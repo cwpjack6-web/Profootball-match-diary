@@ -1,10 +1,9 @@
-
 {
-  "name": "ProFootball Match Diary",
+  "name": "Pro Football Match Diary",
   "short_name": "Match Diary",
   "id": "profootball-match-diary",
-  "scope": "./",
-  "start_url": "./",
+  "scope": "/Profootball-match-diary/",
+  "start_url": "/Profootball-match-diary/",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
