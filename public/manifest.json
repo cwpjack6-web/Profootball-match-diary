@@ -1,18 +1,13 @@
 {
   "name": "Pro Football Match Diary",
-  "short_name": "Profootball Match Diary",
+  "short_name": "Match Diary",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
   "icons": [
     {
-      "src": "icon.png",
-      "sizes": "512x512",
-      "type": "image/png"
-    },
-    {
-      "src": "icon.png",
+      "src": "icon.png", 
       "sizes": "1024x1024",
       "type": "image/png"
     }
