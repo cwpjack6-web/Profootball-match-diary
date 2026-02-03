@@ -296,10 +296,11 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({ isOpen, onClose, onSubmit
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm sm:p-4 animate-fade-in">
-      <div className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-2xl h-[95vh] sm:h-auto flex flex-col">
+      {/* Added sm:max-h-[90vh] to constrain height on desktop and enable scrolling */}
+      <div className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-2xl h-[95vh] sm:h-auto sm:max-h-[90vh] flex flex-col transition-all">
         
         {/* Header */}
-        <div className={`${styles.headerBg} p-4 rounded-t-2xl flex justify-between items-center transition-colors duration-300`}>
+        <div className={`${styles.headerBg} p-4 rounded-t-2xl flex justify-between items-center transition-colors duration-300 flex-none`}>
           <div className="flex items-center gap-2">
             <h2 className={`text-lg font-bold ${styles.headerText}`}>
               <i className="fas fa-edit mr-2"></i>{initialData ? t.editMatchReport : t.matchReport}
@@ -327,7 +328,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({ isOpen, onClose, onSubmit
         </div>
 
         {/* Content */}
-        <form onSubmit={handleSubmit} className="overflow-y-auto p-4 space-y-5 flex-1 bg-slate-50">
+        <form onSubmit={handleSubmit} className="overflow-y-auto p-4 space-y-5 flex-1 bg-slate-50 min-h-0">
           
           {/* Fixture Mode Toggle */}
           <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
@@ -392,7 +393,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({ isOpen, onClose, onSubmit
 
         </form>
 
-        <div className="p-4 border-t border-gray-100 bg-white rounded-b-2xl">
+        <div className="p-4 border-t border-gray-100 bg-white rounded-b-2xl flex-none">
           <button onClick={handleSubmit} className={`w-full ${styles.button} font-bold py-3.5 px-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2`}>
             <i className={`fas ${isFixtureMode ? 'fa-calendar-plus' : 'fa-save'}`}></i> {isFixtureMode ? t.save : t.save}
           </button>
