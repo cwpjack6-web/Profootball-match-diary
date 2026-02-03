@@ -4,13 +4,22 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>ProFootball Match Diary</title>
-    <link rel="manifest" href="./manifest.json">
+    <title>Profootball Match Diary</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+    
+    <!-- PWA Settings -->
     <meta name="theme-color" content="#0f172a" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Match Diary" />
+    
+    <!-- Critical: Link to Manifest and Icons -->
+    <!-- 使用 ./ 確保在 GitHub Pages 子路徑下也能正確找到檔案 -->
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="icon" type="image/png" href="./icon.png" />
+    <link rel="apple-touch-icon" href="./icon.png" />
+    
     <style>
       body {
         -webkit-tap-highlight-color: transparent;
@@ -52,8 +61,7 @@
 }
 </script>
 </head>
- <body>
+  <body>
     <div id="root"></div>
-    <script type="module" src="./index.tsx"></script>
   </body>
 </html>
