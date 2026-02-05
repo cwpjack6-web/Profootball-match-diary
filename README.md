@@ -67,7 +67,7 @@ It runs entirely in the browser using **Local Storage**, meaning your data stays
 **You DO NOT need to write any code.** (你不需要編寫或下載任何代碼)
 
 1.  **Open the Link (開啟連結):**
-    Click the website URL : https://cwpjack6-web.github.io/Profootball-match-diary/
+    https://cwpjack6-web.github.io/Profootball-match-diary/
 
 2.  **Add to Home Screen (加至主畫面):**
     *   **iOS (Safari):** Tap the **Share** button (分享) -> Scroll down and tap **"Add to Home Screen"** (加至主畫面).
