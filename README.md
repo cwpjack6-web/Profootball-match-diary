@@ -63,22 +63,34 @@ It runs entirely in the browser using **Local Storage**, meaning your data stays
 
 ## 🚀 Getting Started / 如何開始
 
-Since this project uses no build step (via `importmap` and `esm.sh`), you can simply serve the files statically.
-由於本專案採用無 Build Step 架構（透過 `importmap`），你可以直接開啟靜態檔案。
+### 📱 For Parents & Users (家長/用家指南)
+**You DO NOT need to write any code.** (你不需要編寫或下載任何代碼)
+
+1.  **Open the Link (開啟連結):**
+    Click the website URL : https://cwpjack6-web.github.io/Profootball-match-diary/
+
+2.  **Add to Home Screen (加至主畫面):**
+    *   **iOS (Safari):** Tap the **Share** button (分享) -> Scroll down and tap **"Add to Home Screen"** (加至主畫面).
+    *   **Android (Chrome):** Tap the **Menu** (三點圖示) -> Tap **"Add to Home Screen"** (加至主畫面) or "Install App".
+
+3.  **Done!** The app will appear on your phone like a native app.
+    (完成！App 會像普通應用程式一樣出現在你的手機桌面上。)
+
+---
+
+### 💻 For Developers (開發者指南)
+*Follow these steps only if you want to modify the code or run a local development server.*
 
 1.  **Clone the repository / 下載專案**
     ```bash
-    git clone https://github.com/cwpjack6/football-match-diary.git
+    git clone https://github.com/your-username/football-match-diary.git
     ```
 
 2.  **Run Locally / 本地運行**
-    *   You can use **VS Code** with the "Live Server" extension.
-    *   Right-click `index.html` and select "Open with Live Server".
-    *   Or use any static server / 或者使用任何靜態伺服器 (e.g., `python -m http.server`, `npx serve`).
-
-3.  **Install as App / 安裝為 App**
-    *   Open in Chrome/Safari on your mobile.
-    *   Select "Add to Home Screen" (加至主畫面).
+    Since this project uses no build step (via `importmap` and `esm.sh`), you can simply serve the files statically.
+    *   **VS Code:** Install "Live Server" extension -> Right-click `index.html` -> "Open with Live Server".
+    *   **Python:** `python -m http.server`
+    *   **Node:** `npx serve`
 
 ## 🔒 Privacy Note / 私隱聲明
 This app does **not** collect any personal data. All match logs, photos (processed locally), and profiles are stored inside your browser's Local Storage. If you clear your browser cache, you may lose data unless you have exported a backup.
