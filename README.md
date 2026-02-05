@@ -1,5 +1,5 @@
 
-# ⚽ Pro Football Match Diary (足球比賽日記)
+# ⚽ ProFootball Match Diary (足球比賽日記)
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![React](https://img.shields.io/badge/React-19-61DAFB.svg?logo=react&logoColor=black)
@@ -16,7 +16,7 @@
 ## <a name="english"></a>🇬🇧 English
 
 ### 📖 Introduction
-**Pro Football Match Diary** is an offline-first Progressive Web App (PWA) designed to track a player's development journey. It replaces traditional paper diaries with a gamified, visual, and data-driven experience. 
+**ProFootball Match Diary** is an offline-first Progressive Web App (PWA) designed to track a player's development journey. It replaces traditional paper diaries with a gamified, visual, and data-driven experience. 
 
 It runs entirely in the browser using **Local Storage**, meaning your data stays on your device—no external servers, no API keys required, and completely private.
 
@@ -40,7 +40,7 @@ It runs entirely in the browser using **Local Storage**, meaning your data stays
 ## <a name="繁體中文"></a>🇭🇰 繁體中文
 
 ### 📖 簡介
-**Pro Football Match Diary (足球比賽日記)** 是一個「離線優先」的網頁應用程式 (PWA)，專為記錄球員成長歷程而設。它將傳統的訓練日記變為一個遊戲化、數據化且視覺化的體驗。
+**ProFootball Match Diary (足球比賽日記)** 是一個「離線優先」的網頁應用程式 (PWA)，專為記錄球員成長歷程而設。它將傳統的訓練日記變為一個遊戲化、數據化且視覺化的體驗。
 
 本程式完全在瀏覽器端運行，使用 **Local Storage** 儲存資料。這意味著所有數據都保留在您的裝置上——無需伺服器、無需 API Key，絕對私隱安全。
 
