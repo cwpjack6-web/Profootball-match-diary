@@ -68,7 +68,7 @@ Since this project uses no build step (via `importmap` and `esm.sh`), you can si
 
 1.  **Clone the repository / 下載專案**
     ```bash
-    git clone https://github.com/your-username/football-match-diary.git
+    git clone https://github.com/cwpjack6/football-match-diary.git
     ```
 
 2.  **Run Locally / 本地運行**
