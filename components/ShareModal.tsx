@@ -163,10 +163,24 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, match, profile
   };
 
   const getCardStyle = () => {
-      if (cardTheme === 'minimal') return "p-6 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]";
+      // Broadcast: Solid Bar
       if (cardTheme === 'broadcast') return "bg-slate-900/90 text-white w-full border-t-2 border-white/10 p-6";
-      if (cardTheme === 'gradient') return "bg-gradient-to-t from-black/90 to-transparent pt-12 p-6 text-white";
+      
+      // Minimal: No background, just text (Requires outline)
+      if (cardTheme === 'minimal') return "p-6 text-white";
+      
+      // Gradient: Transparent container (Gradient is handled by absolute overlay now)
+      if (cardTheme === 'gradient') return "pt-12 p-6 text-white";
+      
       return "";
+  };
+
+  // --- Strong Outline for Readability (Stroke Effect) ---
+  // Use this for Minimal theme or generally if readability is key
+  const textOutlineStyle = cardTheme === 'minimal' ? {
+      textShadow: '2px 0 0 #000, -2px 0 0 #000, 0 2px 0 #000, 0 -2px 0 #000, 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 0 4px 8px rgba(0,0,0,0.8)'
+  } : {
+      textShadow: '0 2px 4px rgba(0,0,0,0.8)'
   };
 
   return (
@@ -231,6 +245,12 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, match, profile
                     <div className={`absolute inset-0 w-full h-full bg-gradient-to-br ${theme.gradient} opacity-50`}></div>
                 )}
 
+                {/* --- FIX 1: ABSOLUTE GRADIENT OVERLAY (Independent of Text) --- */}
+                {/* This ensures the gradient hits the bottom edge perfectly without lines */}
+                {cardTheme === 'gradient' && (
+                    <div className={`absolute left-0 right-0 pointer-events-none z-0 ${textPosition === 'top' ? 'top-0 h-1/2 bg-gradient-to-b' : 'bottom-0 h-2/3 bg-gradient-to-t'} from-black via-black/80 to-transparent`}></div>
+                )}
+
                 {/* Content Container */}
                 <div className={getContentContainerClass()}>
                     
@@ -240,29 +260,29 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, match, profile
                         {/* Header Row */}
                         <div className="flex justify-between items-start mb-2">
                             <div className="flex flex-col">
-                                <span className="text-[10px] font-bold tracking-widest uppercase opacity-70 mb-0.5">{t.matchResult}</span>
+                                <span className="text-[10px] font-bold tracking-widest uppercase opacity-80 mb-0.5" style={textOutlineStyle}>{t.matchResult}</span>
                                 <div className="flex items-center gap-2">
                                     {cardTheme === 'broadcast' && <div className={`h-6 w-1 ${theme.bg}`}></div>}
-                                    <h2 className="text-lg font-black italic uppercase leading-none flex items-center gap-2">
+                                    <h2 className="text-lg font-black italic uppercase leading-none flex items-center gap-2" style={textOutlineStyle}>
                                         {matchTeam.name}
                                         {/* Logo in Share Card - Increased Size */}
                                         {matchTeam.logo && <img src={matchTeam.logo} className="h-8 w-8 object-contain drop-shadow-md" alt="" />}
                                     </h2>
                                 </div>
                             </div>
-                            {match.isMotm && <div className="bg-yellow-500 text-black px-2 py-0.5 rounded-full font-black text-[10px] shadow-lg flex items-center gap-1 transform rotate-3"><i className="fas fa-trophy"></i> MOTM</div>}
+                            {match.isMotm && <div className="bg-yellow-500 text-black px-2 py-0.5 rounded-full font-black text-[10px] shadow-lg flex items-center gap-1 transform rotate-3 border-2 border-white/20"><i className="fas fa-trophy"></i> MOTM</div>}
                         </div>
 
                         {/* Score Block */}
                         <div className="flex items-center justify-center gap-4 w-full mb-2">
                              <div className="text-center w-1/3">
-                                 <span className="text-4xl font-black shadow-black drop-shadow-lg">{match.scoreMyTeam}</span>
-                                 <span className="block text-[10px] font-bold uppercase mt-1 opacity-80">{t.us}</span>
+                                 <span className="text-4xl font-black" style={textOutlineStyle}>{match.scoreMyTeam}</span>
+                                 <span className="block text-[10px] font-bold uppercase mt-1 opacity-90" style={textOutlineStyle}>{t.us}</span>
                              </div>
-                             <div className="h-8 w-px bg-white/30"></div>
+                             <div className="h-8 w-px bg-white/50 shadow-[0_0_2px_black]"></div>
                              <div className="text-center w-1/3">
-                                 <span className="text-4xl font-black shadow-black drop-shadow-lg opacity-80">{match.scoreOpponent}</span>
-                                 <span className="block text-[10px] font-bold uppercase mt-1 opacity-60">{match.opponent}</span>
+                                 <span className="text-4xl font-black opacity-90" style={textOutlineStyle}>{match.scoreOpponent}</span>
+                                 <span className="block text-[10px] font-bold uppercase mt-1 opacity-80" style={textOutlineStyle}>{match.opponent}</span>
                              </div>
                         </div>
                         
@@ -272,11 +292,11 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, match, profile
                         <div className="w-full flex flex-col items-center gap-1">
                              {(match.arthurGoals > 0 || match.scorers.length > 0) && (
                                 <div className="text-center mb-1">
-                                    <div className="text-[9px] font-bold uppercase text-emerald-400 mb-0.5 opacity-90"><i className="fas fa-futbol mr-1"></i> Scoresheet</div>
-                                    <p className="text-xs font-medium leading-relaxed max-w-[90%] mx-auto opacity-90">{getScorersText()}</p>
+                                    <div className="text-[9px] font-bold uppercase text-emerald-400 mb-0.5 opacity-100" style={{ textShadow: '0 1px 2px black' }}><i className="fas fa-futbol mr-1"></i> Scoresheet</div>
+                                    <p className="text-xs font-bold leading-relaxed max-w-[90%] mx-auto opacity-100" style={textOutlineStyle}>{getScorersText()}</p>
                                 </div>
                              )}
-                             <div className="flex items-center gap-3 text-[10px] font-bold opacity-70 uppercase tracking-wide mt-1">
+                             <div className="flex items-center gap-3 text-[10px] font-bold opacity-90 uppercase tracking-wide mt-1" style={textOutlineStyle}>
                                  <span>{match.date}</span>
                                  {match.location && <><span>•</span><span>{match.location}</span></>}
                              </div>
