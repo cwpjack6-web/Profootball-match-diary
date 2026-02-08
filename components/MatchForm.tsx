@@ -127,6 +127,39 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({ isOpen, onClose, onSubmit
       }
   }, [formData.teamId]);
 
+  // --- SMART DATE DETECTION ---
+  // Automatically switch between 'scheduled' and 'completed' based on date
+  useEffect(() => {
+    if (!formData.date) return;
+
+    const selectedDate = new Date(formData.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    selectedDate.setHours(0, 0, 0, 0);
+
+    // If date is in the future
+    if (selectedDate > today) {
+        setFormData(prev => {
+            if (prev.status !== 'scheduled') {
+                return { ...prev, status: 'scheduled' };
+            }
+            return prev;
+        });
+    } 
+    // If date is today or past
+    else {
+         setFormData(prev => {
+            // Only switch back to completed if we are currently in scheduled mode
+            // and the user hasn't explicitly set it. 
+            // For now, simple logic: if it's past, assume it's completed unless user toggles it back.
+            if (prev.status !== 'completed') {
+                return { ...prev, status: 'completed' };
+            }
+            return prev;
+        });
+    }
+  }, [formData.date]);
+
   const activeTeam = getTeamById(profile.teams, formData.teamId);
   const styles = getTeamColorStyles(activeTeam.themeColor);
 
@@ -310,8 +343,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({ isOpen, onClose, onSubmit
                 name="teamId" 
                 value={formData.teamId} 
                 onChange={handleChange}
-                className="bg-white/20 text-xs text-slate-900 border border-white/30 rounded px-2 py-1 outline-none font-bold appearance-none"
-                style={{ color: activeTeam.themeColor === 'white' ? '#334155' : 'white', borderColor: activeTeam.themeColor === 'white' ? '#cbd5e1' : 'rgba(255,255,255,0.3)', backgroundColor: activeTeam.themeColor === 'white' ? 'white' : 'rgba(255,255,255,0.2)' }}
+                className="bg-white text-xs text-slate-900 rounded-lg px-3 py-1.5 font-bold outline-none shadow-sm border-none cursor-pointer"
               >
                 {profile.teams.map(t => (
                   <option key={t.id} value={t.id} className="text-slate-800">{t.name}</option>
@@ -319,7 +351,9 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({ isOpen, onClose, onSubmit
               </select>
             )}
             {profile.teams.length === 1 && (
-               <span className={`text-xs opacity-80 ${styles.headerText} border border-white/30 px-2 py-1 rounded`}>{activeTeam.name}</span>
+               <span className="bg-white text-slate-900 text-xs font-bold px-3 py-1.5 rounded-lg shadow-sm">
+                   {activeTeam.name}
+               </span>
             )}
           </div>
           <button onClick={onClose} className={`w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/10 ${styles.headerText}`}>
