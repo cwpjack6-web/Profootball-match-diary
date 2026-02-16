@@ -110,12 +110,22 @@ export const generateCoachReport = async (
             })
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to generate report');
+        // Safely parse JSON, handling cases where server returns raw text (like Vercel error pages)
+        const contentType = response.headers.get("content-type");
+        let data;
+        
+        if (contentType && contentType.includes("application/json")) {
+            data = await response.json();
+        } else {
+            // Fallback for non-JSON responses (e.g. 500 html/text)
+            const text = await response.text();
+            throw new Error(`Server Error (${response.status}): ${text.substring(0, 100)}...`);
         }
 
-        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to generate report');
+        }
+
         return data.text || "Coach is speechless! (No output generated)";
 
     } catch (error) {
