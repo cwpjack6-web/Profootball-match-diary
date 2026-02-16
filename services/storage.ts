@@ -1,10 +1,12 @@
 
-import { MatchData, UserProfile } from '../types';
+import { MatchData, UserProfile, CoachReport } from '../types';
 
 const MATCH_STORAGE_KEY = 'arthur_match_diary_v1';
 const PROFILES_STORAGE_KEY = 'arthur_match_profiles_list_v1';
 const LEGACY_PROFILE_KEY = 'arthur_match_profile_v1';
 const BACKUP_TIMESTAMP_KEY = 'arthur_last_backup_timestamp';
+const COACH_REPORTS_KEY = 'arthur_coach_reports_v1';
+const COACH_AVATARS_KEY = 'arthur_coach_avatars_v1'; // New Key
 
 // --- Helper: Generate ID ---
 const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2);
@@ -190,26 +192,17 @@ export const saveMatches = (matches: MatchData[]): void => {
 };
 
 // --- MERGE LOGIC FOR SYNC (Matches) ---
-// This ensures we don't wipe local data if we sync from a source with fewer matches
 export const importMatches = (incomingMatches: MatchData[]): void => {
     try {
         const currentMatches = getMatches(); // Get ALL matches (all profiles)
-        
-        // Create a map of existing matches by ID for easy lookup
         const matchMap = new Map<string, MatchData>();
         currentMatches.forEach(m => matchMap.set(m.id, m));
         
-        // Merge incoming matches
         incomingMatches.forEach(incoming => {
-            // We overwrite if ID exists, otherwise add. 
-            // This assumes "Last Sync" is the truth. 
-            // For a simple app, this is better than complex conflict resolution.
             matchMap.set(incoming.id, incoming);
         });
         
-        // Convert back to array
         const mergedList = Array.from(matchMap.values());
-        
         localStorage.setItem(MATCH_STORAGE_KEY, JSON.stringify(mergedList));
     } catch (e) {
         console.error("Import matches error", e);
@@ -219,10 +212,8 @@ export const importMatches = (incomingMatches: MatchData[]): void => {
 export const addMatchToStorage = (match: MatchData): MatchData[] => {
   try {
     const allMatches = getMatches(); // Use getMatches to ensure migration happens if needed
-    
     const updatedAll = [match, ...allMatches];
     localStorage.setItem(MATCH_STORAGE_KEY, JSON.stringify(updatedAll));
-    
     return updatedAll.filter(m => m.profileId === match.profileId);
   } catch (e) {
     console.error(e);
@@ -233,10 +224,8 @@ export const addMatchToStorage = (match: MatchData): MatchData[] => {
 export const updateMatchInStorage = (match: MatchData): MatchData[] => {
   try {
     const allMatches = getMatches(); // Use getMatches to ensure migration
-    
     const updatedAll = allMatches.map(m => m.id === match.id ? match : m);
     localStorage.setItem(MATCH_STORAGE_KEY, JSON.stringify(updatedAll));
-    
     return updatedAll.filter(m => m.profileId === match.profileId);
   } catch (e) {
     console.error(e);
@@ -247,10 +236,8 @@ export const updateMatchInStorage = (match: MatchData): MatchData[] => {
 export const deleteMatchFromStorage = (id: string, currentProfileId: string): MatchData[] => {
   try {
     const allMatches = getMatches();
-    
     const updatedAll = allMatches.filter(m => m.id !== id);
     localStorage.setItem(MATCH_STORAGE_KEY, JSON.stringify(updatedAll));
-    
     return updatedAll.filter(m => m.profileId === currentProfileId);
   } catch (e) {
     console.error(e);
@@ -258,13 +245,63 @@ export const deleteMatchFromStorage = (id: string, currentProfileId: string): Ma
   }
 };
 
+// --- Coach Reports Storage (New) ---
+export const getCoachReports = (profileId: string): CoachReport[] => {
+    try {
+        const data = localStorage.getItem(COACH_REPORTS_KEY);
+        if (data) {
+            const allReports: CoachReport[] = JSON.parse(data);
+            return allReports.filter(r => r.profileId === profileId);
+        }
+        return [];
+    } catch (e) { return []; }
+};
+
+export const saveCoachReport = (report: CoachReport): CoachReport[] => {
+    try {
+        const data = localStorage.getItem(COACH_REPORTS_KEY);
+        const allReports: CoachReport[] = data ? JSON.parse(data) : [];
+        
+        // Check if report for this month/persona exists and update it, else add
+        const index = allReports.findIndex(r => r.profileId === report.profileId && r.monthKey === report.monthKey && r.coachPersona === report.coachPersona);
+        
+        if (index >= 0) {
+            allReports[index] = report;
+        } else {
+            allReports.push(report);
+        }
+        
+        localStorage.setItem(COACH_REPORTS_KEY, JSON.stringify(allReports));
+        return allReports.filter(r => r.profileId === report.profileId);
+    } catch (e) { return []; }
+};
+
+// --- Custom Coach Avatars (New) ---
+export const getCoachAvatars = (): Record<string, string> => {
+    try {
+        const data = localStorage.getItem(COACH_AVATARS_KEY);
+        return data ? JSON.parse(data) : {};
+    } catch { return {}; }
+};
+
+export const saveCoachAvatar = (persona: string, base64: string) => {
+    try {
+        const current = getCoachAvatars();
+        current[persona] = base64;
+        localStorage.setItem(COACH_AVATARS_KEY, JSON.stringify(current));
+        return current;
+    } catch { return {}; }
+};
+
 // --- Full Backup Helper ---
 export const getFullBackupData = () => {
     return {
         type: 'arthur_full_backup_v1',
-        version: '1.0', // Version Control for future migrations
+        version: '1.0', 
         timestamp: Date.now(),
         profiles: getAllProfiles(),
-        matches: getMatches()
+        matches: getMatches(),
+        coachReports: localStorage.getItem(COACH_REPORTS_KEY) ? JSON.parse(localStorage.getItem(COACH_REPORTS_KEY)!) : [],
+        coachAvatars: getCoachAvatars() // Include custom avatars in backup
     };
 };
