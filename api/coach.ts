@@ -3,7 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 
 // Vercel Node.js Serverless Function
 export default async function handler(req: any, res: any) {
-    // Enable CORS just in case, though Vercel handles same-origin automatically
+    // Enable CORS
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -23,20 +23,23 @@ export default async function handler(req: any, res: any) {
     }
 
     try {
-        // Parse body - Vercel parses JSON body automatically
         const { prompt, systemInstruction } = req.body;
 
-        const apiKey = process.env.GEMINI_API_KEY;
+        // Use standard API_KEY environment variable
+        const apiKey = process.env.API_KEY;
 
         if (!apiKey) {
-            console.error("API Key missing on server");
-            return res.status(500).json({ error: 'Server configuration error: API Key missing' });
+            console.error("Server Error: API_KEY environment variable is missing.");
+            return res.status(500).json({ 
+                error: 'Server configuration error: API_KEY is missing. Please set it in Vercel settings.' 
+            });
         }
 
         const ai = new GoogleGenAI({ apiKey });
 
+        // Use the standard Flash model for speed and efficiency
         const response = await ai.models.generateContent({
-            model: 'gemini-2.0-flash-lite-preview-02-05',
+            model: 'gemini-3-flash-preview',
             contents: prompt,
             config: {
                 systemInstruction: systemInstruction,
@@ -44,11 +47,13 @@ export default async function handler(req: any, res: any) {
         });
 
         const text = response.text;
-
         return res.status(200).json({ text });
 
     } catch (error: any) {
-        console.error("Gemini API Error:", error);
-        return res.status(500).json({ error: error.message || 'Error processing request' });
+        console.error("Gemini API Execution Error:", error);
+        // Ensure we always return JSON, even for errors
+        return res.status(500).json({ 
+            error: error.message || 'An error occurred while communicating with the AI coach.' 
+        });
     }
 }
