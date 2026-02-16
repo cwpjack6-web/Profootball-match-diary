@@ -77,6 +77,19 @@ export interface MatchData {
   updatedAt?: number; 
 }
 
+// New Interface for Coach Reports
+export type CoachPersona = 'motivator' | 'tactician' | 'wisdom' | 'custom';
+
+export interface CoachReport {
+    id: string;
+    profileId: string;
+    monthKey: string; // YYYY-MM
+    coachPersona: CoachPersona;
+    customCoachName?: string; // New: Store the name of the custom coach
+    content: string; // The markdown content from AI
+    generatedAt: number;
+}
+
 export interface MatchFormProps {
   isOpen: boolean;
   onClose: () => void;
