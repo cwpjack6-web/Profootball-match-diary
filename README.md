@@ -98,4 +98,4 @@ This app does **not** collect any personal data. All match logs, photos (process
 
 ---
 
-Created with ❤️ by a Football Dad JC. :)
+Created with ❤️ by a Football Dad JC. :) 
