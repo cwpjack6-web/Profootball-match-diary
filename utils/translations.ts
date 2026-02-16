@@ -25,6 +25,7 @@ export const translations = {
     navMatches: "戰報",
     navStats: "數據",
     navProfile: "檔案",
+    navCoach: "名帥", 
     manageTeams: "球隊管理",
 
     // Match Types
@@ -296,6 +297,46 @@ export const translations = {
     month10: "十月",
     month11: "十一月",
     month12: "十二月",
+
+    // Coach Report
+    coachCorner: "名帥復盤",
+    selectCoach: "選擇教練風格",
+    selectMonth: "選擇月份",
+    dataRichness: "情報充足度",
+    generateReport: "召喚教練分析",
+    enterApiKey: "輸入 Google AI Key",
+    apiKeyDesc: "請輸入您的 Gemini API Key 以啟用分析功能。Key 只會儲存在您的手機。",
+    getFreeKey: "免費獲取 Key",
+    motivator: "熱血型 (The Motivator)",
+    tactician: "戰術型 (The Tactician)",
+    wisdom: "智慧型 (The Wise)",
+    customCoach: "自訂教練",
+    customNamePlaceholder: "教練名稱 (例如: 摩連奴)",
+    customStylePlaceholder: "形容風格 (例如: 說話很寸，喜歡防守反擊)",
+    richnessLow: "情報不足",
+    richnessMedium: "情報尚可",
+    richnessHigh: "情報豐富",
+    richnessLowDesc: "建議補充更多比賽評語，以獲得更精準建議。",
+    richnessHighDesc: "資料非常充足！教練可以提供深入分析。",
+    coachThinking: "教練正在觀看比賽錄影...",
+    reportSaved: "報告已儲存",
+    coachSays: "教練的話",
+
+    // Whats New Modal
+    whatsNewTitle: "最新功能登場！",
+    whatsNewCoachTitle: "名帥復盤 (AI Coach)",
+    whatsNewCoachDesc: "Google Gemini 2.0 AI 現在進駐你的日記！選擇三位不同風格的名帥，為你的每月表現撰寫詳細報告。",
+    whatsNewCoachM: "熱血型：充滿激情，著重鬥志與士氣 (Klopp 風格)",
+    whatsNewCoachT: "戰術型：著重細節、空間與決策 (Pep 風格)",
+    whatsNewCoachW: "智慧型：冷靜沈著，著重團隊和諧與適應力 (Carlo 風格)",
+    whatsNewRichnessTitle: "情報充足度分析",
+    whatsNewRichnessDesc: "AI 會自動分析你的比賽紀錄是否足夠豐富。多寫「賽後訪問」和「簡評」，教練的分析就會越準確！",
+    gotIt: "立即體驗",
+
+    // Support
+    supportDevTitle: "支持開發者",
+    supportDevDesc: "如果這應用程式對你有幫助，歡迎請我飲杯咖啡！你的支持有助伺服器運作及開發新功能。",
+    buyCoffeeBtn: "請我飲咖啡",
   },
   en: {
     // General
@@ -322,6 +363,7 @@ export const translations = {
     navMatches: "Matches",
     navStats: "Stats",
     navProfile: "Profile",
+    navCoach: "Coach", // New
     manageTeams: "Teams",
 
     // Match Types
@@ -593,5 +635,45 @@ export const translations = {
     month10: "October",
     month11: "November",
     month12: "December",
+
+    // Coach Report
+    coachCorner: "Gaffer's Corner",
+    selectCoach: "Select Coach Persona",
+    selectMonth: "Select Month",
+    dataRichness: "Data Richness",
+    generateReport: "Call the Gaffer",
+    enterApiKey: "Enter Google AI Key",
+    apiKeyDesc: "Enter your Gemini API key to enable analysis. Key is stored on your device only.",
+    getFreeKey: "Get Free Key",
+    motivator: "The Motivator (Klopp)",
+    tactician: "The Tactician (Pep)",
+    wisdom: "The Wise (Carlo)",
+    customCoach: "Custom Coach",
+    customNamePlaceholder: "Coach Name (e.g. Mourinho)",
+    customStylePlaceholder: "Style description (e.g. Sarcastic, Defensive)",
+    richnessLow: "Low Data",
+    richnessMedium: "Good Data",
+    richnessHigh: "Rich Data",
+    richnessLowDesc: "Add more comments to matches for better advice.",
+    richnessHighDesc: "Perfect! Coach can give detailed analysis.",
+    coachThinking: "Coach is watching the tapes...",
+    reportSaved: "Report Saved",
+    coachSays: "Coach Says",
+
+    // Whats New Modal
+    whatsNewTitle: "What's New in v1.1",
+    whatsNewCoachTitle: "AI Coach Analysis",
+    whatsNewCoachDesc: "Google Gemini 2.0 AI is now your personal analyst. Choose from 3 distinct coaching personas to generate monthly reports.",
+    whatsNewCoachM: "The Motivator: High energy, focus on spirit (Klopp style)",
+    whatsNewCoachT: "The Tactician: Detail-oriented, focus on intelligence (Pep style)",
+    whatsNewCoachW: "The Wise: Calm, father-figure, focus on adaptation (Carlo style)",
+    whatsNewRichnessTitle: "Data Richness Score",
+    whatsNewRichnessDesc: "AI now rates your match data. Add more comments and interviews to get deeper analysis from the coach.",
+    gotIt: "Got it!",
+
+    // Support
+    supportDevTitle: "Support Development",
+    supportDevDesc: "If you enjoy using Match Diary, consider buying me a coffee! Your support keeps the servers running and features coming.",
+    buyCoffeeBtn: "Buy me a Coffee",
   }
 };
