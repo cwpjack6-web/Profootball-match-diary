@@ -3,9 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Profootball Match Diary</title>
+    <title>Arthur's Match Diary</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+    
+    <!-- Google Fonts for Signatures & Reports -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Dancing+Script:wght@700&family=Permanent+Marker&family=Reenie+Beanie&family=Rock+Salt&display=swap" rel="stylesheet">
     
     <!-- PWA Settings -->
     <meta name="theme-color" content="#0f172a" />
@@ -14,8 +19,7 @@
     <meta name="apple-mobile-web-app-title" content="Match Diary" />
     
     <!-- Critical: Link to Manifest and Icons -->
-    <!-- Added ?v=2 to force browser to re-fetch the updated manifest -->
-    <link rel="manifest" href="./manifest.json?v=2" />
+    <link rel="manifest" href="./manifest.json?v=2" crossorigin="use-credentials" />
     <link rel="icon" type="image/png" href="./icon.png" />
     <link rel="apple-touch-icon" href="./icon.png" />
     
@@ -48,6 +52,13 @@
       .swipe-action-btn {
         transition: opacity 0.2s ease;
       }
+
+      /* Custom Font Classes */
+      .font-typewriter { font-family: 'Courier Prime', monospace; }
+      .font-signature-heavy { font-family: 'Permanent Marker', cursive; } /* Klopp */
+      .font-signature-messy { font-family: 'Reenie Beanie', cursive; }   /* Pep */
+      .font-signature-elegant { font-family: 'Dancing Script', cursive; } /* Carlo */
+      .font-stamp { font-family: 'Rock Salt', cursive; }
     </style>
   <script type="importmap">
 {
@@ -55,7 +66,10 @@
     "react": "https://esm.sh/react@^19.2.3",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "html2canvas": "https://esm.sh/html2canvas@1.4.1",
-    "react/": "https://esm.sh/react@^19.2.3/"
+    "@google/genai": "https://esm.sh/@google/genai",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "vite": "https://esm.sh/vite@^7.3.1",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.4"
   }
 }
 </script>
