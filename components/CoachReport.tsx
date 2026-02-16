@@ -19,13 +19,12 @@ const COACH_NAMES = {
     custom: "Coach"
 };
 
-// Use local PNGs stored in public/coaches/
-// Files must be named: motivator.png, tactician.png, wisdom.png
+// Restore paths assuming images are in public/coaches/
 const DEFAULT_AVATAR_URLS = {
-    motivator: "./coaches/motivator.png",
-    tactician: "./coaches/tactician.png",
-    wisdom: "./coaches/wisdom.png",
-    custom: "" // No default for custom, uses fallback icon or upload
+    motivator: "/coaches/motivator.png",
+    tactician: "/coaches/tactician.png",
+    wisdom: "/coaches/wisdom.png",
+    custom: "" 
 };
 
 // Typewriter Component
@@ -168,17 +167,20 @@ const CoachReport: React.FC<CoachReportProps> = ({ profile, matches }) => {
             saveCoachReport(newReport);
             setCurrentReport(newReport);
             showToast(t.reportSaved, 'success');
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            showToast('Error generating report.', 'error');
+            const msg = e.message || 'Error generating report.';
+            showToast(msg, 'error');
         } finally {
             setIsLoading(false);
         }
     };
 
     const handleImageError = (persona: string) => {
-        console.warn(`Failed to load image for ${persona}`);
-        setAvatarErrors(prev => ({ ...prev, [persona]: true }));
+        // Prevent infinite loop if default is also broken, just set error state
+        if (!avatarErrors[persona]) {
+            setAvatarErrors(prev => ({ ...prev, [persona]: true }));
+        }
     };
 
     // Handle File Upload (Only for Custom)
@@ -252,9 +254,12 @@ const CoachReport: React.FC<CoachReportProps> = ({ profile, matches }) => {
             );
         }
 
-        // 2. Preset Avatars (Local Files)
-        // Fallback to Icon if File Not Found
-        if (avatarErrors[persona]) {
+        // 2. For presets: Check if URL exists and not errored
+        const url = DEFAULT_AVATAR_URLS[persona as keyof typeof DEFAULT_AVATAR_URLS];
+        const hasError = avatarErrors[persona];
+
+        // If no URL or Error, render Icon Fallback
+        if (!url || hasError) {
             let iconClass = 'fa-user-tie';
             let bgClass = 'bg-slate-200 text-slate-400';
             
@@ -269,10 +274,10 @@ const CoachReport: React.FC<CoachReportProps> = ({ profile, matches }) => {
             );
         }
 
-        // Default: Use Local File
+        // 3. Render Image
         return (
             <img 
-                src={DEFAULT_AVATAR_URLS[persona]} 
+                src={url} 
                 alt={persona} 
                 className="w-full h-full object-cover" 
                 onError={() => handleImageError(persona)}
