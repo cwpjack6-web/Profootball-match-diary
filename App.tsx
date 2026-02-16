@@ -25,9 +25,13 @@ import OpponentStatsModal from './components/OpponentStatsModal';
 import MatchTimeline from './components/MatchTimeline';
 import VideoModal from './components/VideoModal';
 import TeamManager from './components/TeamManager';
+import CoachReport from './components/CoachReport';
+import WhatsNewModal from './components/WhatsNewModal';
 
 type AppView = 'cover' | 'setup' | 'dashboard';
-type Tab = 'matches' | 'stats' | 'teams' | 'profile';
+type Tab = 'matches' | 'stats' | 'teams' | 'profile' | 'coach';
+
+const APP_VERSION = '1.1.0';
 
 const App: React.FC = () => {
   const { t, language, toggleLanguage } = useLanguage();
@@ -47,6 +51,9 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('matches');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [showBackupAlert, setShowBackupAlert] = useState(false);
+  
+  // Update Modal State
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
 
   // Filter & Search State
   const [quickTeamFilter, setQuickTeamFilter] = useState<string>('all');
@@ -69,7 +76,18 @@ const App: React.FC = () => {
     setAllProfiles(profiles);
     setCurrentView('cover');
     setLoading(false);
+    
+    // Check version for What's New Modal
+    const lastVersion = localStorage.getItem('arthur_app_version');
+    if (lastVersion !== APP_VERSION) {
+        setShowWhatsNew(true);
+    }
   }, []);
+  
+  const handleCloseWhatsNew = () => {
+      localStorage.setItem('arthur_app_version', APP_VERSION);
+      setShowWhatsNew(false);
+  };
 
   useEffect(() => {
     if (activeProfile) {
@@ -219,7 +237,10 @@ const App: React.FC = () => {
 
   const handleFormSubmit = (data: Omit<MatchData, 'id'>) => {
     if (!activeProfile) return;
-    if (editingMatch) {
+    
+    // Check if editingMatch exists AND has an ID. 
+    // Duplicated matches have editingMatch set, but ID is empty, so they should be treated as NEW.
+    if (editingMatch && editingMatch.id) {
       const updatedList = updateMatchInStorage({ ...data, id: editingMatch.id, profileId: activeProfile.id });
       setMatches(updatedList);
       showToast(t.save + ' ' + t.done, 'success');
@@ -236,6 +257,7 @@ const App: React.FC = () => {
   const handleDuplicateLast = () => {
     if (matches.length === 0) { setIsFormOpen(true); return; }
     const sorted = [...matches].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    // Duplicate logic: Empty ID means it will be saved as new
     setEditingMatch({ ...sorted[0], id: '', scoreMyTeam: 0, scoreOpponent: 0, scorers: [], arthurGoals: 0, arthurAssists: 0, dadComment: '', kidInterview: '', videos: [], rating: 8, isMotm: false });
     setIsFormOpen(true);
   };
@@ -403,6 +425,8 @@ const App: React.FC = () => {
         <div className="max-w-2xl mx-auto min-h-full">
             {activeTab === 'stats' && <AnalyticsDashboard matches={matches} profile={activeProfile} />}
             {activeTab === 'teams' && <TeamManager profile={activeProfile} onUpdateProfile={handleUpdateProfileFromManager} />}
+            {activeTab === 'coach' && <CoachReport profile={activeProfile} matches={matches} />}
+            
             {activeTab === 'matches' && (
             <div className="animate-fade-in relative">
                 {/* Team Filter & Archive Toggle */}
@@ -451,6 +475,25 @@ const App: React.FC = () => {
                          <button onClick={handleEditProfile} className="w-full py-3 bg-blue-50 text-blue-600 rounded-xl font-bold mb-3 hover:bg-blue-100 mt-6">{t.edit} {t.navProfile}</button>
                          <button onClick={handleSwitchUser} className="w-full py-3 bg-slate-50 text-slate-600 rounded-xl font-bold hover:bg-slate-100">{t.switchUser}</button>
                      </div>
+
+                     {/* Support Card */}
+                     <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-2xl shadow-sm border border-orange-100 w-full text-center relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-orange-100/50 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
+                        
+                        <h3 className="text-lg font-bold text-slate-800 mb-2">{t.supportDevTitle}</h3>
+                        <p className="text-xs text-slate-600 mb-4 leading-relaxed opacity-90">
+                            {t.supportDevDesc}
+                        </p>
+                        
+                        <a 
+                            href="https://buymeacoffee.com/jcfromhk" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 bg-[#FFDD00] text-black font-black px-6 py-3 rounded-full shadow-md hover:shadow-lg hover:scale-105 transition-all text-xs"
+                        >
+                            <span className="text-base">☕</span> {t.buyCoffeeBtn}
+                        </a>
+                    </div>
                  </div>
              )}
 
@@ -486,9 +529,10 @@ const App: React.FC = () => {
 
       {/* NAVBAR */}
       <nav className="fixed bottom-0 w-full bg-white border-t border-slate-200 z-50 safe-area-bottom">
-        <div className="max-w-2xl mx-auto grid grid-cols-4 h-16">
+        <div className="max-w-2xl mx-auto grid grid-cols-5 h-16">
             <button onClick={() => transitionTab('matches')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'matches' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-list-ul text-lg ${activeTab === 'matches' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.navMatches}</span></button>
             <button onClick={() => transitionTab('stats')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'stats' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-chart-pie text-lg ${activeTab === 'stats' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.navStats}</span></button>
+            <button onClick={() => transitionTab('coach')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'coach' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-magic text-lg ${activeTab === 'coach' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.navCoach}</span></button>
             <button onClick={() => transitionTab('teams')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'teams' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-users-cog text-lg ${activeTab === 'teams' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.manageTeams}</span></button>
             <button onClick={() => transitionTab('profile')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'profile' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-user-circle text-lg ${activeTab === 'profile' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.navProfile}</span></button>
         </div>
@@ -499,6 +543,9 @@ const App: React.FC = () => {
       <VideoModal isOpen={!!viewingVideoId} videoId={viewingVideoId} onClose={() => setViewingVideoId(null)} />
       {shareMatch && activeProfile && <ShareModal isOpen={!!shareMatch} onClose={() => setShareMatch(null)} match={shareMatch} profile={activeProfile} />}
       {selectedOpponent && activeProfile && <OpponentStatsModal isOpen={!!selectedOpponent} onClose={() => setSelectedOpponent(null)} opponentName={selectedOpponent} allMatches={matches} profile={activeProfile} />}
+      
+      {/* What's New Modal */}
+      <WhatsNewModal isOpen={showWhatsNew} onClose={handleCloseWhatsNew} />
     </div>
   );
 };
