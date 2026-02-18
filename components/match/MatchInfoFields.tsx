@@ -60,6 +60,32 @@ const MatchInfoFields: React.FC<MatchInfoFieldsProps> = ({
         </div>
         </div>
 
+        {/* Tournament Info */}
+        <div className="flex gap-3">
+            <div className="flex-[3]">
+                <label className="text-xs font-bold text-slate-400 uppercase">{t.tournamentName || "Tournament Name"}</label>
+                <input 
+                    type="text" 
+                    name="tournamentName" 
+                    placeholder="e.g. Easter Cup" 
+                    value={formData.tournamentName || ''} 
+                    onChange={handleChange} 
+                    className="w-full bg-white text-slate-900 border border-slate-200 rounded-lg p-2 text-sm" 
+                />
+            </div>
+            <div className="flex-[2]">
+                <label className="text-xs font-bold text-slate-400 uppercase">{t.matchLabel || "Match Label"}</label>
+                <input 
+                    type="text" 
+                    name="matchLabel" 
+                    placeholder="e.g. Game 1" 
+                    value={formData.matchLabel || ''} 
+                    onChange={handleChange} 
+                    className="w-full bg-white text-slate-900 border border-slate-200 rounded-lg p-2 text-sm" 
+                />
+            </div>
+        </div>
+
         <div className="flex gap-3 relative">
         <div className="flex-1 relative">
             <label className="text-xs font-bold text-slate-400 uppercase">{t.opponentName}</label>
