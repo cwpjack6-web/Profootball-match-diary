@@ -17,6 +17,8 @@ interface ExtendedMatchFormProps extends MatchFormProps {
 type FormState = Omit<MatchData, 'id' | 'profileId' | 'pitchType' | 'weather' | 'matchFormat' | 'matchStructure' | 'periodsPlayed'> & {
   id?: string;
   profileId?: string;
+  tournamentName?: string;
+  matchLabel?: string;
   pitchType: PitchType | '';
   weather: WeatherType | '';
   matchFormat: MatchFormat | '';
@@ -44,6 +46,8 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({ isOpen, onClose, onSubmit
         location: '',
         isHome: true,
         matchType: 'league',
+        tournamentName: '',
+        matchLabel: '',
         matchFormat: defaultFormat, 
         matchStructure: defaultStructure, 
         periodsPlayed: defaultPeriods, 
@@ -77,6 +81,8 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({ isOpen, onClose, onSubmit
               ...defaultState,
               ...initialData,
               matchType: initialData.matchType || 'league', 
+              tournamentName: initialData.tournamentName || '',
+              matchLabel: initialData.matchLabel || '',
               matchFormat: initialData.matchFormat || '7v7',
               matchStructure: initialData.matchStructure || 'quarters',
               periodsPlayed: initialData.periodsPlayed !== undefined ? initialData.periodsPlayed : 4,
@@ -90,6 +96,27 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({ isOpen, onClose, onSubmit
               status: initialData.status || 'completed'
           };
       }
+      
+      // Auto-fill logic for new matches:
+      // If the most recent match (sorted by date) has a tournamentName, suggest it? 
+      // Or maybe just leave it blank. 
+      // Let's try to find the most recent match and see if it was recent (within 2 days).
+      if (previousMatches.length > 0) {
+          const sorted = [...previousMatches].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          const lastMatch = sorted[0];
+          const lastDate = new Date(lastMatch.date);
+          const today = new Date();
+          const diffTime = Math.abs(today.getTime() - lastDate.getTime());
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+          
+          // If last match was within 3 days and had a tournament name, pre-fill it
+          if (diffDays <= 3 && lastMatch.tournamentName) {
+              defaultState.tournamentName = lastMatch.tournamentName;
+              defaultState.matchType = lastMatch.matchType; // Also copy match type
+              defaultState.location = lastMatch.location; // And location
+          }
+      }
+
       return defaultState;
   };
 
