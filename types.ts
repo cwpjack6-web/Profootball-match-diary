@@ -55,6 +55,8 @@ export interface MatchData {
   location: string;
   isHome: boolean;
   matchType: MatchType; 
+  tournamentName?: string; // New: e.g., "Easter Cup"
+  matchLabel?: string; // New: e.g., "Game 1", "Semi-Final"
   pitchType?: PitchType; 
   weather?: WeatherType;
   matchFormat?: MatchFormat; 
