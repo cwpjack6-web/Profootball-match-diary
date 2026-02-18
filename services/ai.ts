@@ -35,8 +35,12 @@ export const generateCoachReport = async (
     
     // 1. Prepare Data Payload
     const matchesSummary = matches.map(m => {
+        const tournamentInfo = m.tournamentName ? `Tournament: ${m.tournamentName}` : '';
+        const matchLabelInfo = m.matchLabel ? `Match Label: ${m.matchLabel}` : '';
+        const context = [tournamentInfo, matchLabelInfo].filter(Boolean).join(', ');
+
         return `
-        - Date: ${m.date}
+        - Date: ${m.date} ${context ? `(${context})` : ''}
         - Opponent: ${m.opponent}
         - Result: ${m.scoreMyTeam} - ${m.scoreOpponent} (${m.scoreMyTeam > m.scoreOpponent ? 'Win' : m.scoreMyTeam < m.scoreOpponent ? 'Loss' : 'Draw'})
         - Player Stats: ${m.arthurGoals} Goals, ${m.arthurAssists} Assists
