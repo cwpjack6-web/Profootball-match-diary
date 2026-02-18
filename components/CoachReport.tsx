@@ -1,5 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
+import html2canvas from 'html2canvas';
 import { MatchData, UserProfile, CoachReport as CoachReportType, CoachPersona } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 import { getCoachReports, saveCoachReport, getCoachAvatars, saveCoachAvatar } from '../services/storage';
@@ -27,41 +29,6 @@ const DEFAULT_AVATAR_URLS = {
     custom: "" 
 };
 
-// Typewriter Component
-const TypewriterText: React.FC<{ text: string; onComplete?: () => void }> = ({ text, onComplete }) => {
-    const [displayedText, setDisplayedText] = useState('');
-    const indexRef = useRef(0);
-
-    useEffect(() => {
-        setDisplayedText('');
-        indexRef.current = 0;
-        
-        const timer = setInterval(() => {
-            if (indexRef.current < text.length) {
-                setDisplayedText((prev) => prev + text.charAt(indexRef.current));
-                indexRef.current++;
-            } else {
-                clearInterval(timer);
-                if (onComplete) onComplete();
-            }
-        }, 15); // Speed of typing
-
-        return () => clearInterval(timer);
-    }, [text, onComplete]);
-
-    return (
-        <div className="whitespace-pre-wrap leading-relaxed">
-            {displayedText.split(/(\*\*.*?\*\*)/g).map((part, i) => {
-                if (part.startsWith('**') && part.endsWith('**')) {
-                    return <strong key={i} className="font-bold text-slate-900 bg-yellow-100/50 px-1 rounded">{part.slice(2, -2)}</strong>;
-                }
-                return <span key={i}>{part}</span>;
-            })}
-            <span className="animate-pulse inline-block w-2 h-4 bg-slate-400 ml-1 align-middle"></span>
-        </div>
-    );
-};
-
 const CoachReport: React.FC<CoachReportProps> = ({ profile, matches }) => {
     const { t, language } = useLanguage();
     const { showToast } = useToast();
@@ -70,8 +37,8 @@ const CoachReport: React.FC<CoachReportProps> = ({ profile, matches }) => {
     const [selectedMonth, setSelectedMonth] = useState<string>('');
     const [selectedPersona, setSelectedPersona] = useState<CoachPersona>('motivator');
     const [isLoading, setIsLoading] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
     const [currentReport, setCurrentReport] = useState<CoachReportType | null>(null);
-    const [showSignature, setShowSignature] = useState(false);
     
     // Custom Coach State
     const [customName, setCustomName] = useState('');
@@ -81,8 +48,9 @@ const CoachReport: React.FC<CoachReportProps> = ({ profile, matches }) => {
     const [customAvatars, setCustomAvatars] = useState<Record<string, string>>({});
     const [avatarErrors, setAvatarErrors] = useState<Record<string, boolean>>({});
     
-    // File Input Ref
+    // Refs
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const reportRef = useRef<HTMLDivElement>(null); // Ref for capturing image
 
     // Initial Load
     useEffect(() => {
@@ -99,21 +67,13 @@ const CoachReport: React.FC<CoachReportProps> = ({ profile, matches }) => {
         if (!selectedMonth || !selectedPersona) return;
         
         const reports = getCoachReports(profile.id);
-        // Find existing report based on persona (and name if custom)
         const existing = reports.find(r => r.monthKey === selectedMonth && r.coachPersona === selectedPersona);
         
-        // Reset signature animation when report changes
-        setShowSignature(false);
         setCurrentReport(existing || null);
         
         // Populate Custom Fields if existing
         if (selectedPersona === 'custom' && existing && existing.customCoachName) {
             setCustomName(existing.customCoachName);
-        }
-        
-        // If it's an existing report, show signature immediately
-        if (existing) {
-            setTimeout(() => setShowSignature(true), 500); 
         }
     }, [selectedMonth, selectedPersona, profile.id]);
 
@@ -149,7 +109,6 @@ const CoachReport: React.FC<CoachReportProps> = ({ profile, matches }) => {
         }
 
         setIsLoading(true);
-        setShowSignature(false);
         try {
             const customDetails = selectedPersona === 'custom' ? { name: customName, style: customStyle } : undefined;
             const content = await generateCoachReport(profile, monthMatches, selectedMonth, selectedPersona, language, customDetails);
@@ -176,19 +135,47 @@ const CoachReport: React.FC<CoachReportProps> = ({ profile, matches }) => {
         }
     };
 
+    const handleDownloadLetter = async () => {
+        if (!reportRef.current) return;
+        setIsDownloading(true);
+
+        try {
+            // Slight delay to ensure renders
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            const canvas = await html2canvas(reportRef.current, {
+                useCORS: true,
+                scale: 2, // High resolution
+                backgroundColor: null, // Transparent background (will pick up CSS styles)
+                logging: false,
+            });
+
+            const link = document.createElement('a');
+            link.download = `Coach_Report_${selectedMonth}_${selectedPersona}.png`;
+            link.href = canvas.toDataURL('image/png');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showToast(t.exportSuccess || "Image Downloaded!", 'success');
+        } catch (err) {
+            console.error("Failed to generate image", err);
+            showToast("Failed to generate image.", 'error');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
     const handleImageError = (persona: string) => {
-        // Prevent infinite loop if default is also broken, just set error state
         if (!avatarErrors[persona]) {
             setAvatarErrors(prev => ({ ...prev, [persona]: true }));
         }
     };
 
-    // Handle File Upload (Only for Custom)
     const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file && selectedPersona === 'custom') {
             try {
-                // Compress nicely for storage
                 const compressed = await compressImage(file, 200, 0.8);
                 const updated = saveCoachAvatar('custom', compressed);
                 setCustomAvatars(updated);
@@ -198,7 +185,6 @@ const CoachReport: React.FC<CoachReportProps> = ({ profile, matches }) => {
                 showToast("Failed to upload image", 'error');
             }
         }
-        // Reset input
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
@@ -228,7 +214,6 @@ const CoachReport: React.FC<CoachReportProps> = ({ profile, matches }) => {
         }
     };
 
-    // New: Dynamic Header Background for the Report
     const getReportHeaderStyle = (persona: CoachPersona) => {
         switch(persona) {
             case 'motivator': return 'bg-gradient-to-r from-red-700 to-rose-900 shadow-red-200';
@@ -238,15 +223,12 @@ const CoachReport: React.FC<CoachReportProps> = ({ profile, matches }) => {
         }
     };
 
-    // Render Avatar
     const renderAvatar = (persona: CoachPersona) => {
-        // 1. If it's custom, try local storage first
         if (persona === 'custom') {
             const customSrc = customAvatars['custom'];
             if (customSrc) {
                 return <img src={customSrc} alt="Custom Coach" className="w-full h-full object-cover" />;
             }
-            // Fallback icon for custom
             return (
                 <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-400">
                     <i className="fas fa-user-secret text-2xl"></i>
@@ -254,11 +236,9 @@ const CoachReport: React.FC<CoachReportProps> = ({ profile, matches }) => {
             );
         }
 
-        // 2. For presets: Check if URL exists and not errored
         const url = DEFAULT_AVATAR_URLS[persona as keyof typeof DEFAULT_AVATAR_URLS];
         const hasError = avatarErrors[persona];
 
-        // If no URL or Error, render Icon Fallback
         if (!url || hasError) {
             let iconClass = 'fa-user-tie';
             let bgClass = 'bg-slate-200 text-slate-400';
@@ -274,7 +254,6 @@ const CoachReport: React.FC<CoachReportProps> = ({ profile, matches }) => {
             );
         }
 
-        // 3. Render Image
         return (
             <img 
                 src={url} 
@@ -289,7 +268,6 @@ const CoachReport: React.FC<CoachReportProps> = ({ profile, matches }) => {
     return (
         <div className="pb-24 animate-fade-in bg-slate-50 min-h-screen">
             
-            {/* Hidden Input for Uploads (Only for custom) */}
             <input 
                 ref={fileInputRef} 
                 type="file" 
@@ -298,7 +276,6 @@ const CoachReport: React.FC<CoachReportProps> = ({ profile, matches }) => {
                 onChange={handleAvatarUpload} 
             />
 
-            {/* Header */}
             <div className="bg-slate-900 text-white p-4 sticky top-0 z-20 shadow-md">
                 <div className="flex justify-between items-center">
                     <h2 className="font-bold text-lg flex items-center gap-2">
@@ -311,7 +288,7 @@ const CoachReport: React.FC<CoachReportProps> = ({ profile, matches }) => {
                 
                 {/* Controls */}
                 <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200 space-y-4">
-                    {/* Month Selector */}
+                    {/* Selectors ... */}
                     <div>
                         <label className="text-xs font-bold text-slate-400 uppercase mb-1 block">{t.selectMonth}</label>
                         <select 
@@ -326,7 +303,6 @@ const CoachReport: React.FC<CoachReportProps> = ({ profile, matches }) => {
                         </select>
                     </div>
 
-                    {/* Persona Selector (Horizontal Scroll) */}
                     <div>
                         <label className="text-xs font-bold text-slate-400 uppercase mb-2 block">{t.selectCoach}</label>
                         <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
@@ -350,10 +326,8 @@ const CoachReport: React.FC<CoachReportProps> = ({ profile, matches }) => {
                         </div>
                     </div>
 
-                    {/* Custom Coach Inputs */}
                     {selectedPersona === 'custom' && (
                         <div className="animate-fade-in bg-blue-50 rounded-xl p-3 border border-blue-100 space-y-3 relative">
-                            {/* Upload Button overlay for Custom */}
                             <button 
                                 onClick={triggerUpload}
                                 className="absolute -top-2 -right-2 w-8 h-8 bg-white border border-slate-200 rounded-full shadow flex items-center justify-center text-blue-600 z-10 hover:bg-blue-50"
@@ -385,7 +359,7 @@ const CoachReport: React.FC<CoachReportProps> = ({ profile, matches }) => {
                         </div>
                     )}
 
-                    {/* Data Richness Indicator */}
+                    {/* Data Richness */}
                     <div className="bg-slate-50 rounded-lg p-3 flex items-center justify-between">
                          <div className="flex flex-col">
                              <span className="text-[10px] font-bold text-slate-400 uppercase">{t.dataRichness}</span>
@@ -403,13 +377,7 @@ const CoachReport: React.FC<CoachReportProps> = ({ profile, matches }) => {
                              ))}
                          </div>
                     </div>
-                    {richness === 'low' && (
-                        <p className="text-[10px] text-slate-400 italic text-center">
-                            {t.richnessLowDesc}
-                        </p>
-                    )}
 
-                    {/* Generate Button */}
                     <button 
                         onClick={handleGenerate}
                         disabled={isLoading || monthMatches.length === 0}
@@ -427,54 +395,76 @@ const CoachReport: React.FC<CoachReportProps> = ({ profile, matches }) => {
 
                 {/* Report Display - Enhanced Letterhead Style */}
                 {currentReport && (
-                    <div className="bg-white rounded-xl shadow-2xl overflow-hidden animate-fade-in-up border border-slate-200 relative mt-4">
-                        {/* Paper Texture Overlay */}
-                        <div className="absolute inset-0 opacity-5 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')]"></div>
+                    <div className="animate-fade-in-up">
+                        <div ref={reportRef} className="bg-white rounded-xl shadow-2xl overflow-hidden border border-slate-200 relative mb-4">
+                            {/* Paper Texture Overlay */}
+                            <div className="absolute inset-0 opacity-5 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')]"></div>
 
-                        {/* Report Header */}
-                        <div className={`${getReportHeaderStyle(currentReport.coachPersona)} p-6 text-white relative overflow-hidden pb-8`}>
-                             {/* Abstract Background Shapes */}
-                             <div className="absolute top-[-50%] right-[-10%] w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
-                             
-                             <div className="relative z-10 flex items-center justify-between">
-                                 <div>
-                                     <div className="text-[10px] font-bold uppercase tracking-widest opacity-70 mb-1">{t.coachSays}</div>
-                                     <h3 className="text-2xl font-bold font-serif leading-none tracking-tight">
-                                         {currentReport.customCoachName || COACH_NAMES[currentReport.coachPersona]}
-                                     </h3>
-                                     <div className="text-[10px] opacity-60 mt-1 font-mono">{new Date(currentReport.generatedAt).toLocaleDateString()}</div>
-                                 </div>
-                             </div>
-                        </div>
-
-                        {/* Avatar Overlap */}
-                        <div className="absolute top-16 right-6 w-20 h-20 rounded-full border-4 border-white shadow-lg overflow-hidden bg-white z-20">
-                             {renderAvatar(currentReport.coachPersona)}
-                        </div>
-
-                        {/* Report Content */}
-                        <div className="p-8 pt-10 text-slate-700 text-sm leading-loose font-typewriter relative">
-                            {/* Decorative Quote Icon */}
-                            <i className="fas fa-quote-left text-4xl text-slate-100 absolute top-6 left-4 -z-0"></i>
-                            
-                            <div className="relative z-10">
-                                <TypewriterText 
-                                    text={currentReport.content} 
-                                    onComplete={() => setShowSignature(true)}
-                                />
-                            </div>
-                            
-                            {/* Signature */}
-                            <div className={`mt-8 flex justify-end transition-opacity duration-1000 ${showSignature ? 'opacity-100' : 'opacity-0'}`}>
-                                <div className="transform rotate-[-2deg] text-center">
-                                    <div className={`text-3xl ${getSignatureFont()} ${getSignatureColor()}`}>
-                                        {currentReport.customCoachName || COACH_NAMES[currentReport.coachPersona]}
+                            {/* Report Header */}
+                            <div className={`${getReportHeaderStyle(currentReport.coachPersona)} p-6 text-white relative overflow-hidden pb-8`}>
+                                <div className="absolute top-[-50%] right-[-10%] w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
+                                
+                                <div className="relative z-10 flex items-center justify-between">
+                                    <div>
+                                        <div className="text-[10px] font-bold uppercase tracking-widest opacity-70 mb-1">{t.coachSays}</div>
+                                        <h3 className="text-2xl font-bold font-serif leading-none tracking-tight">
+                                            {currentReport.customCoachName || COACH_NAMES[currentReport.coachPersona]}
+                                        </h3>
+                                        <div className="text-[10px] opacity-60 mt-1 font-mono">{new Date(currentReport.generatedAt).toLocaleDateString()}</div>
                                     </div>
-                                    <div className="w-full h-0.5 bg-slate-300 rounded-full mt-1 opacity-50"></div>
-                                    <div className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">Head Coach</div>
+                                </div>
+                            </div>
+
+                            {/* Avatar Overlap */}
+                            <div className="absolute top-16 right-6 w-20 h-20 rounded-full border-4 border-white shadow-lg overflow-hidden bg-white z-20">
+                                {renderAvatar(currentReport.coachPersona)}
+                            </div>
+
+                            {/* Report Content with ReactMarkdown */}
+                            <div className="p-8 pt-10 text-slate-700 text-sm leading-loose font-typewriter relative">
+                                <i className="fas fa-quote-left text-4xl text-slate-100 absolute top-6 left-4 -z-0"></i>
+                                
+                                <div className="relative z-10 markdown-content">
+                                    {/* Using react-markdown for cleaner rendering */}
+                                    <ReactMarkdown 
+                                        components={{
+                                            strong: ({node, ...props}) => <span className="font-bold text-slate-900 bg-yellow-100/50 px-1 rounded" {...props} />,
+                                            ul: ({node, ...props}) => <ul className="list-disc pl-5 my-2 space-y-1" {...props} />,
+                                            li: ({node, ...props}) => <li className="pl-1" {...props} />,
+                                            p: ({node, ...props}) => <p className="mb-4" {...props} />,
+                                            h1: ({node, ...props}) => <h1 className="text-lg font-bold mb-2" {...props} />,
+                                            h2: ({node, ...props}) => <h2 className="text-base font-bold mb-2" {...props} />,
+                                        }}
+                                    >
+                                        {currentReport.content}
+                                    </ReactMarkdown>
+                                </div>
+                                
+                                {/* Signature */}
+                                <div className="mt-8 flex justify-end">
+                                    <div className="transform rotate-[-2deg] text-center">
+                                        <div className={`text-3xl ${getSignatureFont()} ${getSignatureColor()}`}>
+                                            {currentReport.customCoachName || COACH_NAMES[currentReport.coachPersona]}
+                                        </div>
+                                        <div className="w-full h-0.5 bg-slate-300 rounded-full mt-1 opacity-50"></div>
+                                        <div className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">Head Coach</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+
+                        {/* Download Button */}
+                        <button 
+                            onClick={handleDownloadLetter}
+                            disabled={isDownloading}
+                            className="w-full py-4 bg-slate-800 text-white rounded-xl font-bold shadow-lg hover:bg-slate-700 transition-all flex items-center justify-center gap-2"
+                        >
+                            {isDownloading ? (
+                                <><i className="fas fa-spinner fa-spin"></i> {t.generating}</>
+                            ) : (
+                                <><i className="fas fa-file-download"></i> Download Coach Letter</>
+                            )}
+                        </button>
                     </div>
                 )}
 
