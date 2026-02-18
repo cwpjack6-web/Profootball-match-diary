@@ -335,7 +335,7 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                                         <button onClick={(e) => onEdit(e, match)} className="text-slate-400 hover:text-blue-500 p-2"><i className="fas fa-edit"></i></button>
                                         {deleteConfirmId === match.id ? (
                                             <div className="flex items-center bg-slate-100 rounded p-1">
-                                                <button onClick={(e) => onConfirmDelete(e, match.id)} className="bg-red-500 text-white text-[10px] px-2 py-1 rounded mr-1">確認</button>
+                                                <button onClick={(e) => onConfirmDelete(e, match.id)} className="bg-red-500 text-white text-[10px] px-2 py-1 rounded mr-1">{t.delete}</button>
                                                 <button onClick={onCancelDelete} className="text-slate-400 p-1"><i className="fas fa-times"></i></button>
                                             </div>
                                         ) : (
