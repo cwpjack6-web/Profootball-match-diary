@@ -178,6 +178,11 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                                         <div className="flex flex-wrap items-center gap-2">
                                             {isSelectionMode && <div className={`w-5 h-5 rounded border flex items-center justify-center ${isSelected ? 'bg-blue-500 border-blue-500' : 'border-slate-300'}`}>{isSelected && <i className="fas fa-check text-white text-[10px]"></i>}</div>}
                                             <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">{match.date}</span>
+                                            {match.matchLabel && (
+                                                <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-2 py-1 rounded border border-purple-200 shadow-sm">
+                                                    {match.matchLabel}
+                                                </span>
+                                            )}
                                             <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border border-slate-200 text-slate-500 bg-slate-50 flex items-center gap-1`}>
                                                 {team.logo && <img src={team.logo} className="w-3 h-3 object-contain" alt="logo" />}
                                                 {team.name}
@@ -312,6 +317,11 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                                     <div className="flex flex-wrap items-center gap-2">
                                         {isSelectionMode && <div className={`w-5 h-5 rounded border flex items-center justify-center ${isSelected ? 'bg-blue-500 border-blue-500' : 'border-slate-300'}`}>{isSelected && <i className="fas fa-check text-white text-[10px]"></i>}</div>}
                                         <span className="text-xs font-bold text-slate-500 bg-white/60 px-2 py-1 rounded">{new Date(match.date).getDate()}日</span>
+                                        {match.matchLabel && (
+                                            <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-2 py-1 rounded border border-purple-200 shadow-sm">
+                                                {match.matchLabel}
+                                            </span>
+                                        )}
                                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border bg-white/80 border-slate-200 text-slate-600 flex items-center gap-1`}>
                                             {team.logo && <img src={team.logo} className="w-3 h-3 object-contain" alt="logo" />}
                                             {team.name}
@@ -332,10 +342,15 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                                 </div>
 
                                 {/* Collapsed Info Row */}
-                                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 mb-2 px-1">
+                                <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 mb-2 px-1 flex-wrap">
                                     <span className={`px-1.5 py-0.5 rounded border ${match.isHome ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-orange-50 text-orange-600 border-orange-100'}`}>
                                         {match.isHome ? t.homeShort : t.awayShort}
                                     </span>
+                                    {match.tournamentName && (
+                                        <span className="bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded border border-indigo-100 flex items-center gap-1">
+                                            <i className="fas fa-trophy text-[9px]"></i> {match.tournamentName}
+                                        </span>
+                                    )}
                                     {match.location && (
                                         <span className="flex items-center gap-1 truncate max-w-[150px]">
                                             <i className="fas fa-map-marker-alt text-slate-400"></i> {match.location}
