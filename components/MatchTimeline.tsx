@@ -333,7 +333,14 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                                     <div className="hidden sm:flex gap-2 -mr-2 -mt-2 items-center">
                                         <button onClick={(e) => onShare(e, match)} className="text-slate-400 hover:text-emerald-500 p-2"><i className="fas fa-share-alt"></i></button>
                                         <button onClick={(e) => onEdit(e, match)} className="text-slate-400 hover:text-blue-500 p-2"><i className="fas fa-edit"></i></button>
-                                        <button onClick={(e) => onTrashClick(e, match.id)} className="text-slate-400 hover:text-red-500 p-2"><i className="fas fa-trash-alt"></i></button>
+                                        {deleteConfirmId === match.id ? (
+                                            <div className="flex items-center bg-slate-100 rounded p-1">
+                                                <button onClick={(e) => onConfirmDelete(e, match.id)} className="bg-red-500 text-white text-[10px] px-2 py-1 rounded mr-1">確認</button>
+                                                <button onClick={onCancelDelete} className="text-slate-400 p-1"><i className="fas fa-times"></i></button>
+                                            </div>
+                                        ) : (
+                                            <button onClick={(e) => onTrashClick(e, match.id)} className="text-slate-400 hover:text-red-500 p-2"><i className="fas fa-trash-alt"></i></button>
+                                        )}
                                     </div>
                                     {/* Mobile Share Button (Since edit/delete are behind swipe) */}
                                     <div className="sm:hidden -mr-2 -mt-2">
