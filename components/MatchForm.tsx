@@ -25,11 +25,7 @@ const AVAILABLE_FORMATS: MatchFormat[] = ['5v5', '6v6', '7v7', '8v8', '9v9', '11
 const POSITIONS = ['FW', 'LW', 'RW', 'MF', 'DF', 'GK'];
 
 // ── Page config ────────────────────────────────────────────────────────────────
-const PAGES = [
-  { id: 1, label: '基本資料', icon: 'fa-calendar-alt' },
-  { id: 2, label: '比賽數據', icon: 'fa-futbol' },
-  { id: 3, label: '戰報記錄', icon: 'fa-pen' },
-];
+const PAGE_ICONS = ['fa-calendar-alt', 'fa-futbol', 'fa-pen'];
 
 const MatchForm: React.FC<ExtendedMatchFormProps> = ({
   isOpen, onClose, onSubmit, profile, initialData, previousMatches, onAddTeammate
@@ -142,7 +138,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
   const discardDraft = () => {
     clearDraft();
     setFormData(getInitialState());
-    showToast('草稿已清除', 'info');
+    showToast(t.draftCleared, 'info');
   };
 
   // ── Team change effect ───────────────────────────────────────────────────────
@@ -567,7 +563,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
 
       {/* Player stats counter */}
       <div className="bg-white rounded-2xl border border-slate-100 p-4 shadow-sm">
-        <label className="text-xs font-bold text-slate-400 uppercase block mb-3">個人數據</label>
+        <label className="text-xs font-bold text-slate-400 uppercase block mb-3">{t.personalStats}</label>
         <div className="flex justify-around">
           <div className="flex flex-col items-center gap-2">
             <span className="text-xs font-bold text-slate-500">{t.goals}</span>
@@ -778,7 +774,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
               {/* Draft indicator */}
               {hasDraft && !initialData?.id && (
                 <span className="text-[10px] bg-amber-400 text-amber-900 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                  <i className="fas fa-pen text-[8px]" /> 草稿
+                  <i className="fas fa-pen text-[8px]" /> {t.draft}
                 </span>
               )}
               <button onClick={onClose} className={`w-8 h-8 flex items-center justify-center rounded-full hover:bg-black/10 ${styles.headerText}`}>
@@ -789,12 +785,12 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
 
           {/* Page tabs */}
           <div className="flex gap-1">
-            {PAGES.map(page => (
-              <button key={page.id} type="button" onClick={() => setCurrentPage(page.id)}
+            {([t.formPage1, t.formPage2, t.formPage3] as string[]).map((label, idx) => (
+              <button key={idx + 1} type="button" onClick={() => setCurrentPage(idx + 1)}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
-                  currentPage === page.id ? 'bg-white text-slate-800 shadow-sm' : 'text-white/60 hover:text-white/80'}`}>
-                <i className={`fas ${page.icon} text-[9px]`} />
-                {page.label}
+                  currentPage === idx + 1 ? 'bg-white text-slate-800 shadow-sm' : 'text-white/60 hover:text-white/80'}`}>
+                <i className={`fas ${PAGE_ICONS[idx]} text-[9px]`} />
+                {label}
               </button>
             ))}
           </div>
@@ -804,10 +800,10 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
         {hasDraft && !initialData?.id && currentPage === 1 && (
           <div className="bg-amber-50 border-b border-amber-100 px-4 py-2 flex items-center justify-between flex-none">
             <span className="text-xs text-amber-700 font-bold flex items-center gap-1">
-              <i className="fas fa-history text-amber-500" /> 已恢復草稿
+              <i className="fas fa-history text-amber-500" /> {t.draftRestored}
             </span>
             <button onClick={discardDraft} className="text-[10px] text-amber-600 font-bold underline">
-              清除草稿
+              {t.draftClear}
             </button>
           </div>
         )}
@@ -819,16 +815,16 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
           {currentPage === 2 && isFixtureMode && (
             <div className="flex flex-col items-center justify-center h-48 text-slate-400">
               <i className="fas fa-calendar-check text-4xl mb-3 opacity-30" />
-              <p className="text-sm font-bold">預填賽程模式</p>
-              <p className="text-xs mt-1 opacity-60">比賽完成後才可輸入數據</p>
+              <p className="text-sm font-bold">{t.fixtureMode}</p>
+              <p className="text-xs mt-1 opacity-60">{t.fixtureModeStatsHint}</p>
             </div>
           )}
           {currentPage === 3 && !isFixtureMode && <Page3 />}
           {currentPage === 3 && isFixtureMode && (
             <div className="flex flex-col items-center justify-center h-48 text-slate-400">
               <i className="fas fa-calendar-check text-4xl mb-3 opacity-30" />
-              <p className="text-sm font-bold">預填賽程模式</p>
-              <p className="text-xs mt-1 opacity-60">比賽完成後才可填寫戰報</p>
+              <p className="text-sm font-bold">{t.fixtureMode}</p>
+              <p className="text-xs mt-1 opacity-60">{t.fixtureModeReportHint}</p>
             </div>
           )}
         </div>
@@ -839,14 +835,14 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
             {currentPage > 1 && (
               <button type="button" onClick={() => setCurrentPage(p => p - 1)}
                 className="flex-none px-5 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-slate-200 transition-colors">
-                <i className="fas fa-chevron-left text-xs" /> 上一頁
+                <i className="fas fa-chevron-left text-xs" /> {t.prevPage}
               </button>
             )}
 
             {currentPage < PAGES.length ? (
               <button type="button" onClick={() => setCurrentPage(p => p + 1)}
                 className={`flex-1 ${styles.button} font-bold py-3 rounded-xl shadow-md flex items-center justify-center gap-2 transition-all`}>
-                下一頁 <i className="fas fa-chevron-right text-xs" />
+                {t.nextPage} <i className="fas fa-chevron-right text-xs" />
               </button>
             ) : (
               <button type="button" onClick={handleSubmit}
@@ -858,9 +854,9 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
 
           {/* Page dots */}
           <div className="flex justify-center gap-2 mt-3">
-            {PAGES.map(p => (
-              <div key={p.id}
-                className={`rounded-full transition-all ${currentPage === p.id ? 'w-4 h-2 bg-blue-500' : 'w-2 h-2 bg-slate-200'}`} />
+            {[1, 2, 3].map(p => (
+              <div key={p}
+                className={`rounded-full transition-all ${currentPage === p ? 'w-4 h-2 bg-blue-500' : 'w-2 h-2 bg-slate-200'}`} />
             ))}
           </div>
         </div>
