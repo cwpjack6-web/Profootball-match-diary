@@ -134,59 +134,67 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
       );
     }
 
-    const svgW     = 600;
-    const svgH     = 160;
-    const padX     = 40;
-    const padY     = 28;
-    const graphW   = svgW - padX * 2;
-    const graphH   = svgH - padY * 2;
-
-    // Normalise each series to 0-10 scale for shared Y axis
-    const maxGoals   = Math.max(...chartData.map(d => d.goals), 1);
-    const maxAssists = Math.max(...chartData.map(d => d.assists), 1);
+    const svgW   = 600;
+    const svgH   = 170;
+    const padX   = 40;
+    const padY   = 30;
+    const graphW = svgW - padX * 2;
+    const graphH = svgH - padY * 2;
 
     const getX = (i: number) => (i / (chartData.length - 1)) * graphW + padX;
 
-    // Rating: native 0-10
-    const getRatingY = (v: number) => svgH - padY - (v / 10) * graphH;
-    // Goals: scale max → 10
-    const getGoalsY  = (v: number) => svgH - padY - (v / maxGoals) * graphH;
-    // Assists: scale max → 10
-    const getAssistsY = (v: number) => svgH - padY - (v / maxAssists) * graphH;
+    // ── Fixed Y-axis scales (not dynamic) ──────────────────────────────────
+    // Rating: always 0–10 (native scale)
+    // Goals & Assists: always 0–5 (fixed cap — scoring 5 in one match is extreme)
+    // This keeps proportions honest and consistent across all months.
+    const RATING_MAX  = 10;
+    const GA_MAX      = 5;
+
+    const getRatingY  = (v: number) => svgH - padY - (v / RATING_MAX) * graphH;
+    const getGoalsY   = (v: number) => svgH - padY - (Math.min(v, GA_MAX) / GA_MAX) * graphH;
+    const getAssistsY = (v: number) => svgH - padY - (Math.min(v, GA_MAX) / GA_MAX) * graphH;
 
     const buildPolyline = (mapper: (d: typeof chartData[0]) => number) =>
       chartData.map((d, i) => `${getX(i)},${mapper(d)}`).join(' ');
 
     const buildAreaPath = (mapper: (d: typeof chartData[0]) => number) => {
-      const pts = chartData.map((d, i) => `${getX(i)},${mapper(d)}`);
+      const pts  = chartData.map((d, i) => `${getX(i)},${mapper(d)}`);
       const first = pts[0].split(',')[0];
       const last  = pts[pts.length - 1].split(',')[0];
       return `M${first},${svgH - padY} L${pts.join(' L')} L${last},${svgH - padY} Z`;
     };
 
+    // Label Y-offsets per series to avoid stacking on the same point
+    // Rating: above dot  Goals: upper-right  Assists: upper-left
+    const LABEL_OFFSET: Record<ChartSeries, { dx: number; dy: number }> = {
+      rating:  { dx:  0, dy: -11 },
+      goals:   { dx: +9, dy:  -7 },
+      assists: { dx: -9, dy:  -7 },
+    };
+
     const SERIES_CONFIG = [
       {
-        key: 'rating'  as ChartSeries,
-        label: t.rating,
-        color: '#3b82f6',
-        gradId: 'gradRating',
-        mapper: (d: typeof chartData[0]) => getRatingY(d.rating),
+        key:      'rating'  as ChartSeries,
+        label:    t.rating,
+        color:    '#3b82f6',
+        gradId:   'gradRating',
+        mapper:   (d: typeof chartData[0]) => getRatingY(d.rating),
         getValue: (d: typeof chartData[0]) => d.rating,
       },
       {
-        key: 'goals'   as ChartSeries,
-        label: t.goals,
-        color: '#10b981',
-        gradId: 'gradGoals',
-        mapper: (d: typeof chartData[0]) => getGoalsY(d.goals),
+        key:      'goals'   as ChartSeries,
+        label:    t.goals,
+        color:    '#10b981',
+        gradId:   'gradGoals',
+        mapper:   (d: typeof chartData[0]) => getGoalsY(d.goals),
         getValue: (d: typeof chartData[0]) => d.goals,
       },
       {
-        key: 'assists' as ChartSeries,
-        label: t.assists,
-        color: '#8b5cf6',
-        gradId: 'gradAssists',
-        mapper: (d: typeof chartData[0]) => getAssistsY(d.assists),
+        key:      'assists' as ChartSeries,
+        label:    t.assists,
+        color:    '#8b5cf6',
+        gradId:   'gradAssists',
+        mapper:   (d: typeof chartData[0]) => getAssistsY(d.assists),
         getValue: (d: typeof chartData[0]) => d.assists,
       },
     ];
@@ -212,31 +220,46 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
           ))}
         </div>
 
-        <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full h-44 overflow-visible select-none">
+        <svg viewBox={`0 0 ${svgW} ${svgH}`} className="w-full h-48 overflow-visible select-none">
           <defs>
             {SERIES_CONFIG.map(s => (
               <linearGradient key={s.gradId} id={s.gradId} x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stopColor={s.color} stopOpacity="0.3" />
+                <stop offset="0%" stopColor={s.color} stopOpacity="0.2" />
                 <stop offset="100%" stopColor={s.color} stopOpacity="0" />
               </linearGradient>
             ))}
           </defs>
 
-          {/* Grid lines */}
-          {[3, 5, 7, 10].map(v => (
+          {/* Grid lines — based on rating scale (left axis) */}
+          {[2, 4, 6, 8, 10].map(v => (
             <line key={v}
               x1={padX} y1={getRatingY(v)}
               x2={svgW - padX} y2={getRatingY(v)}
               stroke="#e2e8f0" strokeDasharray="4,4" strokeWidth="1"
             />
           ))}
-          {/* Y labels (rating scale) */}
+
+          {/* Left Y-axis labels: rating scale */}
           {[5, 10].map(v => (
-            <text key={v} x={padX - 6} y={getRatingY(v) + 4}
-              textAnchor="end" fontSize="9" fill="#cbd5e1" fontWeight="bold">
+            <text key={'r' + v} x={padX - 6} y={getRatingY(v) + 4}
+              textAnchor="end" fontSize="9" fill="#94a3b8" fontWeight="bold">
               {v}
             </text>
           ))}
+
+          {/* Right Y-axis labels: goals/assists scale (0–5) */}
+          {[0, 2, 4].map(v => (
+            <text key={'g' + v} x={svgW - padX + 8} y={getGoalsY(v) + 4}
+              textAnchor="start" fontSize="9" fill="#94a3b8" fontWeight="bold">
+              {v}
+            </text>
+          ))}
+
+          {/* Right axis label */}
+          <text x={svgW - padX + 8} y={padY - 10}
+            textAnchor="start" fontSize="8" fill="#cbd5e1" fontWeight="bold">
+            G/A
+          </text>
 
           {/* Area fills */}
           {SERIES_CONFIG.filter(s => activeSeries.has(s.key)).map(s => (
@@ -258,17 +281,38 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
             />
           ))}
 
-          {/* Dots + value labels */}
+          {/* Dots + value labels
+              - Zero value → hollow dot, no label
+              - Non-zero  → solid dot, label staggered by series to avoid overlap */}
           {SERIES_CONFIG.filter(s => activeSeries.has(s.key)).map(s =>
             chartData.map((d, i) => {
-              const x = getX(i);
-              const y = s.mapper(d);
-              const val = s.getValue(d);
+              const x      = getX(i);
+              const y      = s.mapper(d);
+              const val    = s.getValue(d);
+              const isZero = val === 0;
+              const off    = LABEL_OFFSET[s.key];
+
               return (
                 <g key={s.key + i}>
-                  <circle cx={x} cy={y} r="4" fill="white" stroke={s.color} strokeWidth="2.5" />
-                  {val > 0 && (
-                    <text x={x} y={y - 9} textAnchor="middle" fontSize="9" fill={s.color} fontWeight="bold">
+                  {isZero ? (
+                    // Hollow circle for zero
+                    <circle cx={x} cy={y} r="3.5"
+                      fill="white" stroke={s.color} strokeWidth="1.5" opacity="0.5" />
+                  ) : (
+                    // Solid circle for non-zero
+                    <circle cx={x} cy={y} r="4.5"
+                      fill="white" stroke={s.color} strokeWidth="2.5" />
+                  )}
+                  {/* Label only for non-zero values */}
+                  {!isZero && (
+                    <text
+                      x={x + off.dx}
+                      y={y + off.dy}
+                      textAnchor="middle"
+                      fontSize="9"
+                      fill={s.color}
+                      fontWeight="bold"
+                    >
                       {val}
                     </text>
                   )}
