@@ -345,6 +345,30 @@ export const translations = {
     supportDevTitle: "支持開發者",
     supportDevDesc: "如果這應用程式對你有幫助，歡迎請我飲杯咖啡！你的支持有助伺服器運作及開發新功能。",
     buyCoffeeBtn: "請我飲咖啡",
+
+    // Match Form Pages & Draft
+    formPage1: "基本資料",
+    formPage2: "比賽數據",
+    formPage3: "戰報記錄",
+    personalStats: "個人數據",
+    draft: "草稿",
+    draftRestored: "已恢復草稿",
+    draftClear: "清除草稿",
+    draftCleared: "草稿已清除",
+    prevPage: "上一頁",
+    nextPage: "下一頁",
+    fixtureMode: "預填賽程模式",
+    fixtureModeStatsHint: "比賽完成後才可輸入數據",
+    fixtureModeReportHint: "比賽完成後才可填寫戰報",
+
+    // Fixture countdown (改動 3)
+    countdownToday: "今日比賽！",
+    countdownTomorrow: "明天比賽",
+    countdownDays: "{n} 日後",
+
+    // Month summary (改動 1) — uses existing keys: win/draw/loss/goals/avgRating
+
+    // Scorer list (改動 9) — uses existing key: whoScored
   },
   en: {
     // General
@@ -692,5 +716,25 @@ export const translations = {
     supportDevTitle: "Support Development",
     supportDevDesc: "If you enjoy using Match Diary, consider buying me a coffee! Your support keeps the servers running and features coming.",
     buyCoffeeBtn: "Buy me a Coffee",
+
+    // Match Form Pages & Draft
+    formPage1: "Match Info",
+    formPage2: "Match Data",
+    formPage3: "Report",
+    personalStats: "Personal Stats",
+    draft: "Draft",
+    draftRestored: "Draft restored",
+    draftClear: "Clear draft",
+    draftCleared: "Draft cleared",
+    prevPage: "Back",
+    nextPage: "Next",
+    fixtureMode: "Fixture Mode",
+    fixtureModeStatsHint: "Complete the match to enter stats",
+    fixtureModeReportHint: "Complete the match to write a report",
+
+    // Fixture countdown (改動 3)
+    countdownToday: "Today!",
+    countdownTomorrow: "Tomorrow",
+    countdownDays: "In {n} days",
   }
 };
