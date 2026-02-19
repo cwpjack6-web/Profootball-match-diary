@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { MatchData, UserProfile, Team } from './types';
 import { 
@@ -20,7 +19,7 @@ import ProfileSetup from './components/ProfileSetup';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
 import CoverPage from './components/CoverPage';
 import SyncModal from './components/SyncModal';
-import ShareModal from './components/ShareModal';
+import ShareCard from './components/ShareCard';           // ← 換成統一組件
 import OpponentStatsModal from './components/OpponentStatsModal';
 import MatchTimeline from './components/MatchTimeline';
 import VideoModal from './components/VideoModal';
@@ -71,13 +70,15 @@ const App: React.FC = () => {
   const [selectedOpponent, setSelectedOpponent] = useState<string | null>(null);
   const [viewingVideoId, setViewingVideoId] = useState<string | null>(null);
 
+  // ── 新增：賽季分享 state ──────────────────────────────────────────────────
+  const [showSeasonShare, setShowSeasonShare] = useState(false);
+
   useEffect(() => {
     const profiles = getAllProfiles();
     setAllProfiles(profiles);
     setCurrentView('cover');
     setLoading(false);
     
-    // Check version for What's New Modal
     const lastVersion = localStorage.getItem('arthur_app_version');
     if (lastVersion !== APP_VERSION) {
         setShowWhatsNew(true);
@@ -108,12 +109,9 @@ const App: React.FC = () => {
       setShowBackupAlert(isBackupNeeded());
   };
 
-  // Helper for View Transitions
   const transitionView = (view: AppView) => {
     if ((document as any).startViewTransition) {
-      (document as any).startViewTransition(() => {
-        setCurrentView(view);
-      });
+      (document as any).startViewTransition(() => { setCurrentView(view); });
     } else {
       setCurrentView(view);
     }
@@ -121,19 +119,15 @@ const App: React.FC = () => {
 
   const transitionTab = (tab: Tab) => {
     if ((document as any).startViewTransition) {
-      (document as any).startViewTransition(() => {
-        setActiveTab(tab);
-      });
+      (document as any).startViewTransition(() => { setActiveTab(tab); });
     } else {
       setActiveTab(tab);
     }
   };
 
-  // --- FILTER LOGIC with Archive Support ---
   const filteredMatches = useMemo(() => {
     let result = matches;
 
-    // 1. Archive Filter (Hide archived teams unless toggle is on)
     if (!showArchived && activeProfile) {
         result = result.filter(m => {
             const team = getTeamById(activeProfile.teams, m.teamId);
@@ -141,12 +135,10 @@ const App: React.FC = () => {
         });
     }
 
-    // 2. Team Filter
     if (quickTeamFilter !== 'all') {
         result = result.filter(m => m.teamId === quickTeamFilter);
     }
 
-    // 3. Search
     if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         result = result.filter(m => 
@@ -158,7 +150,6 @@ const App: React.FC = () => {
     return result;
   }, [matches, quickTeamFilter, searchQuery, showArchived, activeProfile]);
 
-  // --- FORM GUIDE LOGIC (Last 5) ---
   const formGuide = useMemo(() => {
       if (!activeProfile || matches.length === 0) return null;
       
@@ -168,12 +159,8 @@ const App: React.FC = () => {
           relevantMatches = relevantMatches.filter(m => m.teamId === quickTeamFilter);
       }
       
-      // Sort by date descending (newest first)
       relevantMatches.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      
-      // Take top 5 and reverse for display (Oldest -> Newest: Left to Right)
       const last5 = relevantMatches.slice(0, 5).reverse();
-      
       if (last5.length === 0) return null;
 
       return last5.map(m => {
@@ -182,7 +169,6 @@ const App: React.FC = () => {
           return 'D';
       });
   }, [matches, quickTeamFilter, activeProfile]);
-
 
   // --- Handlers ---
 
@@ -231,15 +217,13 @@ const App: React.FC = () => {
           const updatedProfile = profiles.find(p => p.id === activeProfile.id);
           if (updatedProfile) setActiveProfile(updatedProfile);
       }
-      checkBackupStatus(); // Re-check backup status
+      checkBackupStatus();
       showToast(t.syncSuccess, 'success');
   };
 
   const handleFormSubmit = (data: Omit<MatchData, 'id'>) => {
     if (!activeProfile) return;
     
-    // Check if editingMatch exists AND has an ID. 
-    // Duplicated matches have editingMatch set, but ID is empty, so they should be treated as NEW.
     if (editingMatch && editingMatch.id) {
       const updatedList = updateMatchInStorage({ ...data, id: editingMatch.id, profileId: activeProfile.id });
       setMatches(updatedList);
@@ -253,11 +237,9 @@ const App: React.FC = () => {
     setEditingMatch(null);
   };
 
-  // --- Standard Handlers ---
   const handleDuplicateLast = () => {
     if (matches.length === 0) { setIsFormOpen(true); return; }
     const sorted = [...matches].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    // Duplicate logic: Empty ID means it will be saved as new
     setEditingMatch({ ...sorted[0], id: '', scoreMyTeam: 0, scoreOpponent: 0, scorers: [], arthurGoals: 0, arthurAssists: 0, dadComment: '', kidInterview: '', videos: [], rating: 8, isMotm: false });
     setIsFormOpen(true);
   };
@@ -272,31 +254,24 @@ const App: React.FC = () => {
   const toggleSelectionMode = () => { setIsSelectionMode(!isSelectionMode); setSelectedMatchIds(new Set()); };
   const handleSelectMatch = (id: string) => { const n = new Set(selectedMatchIds); if(n.has(id)) n.delete(id); else n.add(id); setSelectedMatchIds(n); };
   
-  // --- Bulk Selection Logic ---
   const handleSelectAllFiltered = () => {
       const allIds = new Set(filteredMatches.map(m => m.id));
       setSelectedMatchIds(allIds);
   };
 
-  // --- Comprehensive Text Report Generation ---
   const generateTextReport = (ids: Set<string>): string => {
     if (!activeProfile) return '';
     const selected = matches.filter(m => ids.has(m.id)).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     
     return selected.map(m => {
         const team = getTeamById(activeProfile.teams, m.teamId);
-        
-        // Match Context
         const homeAway = m.isHome ? t.home : t.away;
         const matchType = m.matchType ? (m.matchType === 'league' ? t.typeLeague : m.matchType === 'cup' ? t.typeCup : t.typeFriendly) : '';
         const locationStr = m.location ? `@ ${m.location}` : '';
         const contextLine = [matchType, homeAway, locationStr].filter(Boolean).join(' | ');
-
-        // Result & Score
         const isScheduled = m.status === 'scheduled';
         const resultSymbol = isScheduled ? '⏳' : (m.scoreMyTeam > m.scoreOpponent ? '✅' : m.scoreMyTeam < m.scoreOpponent ? '❌' : '🤝');
         
-        // Stats
         let statsParts = [];
         if (!isScheduled) {
             if (m.arthurGoals > 0) statsParts.push(`⚽ ${m.arthurGoals} ${t.goals}`);
@@ -306,29 +281,17 @@ const App: React.FC = () => {
         }
         const statsLine = statsParts.join('  ');
 
-        // Times
         let timeParts = [];
         if (m.matchTime) timeParts.push(`⏰ ${t.matchTime}: ${m.matchTime}`);
         if (m.assemblyTime) timeParts.push(`👥 ${t.assemblyTime}: ${m.assemblyTime}`);
         const timeLine = timeParts.join(' | ');
 
-        // Extra details
         let extraLine = '';
-        const positions = Array.isArray(m.positionPlayed) 
-            ? m.positionPlayed.join(', ') 
-            : typeof m.positionPlayed === 'string' 
-                ? m.positionPlayed 
-                : '';
-
+        const positions = Array.isArray(m.positionPlayed) ? m.positionPlayed.join(', ') : typeof m.positionPlayed === 'string' ? m.positionPlayed : '';
         if (m.pitchType || m.weather || positions) {
-            extraLine = [
-                m.pitchType, 
-                m.weather, 
-                positions
-            ].filter(Boolean).join(' • ');
+            extraLine = [m.pitchType, m.weather, positions].filter(Boolean).join(' • ');
         }
 
-        // Build Block
         let block = `📅 ${m.date} (${team.name})\n`;
         if (timeLine) block += `${timeLine}\n`;
         block += `${contextLine}\n`;
@@ -371,12 +334,21 @@ const App: React.FC = () => {
       handleUpdateProfileFromManager(updated);
   };
 
-  // Determine Active Team for Logo Logic
   const activeTeam = quickTeamFilter !== 'all' 
       ? getTeamById(activeProfile?.teams || [], quickTeamFilter)
-      : activeProfile?.teams?.[0]; // Default to first team if all shown
+      : activeProfile?.teams?.[0];
 
   const mainTheme = activeTeam ? getTeamColorStyles(activeTeam.themeColor) : getTeamColorStyles('blue');
+
+  // ── 賽季分享 title ─────────────────────────────────────────────────────────
+  const seasonShareTitle = useMemo(() => {
+    if (!activeProfile) return '';
+    const teamName = quickTeamFilter !== 'all'
+      ? getTeamById(activeProfile.teams, quickTeamFilter)?.name ?? ''
+      : activeProfile.teams[0]?.name ?? '';
+    const year = new Date().getFullYear();
+    return teamName ? `${teamName} · ${year}` : `${year}`;
+  }, [activeProfile, quickTeamFilter]);
 
   if (loading) return null;
   if (currentView === 'setup') return <ProfileSetup initialProfile={activeProfile} onSave={handleSaveProfile} onCancel={() => setCurrentView('cover')} />;
@@ -411,7 +383,6 @@ const App: React.FC = () => {
                 {!isSelectionMode && (
                     <button onClick={() => { setSyncSubset(null); setIsSyncOpen(true); }} className="relative bg-black/20 hover:bg-black/30 text-white w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors">
                         <i className="fas fa-qrcode text-sm"></i>
-                        {/* Backup Notification Dot */}
                         {showBackupAlert && <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>}
                     </button>
                 )}
@@ -429,7 +400,6 @@ const App: React.FC = () => {
             
             {activeTab === 'matches' && (
             <div className="animate-fade-in relative">
-                {/* Team Filter & Archive Toggle */}
                 {activeProfile.teams.length > 0 && matches.length > 0 && (
                   <div className="sticky top-0 z-20 bg-slate-100/95 backdrop-blur-sm border-b border-slate-200/50 shadow-sm">
                       <div className="px-4 py-3 flex gap-2 overflow-x-auto no-scrollbar items-center">
@@ -440,9 +410,19 @@ const App: React.FC = () => {
                           })}
                           <div className="w-px h-6 bg-slate-300 mx-1"></div>
                           <button onClick={() => setShowArchived(!showArchived)} className={`flex-none w-8 h-8 rounded-full flex items-center justify-center border transition-all ${showArchived ? 'bg-orange-100 text-orange-600 border-orange-200' : 'bg-white text-slate-400 border-slate-200'}`} title="Toggle Archives"><i className="fas fa-archive text-xs"></i></button>
+                          
+                          {/* ── 賽季分享按鈕 ── */}
+                          {filteredMatches.filter(m => m.status !== 'scheduled').length > 0 && (
+                            <button
+                              onClick={() => setShowSeasonShare(true)}
+                              className="flex-none w-8 h-8 rounded-full flex items-center justify-center border bg-white text-slate-400 border-slate-200 hover:text-yellow-500 hover:border-yellow-300 transition-all"
+                              title={t.shareSeason}
+                            >
+                              <i className="fas fa-trophy text-xs"></i>
+                            </button>
+                          )}
                       </div>
                       
-                      {/* FORM GUIDE - Visible below filter */}
                       {formGuide && (
                           <div className="px-4 pb-2 pt-0 flex justify-end items-center gap-2 text-[10px] animate-fade-in">
                               <span className="font-bold text-slate-400 uppercase">{t.last5}:</span>
@@ -476,15 +456,10 @@ const App: React.FC = () => {
                          <button onClick={handleSwitchUser} className="w-full py-3 bg-slate-50 text-slate-600 rounded-xl font-bold hover:bg-slate-100">{t.switchUser}</button>
                      </div>
 
-                     {/* Support Card */}
                      <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-2xl shadow-sm border border-orange-100 w-full text-center relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-24 h-24 bg-orange-100/50 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
-                        
                         <h3 className="text-lg font-bold text-slate-800 mb-2">{t.supportDevTitle}</h3>
-                        <p className="text-xs text-slate-600 mb-4 leading-relaxed opacity-90">
-                            {t.supportDevDesc}
-                        </p>
-                        
+                        <p className="text-xs text-slate-600 mb-4 leading-relaxed opacity-90">{t.supportDevDesc}</p>
                         <a 
                             href="https://buymeacoffee.com/jcfromhk" 
                             target="_blank" 
@@ -538,13 +513,35 @@ const App: React.FC = () => {
         </div>
       </nav>
 
+      {/* ── Modals ── */}
       <MatchForm isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} onSubmit={handleFormSubmit} profile={activeProfile} initialData={editingMatch} previousMatches={matches} onAddTeammate={handleAddTeammate} />
       <SyncModal isOpen={isSyncOpen} onClose={() => setIsSyncOpen(false)} matches={matches} profile={activeProfile} onSyncComplete={handleSyncComplete} syncOnlyMatches={syncSubset} />
       <VideoModal isOpen={!!viewingVideoId} videoId={viewingVideoId} onClose={() => setViewingVideoId(null)} />
-      {shareMatch && activeProfile && <ShareModal isOpen={!!shareMatch} onClose={() => setShareMatch(null)} match={shareMatch} profile={activeProfile} />}
-      {selectedOpponent && activeProfile && <OpponentStatsModal isOpen={!!selectedOpponent} onClose={() => setSelectedOpponent(null)} opponentName={selectedOpponent} allMatches={matches} profile={activeProfile} />}
       
-      {/* What's New Modal */}
+      {/* 單場分享 — mode="match" */}
+      {shareMatch && (
+        <ShareCard
+          mode="match"
+          isOpen={!!shareMatch}
+          onClose={() => setShareMatch(null)}
+          match={shareMatch}
+          profile={activeProfile}
+        />
+      )}
+
+      {/* 賽季分享 — mode="season" */}
+      {showSeasonShare && (
+        <ShareCard
+          mode="season"
+          isOpen={showSeasonShare}
+          onClose={() => setShowSeasonShare(false)}
+          matches={filteredMatches}
+          profile={activeProfile}
+          title={seasonShareTitle}
+        />
+      )}
+
+      {selectedOpponent && <OpponentStatsModal isOpen={!!selectedOpponent} onClose={() => setSelectedOpponent(null)} opponentName={selectedOpponent} allMatches={matches} profile={activeProfile} />}
       <WhatsNewModal isOpen={showWhatsNew} onClose={handleCloseWhatsNew} />
     </div>
   );
