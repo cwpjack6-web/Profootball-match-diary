@@ -348,9 +348,9 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
       <div className="bg-white rounded-xl p-5 shadow border border-slate-100">
         <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
           <i className="fas fa-crosshairs text-emerald-500" />
-          進攻影響力
+          {t.attackInfluence}
           <span className="text-[10px] font-normal text-slate-400 ml-1">
-            (G+A ÷ 球隊總入球)
+            {t.attackInfluenceFormula}
           </span>
         </h3>
 
@@ -368,7 +368,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-2xl font-black text-slate-800 leading-none">{pct}%</span>
-              <span className="text-[9px] font-bold text-slate-400 uppercase">影響力</span>
+              <span className="text-[9px] font-bold text-slate-400 uppercase">{t.influence}</span>
             </div>
           </div>
 
@@ -384,7 +384,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
             <div className="flex justify-between items-center">
               <span className="text-xs text-slate-500 flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-slate-300 inline-block" />
-                球隊總入球
+                {t.teamTotalGoals}
               </span>
               <span className="text-sm font-black text-slate-800">{stats.teamGoals}</span>
             </div>
@@ -399,10 +399,10 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
             </div>
             <p className="text-[10px] text-slate-400 leading-snug">
               {pct >= 50
-                ? '🔥 進攻核心！球隊超過一半入球與你有關。'
+                ? t.attackTierCore
                 : pct >= 25
-                  ? '⚡ 重要貢獻！你是球隊的主要進攻力量之一。'
-                  : '📈 繼續努力，你的進攻參與正在增長！'}
+                  ? t.attackTierKey
+                  : t.attackTierGrowing}
             </p>
           </div>
         </div>
