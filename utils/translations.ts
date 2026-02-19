@@ -1,4 +1,3 @@
-
 export const translations = {
   zh: {
     // General
@@ -234,6 +233,15 @@ export const translations = {
     streakUnbeaten: "不敗",
     goalDist: "入球分佈",
     achievements: "成長歷程",
+
+    // Attack Influence (new)
+    attackInfluence: "進攻影響力",
+    attackInfluenceFormula: "(G+A ÷ 球隊總入球)",
+    influence: "影響力",
+    teamTotalGoals: "球隊總入球",
+    attackTierCore: "🔥 進攻核心！球隊超過一半入球與你有關。",
+    attackTierKey: "⚡ 重要貢獻！你是球隊的主要進攻力量之一。",
+    attackTierGrowing: "📈 繼續努力，你的進攻參與正在增長！",
     
     // Badges & Growth
     growthLevel: "球員等級",
@@ -363,7 +371,7 @@ export const translations = {
     navMatches: "Matches",
     navStats: "Stats",
     navProfile: "Profile",
-    navCoach: "Coach", // New
+    navCoach: "Coach",
     manageTeams: "Teams",
 
     // Match Types
@@ -563,7 +571,7 @@ export const translations = {
     totalAssists: "Total Assists",
     matchesPlayed: "Matches",
     avgRating: "Avg Rating",
-    ratingTrend: "Rating Trend",
+    ratingTrend: "Performance Trend",
     trendNeedMoreData: "Need at least 2 matches to show trend",
     teamContribution: "Team Contribution",
     currentStreak: "Current Streak",
@@ -572,6 +580,15 @@ export const translations = {
     streakUnbeaten: "Unbeaten",
     goalDist: "Goal Distribution",
     achievements: "Growth Journey",
+
+    // Attack Influence (new)
+    attackInfluence: "Attack Influence",
+    attackInfluenceFormula: "(G+A ÷ Team Goals)",
+    influence: "Influence",
+    teamTotalGoals: "Team Goals",
+    attackTierCore: "🔥 Attack Core! Over half the team's goals involve you.",
+    attackTierKey: "⚡ Key Contributor! You're one of the team's main attacking forces.",
+    attackTierGrowing: "📈 Keep going — your attacking involvement is growing!",
 
     // Badges & Growth
     growthLevel: "Player Level",
@@ -610,7 +627,7 @@ export const translations = {
 
     // Share
     shareMatch: "Share Result",
-    shareSeason: "Share Recap",
+    shareSeason: "Share Season Recap",
     uploadPhoto: "Upload Photo",
     uploadPhotoDesc: "Choose an action shot for background",
     generating: "Generating...",
