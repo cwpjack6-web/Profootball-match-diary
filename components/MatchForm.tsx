@@ -151,7 +151,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
           ...prev,
           matchFormat: team.defaultMatchFormat || '7v7',
           matchStructure: newStructure,
-          periodsPlayed: newStructure === 'halves' ? 2 : 4,
+          periodsPlayed: formData.periodsPlayed || (newStructure === 'halves' ? 2 : 4),
         }));
       }
     }
@@ -230,15 +230,20 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
 
   const adjustPeriods = (delta: number) => {
     setFormData(prev => {
-      const max = prev.matchStructure === 'halves' ? 2 : 4;
+      const isLeague = (prev.matchType || 'league') === 'league';
+      const max = isLeague ? (prev.matchStructure === 'halves' ? 2 : 4) : 99;
       return { ...prev, periodsPlayed: Math.min(max, Math.max(0, prev.periodsPlayed + delta)) };
     });
   };
 
   const setMatchStructure = (structure: MatchStructure) => {
     setFormData(prev => {
-      const max = structure === 'halves' ? 2 : 4;
-      return { ...prev, matchStructure: structure, periodsPlayed: Math.min(prev.periodsPlayed, max) };
+      const isLeague = (prev.matchType || 'league') === 'league';
+      const defaultPeriods = structure === 'halves' ? 2 : 4;
+      const newPeriods = isLeague
+        ? defaultPeriods  // reset to standard for league
+        : (prev.periodsPlayed || defaultPeriods); // keep existing for cup/friendly
+      return { ...prev, matchStructure: structure, periodsPlayed: newPeriods };
     });
   };
 
