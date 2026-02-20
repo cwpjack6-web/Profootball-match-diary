@@ -289,8 +289,15 @@ const GrowthStory: React.FC<GrowthStoryProps> = ({ profile, matches }) => {
             ))}
           </div>
         ) : (
-          <div className="text-center py-4 text-slate-400 text-sm">
-            {language === 'zh' ? '呢個時期冇記錄' : 'No matches in this period'}
+          <div className="flex flex-col items-center py-8 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center mb-3">
+              <i className="fas fa-seedling text-2xl text-emerald-200" />
+            </div>
+            <p className="text-sm font-black text-slate-500 mb-1">{t.emptyGrowthTitle}</p>
+            <p className="text-xs text-slate-400 leading-relaxed mb-2">{t.emptyGrowthDesc}</p>
+            <span className="text-[10px] text-emerald-500 font-bold bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">
+              {t.emptyGrowthHint}
+            </span>
           </div>
         )}
 
