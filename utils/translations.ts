@@ -364,6 +364,7 @@ export const translations = {
 
     // Analytics tab labels
     drillDownHint: "撳任何場次可查看完整戰報",
+    drillDownHintNav: "撳入去睇完整戰報",
         tab_overview: "總覽",
     tab_context: "環境",
     tab_growth: "成長",
@@ -388,6 +389,7 @@ export const translations = {
     // Analytics tab labels and units
     // Analytics tab labels
     drillDownHint: "Tap any match to view the full report",
+    drillDownHintNav: "Tap to view full match report",
         tab_overview: "Overview",
     tab_context: "Context",
     tab_growth: "Growth",
