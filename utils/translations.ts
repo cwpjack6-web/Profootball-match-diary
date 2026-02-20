@@ -361,6 +361,20 @@ export const translations = {
     fixtureModeStatsHint: "比賽完成後才可輸入數據",
     fixtureModeReportHint: "比賽完成後才可填寫戰報",
 
+
+    // Analytics tab labels
+    tab_overview: "總覽",
+    tab_context: "環境",
+    tab_growth: "成長",
+    tab_opponent: "對手",
+    matchesUnit: "場",
+    winShort: "勝",
+    drawShort: "和",
+    lossShort: "負",
+    notEnoughData: "數據不足，繼續記錄比賽吧！",
+    progressNeedMore: "需要至少 4 場比賽才能計算進步速度",
+    opponentNeedMore: "需要對同一對手至少 2 場記錄才能顯示難度排名",
+
     // Fixture countdown (改動 3)
     countdownToday: "今日比賽！",
     countdownTomorrow: "明天比賽",
@@ -369,6 +383,20 @@ export const translations = {
     // Month summary (改動 1) — uses existing keys: win/draw/loss/goals/avgRating
 
     // Scorer list (改動 9) — uses existing key: whoScored
+
+    // Analytics tab labels and units
+    // Analytics tab labels
+    tab_overview: "Overview",
+    tab_context: "Context",
+    tab_growth: "Growth",
+    tab_opponent: "Opponent",
+    matchesUnit: " matches",
+    winShort: "W",
+    drawShort: "D",
+    lossShort: "L",
+    notEnoughData: "Not enough data yet — keep logging matches!",
+    progressNeedMore: "Need at least 4 matches to calculate progress",
+    opponentNeedMore: "Need 2+ matches vs same opponent to show difficulty ranking",
 
     // Analytics new modules
     streakTitle: "連勝走勢",
