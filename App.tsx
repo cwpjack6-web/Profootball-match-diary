@@ -334,6 +334,24 @@ const App: React.FC = () => {
       handleUpdateProfileFromManager(updated);
   };
 
+  // Navigate from Analytics drill-down to a specific match in the matches tab
+  const handleNavigateToMatch = (matchId: string) => {
+    transitionTab('matches');
+    // Expand the target match after tab switch (small delay for render)
+    setTimeout(() => {
+      setExpandedMatchIds(prev => {
+        const next = new Set(prev);
+        next.add(matchId);
+        return next;
+      });
+      // Scroll to the match card
+      setTimeout(() => {
+        const el = document.getElementById(`match-${matchId}`);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }, 50);
+  };
+
   const activeTeam = quickTeamFilter !== 'all' 
       ? getTeamById(activeProfile?.teams || [], quickTeamFilter)
       : activeProfile?.teams?.[0];
@@ -394,7 +412,7 @@ const App: React.FC = () => {
       {/* CONTENT */}
       <main className="flex-1 overflow-y-auto pb-40 relative bg-slate-100 w-full min-h-0">
         <div className="max-w-2xl mx-auto min-h-full">
-            {activeTab === 'stats' && <AnalyticsDashboard matches={matches} profile={activeProfile} />}
+            {activeTab === 'stats' && <AnalyticsDashboard matches={matches} profile={activeProfile} onNavigateToMatch={handleNavigateToMatch} />}
             {activeTab === 'teams' && <TeamManager profile={activeProfile} onUpdateProfile={handleUpdateProfileFromManager} />}
             {activeTab === 'coach' && <CoachReport profile={activeProfile} matches={matches} />}
             
