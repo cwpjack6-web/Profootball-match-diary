@@ -355,7 +355,7 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                     .filter(Boolean) as { name: string; number?: string; count: number }[];
 
                   return (
-                    <div key={match.id} className="relative overflow-hidden rounded-xl">
+                    <div key={match.id} id={`match-${match.id}`} className="relative overflow-hidden rounded-xl">
                       {/* Swipe actions */}
                       <div className="absolute inset-y-0 right-0 flex w-32">
                         <button onClick={e => onEdit(e, match)} className="w-1/2 bg-blue-500 text-white flex items-center justify-center font-bold text-xs">
