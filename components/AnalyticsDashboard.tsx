@@ -30,6 +30,14 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
   // Badges collapsible
   const [badgesExpanded, setBadgesExpanded] = useState(false);
 
+  // Drill-down sheet
+  interface DrillDown {
+    title: string;
+    icon: string;
+    matches: typeof filteredMatches;
+  }
+  const [drillDown, setDrillDown] = useState<DrillDown | null>(null);
+
   const completedMatches = useMemo(() => {
     return matches.filter(m => m.status !== 'scheduled');
   }, [matches]);
@@ -539,6 +547,86 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
     );
   };
 
+  // ── DrillDown Sheet ──────────────────────────────────────────────────────
+  const DrillDownSheet = ({ data }: { data: DrillDown }) => {
+    const sorted = [...data.matches].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return (
+      <div className="fixed inset-0 z-[90] flex flex-col justify-end" onClick={() => setDrillDown(null)}>
+        {/* Backdrop */}
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+        {/* Sheet */}
+        <div className="relative z-10 bg-white rounded-t-2xl shadow-2xl max-h-[75vh] flex flex-col" style={{ animation: "slideUp 0.28s cubic-bezier(0.32,0.72,0,1)" }}
+          onClick={e => e.stopPropagation()}>
+          {/* Handle */}
+          <div className="flex justify-center pt-3 pb-1">
+            <div className="w-10 h-1 bg-slate-200 rounded-full" />
+          </div>
+          {/* Header */}
+          <div className="px-4 py-3 flex items-center justify-between border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <i className={`fas ${data.icon} text-blue-500`} />
+              <span className="font-black text-slate-800 text-sm">{data.title}</span>
+              <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">
+                {sorted.length}{t.matchesUnit}
+              </span>
+            </div>
+            <button onClick={() => setDrillDown(null)} className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+              <i className="fas fa-times text-xs" />
+            </button>
+          </div>
+          {/* List */}
+          <div className="overflow-y-auto flex-1 divide-y divide-slate-50">
+            {sorted.map(m => {
+              const isWin  = m.scoreMyTeam > m.scoreOpponent;
+              const isLoss = m.scoreMyTeam < m.scoreOpponent;
+              const resultBg = isWin ? 'border-l-emerald-500' : isLoss ? 'border-l-rose-400' : 'border-l-slate-300';
+              return (
+                <div key={m.id} className={`flex items-center gap-3 px-4 py-3 border-l-4 ${resultBg}`}>
+                  {/* Date */}
+                  <div className="w-14 shrink-0">
+                    <div className="text-[10px] font-black text-slate-500">{m.date.slice(5)}</div>
+                    <div className="text-[9px] text-slate-300">{m.date.slice(0, 4)}</div>
+                  </div>
+                  {/* Opponent + badges */}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-black text-slate-700 truncate">{m.opponent}</div>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      {m.isHome
+                        ? <span className="text-[9px] font-bold bg-blue-50 text-blue-500 px-1 rounded">{t.homeShort}</span>
+                        : <span className="text-[9px] font-bold bg-orange-50 text-orange-500 px-1 rounded">{t.awayShort}</span>}
+                      {m.matchFormat && <span className="text-[9px] text-slate-400 font-bold">{m.matchFormat}</span>}
+                      {m.isMotm && <span className="text-[9px] bg-yellow-100 text-yellow-700 font-bold px-1 rounded">MOTM</span>}
+                    </div>
+                  </div>
+                  {/* Score */}
+                  <div className="font-mono font-black text-base text-slate-800 shrink-0">
+                    {m.scoreMyTeam}–{m.scoreOpponent}
+                  </div>
+                  {/* Personal stats */}
+                  <div className="flex flex-col items-end gap-0.5 shrink-0 w-12">
+                    {(m.arthurGoals > 0 || m.arthurAssists > 0) && (
+                      <div className="flex gap-1 text-[9px] font-bold">
+                        {m.arthurGoals > 0 && <span className="text-emerald-600">⚽{m.arthurGoals}</span>}
+                        {m.arthurAssists > 0 && <span className="text-indigo-500">👟{m.arthurAssists}</span>}
+                      </div>
+                    )}
+                    {m.rating > 0 && (
+                      <span className="text-[10px] font-black text-yellow-600">★{m.rating}</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {/* Footer */}
+          <div className="px-4 py-3 border-t border-slate-100 bg-slate-50/80">
+            <p className="text-[10px] text-slate-400 text-center">{t.drillDownHint}</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // ── Active tab state ────────────────────────────────────────────────────
   const TABS = [
     { id: 'overview',  icon: 'fa-chart-pie',    labelZh: '總覽',  labelEn: 'Overview' },
@@ -550,6 +638,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
 
   return (
     <div className="pb-32 animate-fade-in">
+      <style>{`@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
 
       {/* ── Sticky header: filters + tab bar ─────────────────────────────── */}
       <div className="sticky top-0 z-20 bg-white shadow-sm border-b border-slate-100">
@@ -740,7 +829,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
                   { label: t.home, data: homeAwayData.home, color: 'blue' },
                   { label: t.away, data: homeAwayData.away, color: 'orange' },
                 ].map(({ label, data, color }) => (
-                  <div key={label} className={`rounded-xl p-3 border bg-${color}-50 border-${color}-100`}>
+                  <button key={label} onClick={() => setDrillDown({ title: label, icon: label === t.home ? 'fa-home' : 'fa-plane', matches: filteredMatches.filter(m => label === t.home ? m.isHome : !m.isHome) })} className={`rounded-xl p-3 border bg-${color}-50 border-${color}-100 text-left w-full active:scale-95 transition-transform`}>
                     <div className={`text-xs font-black text-${color}-600 uppercase mb-2`}>{label} ({data.total}{t.matchesUnit})</div>
                     <div className="space-y-1.5">
                       <div className="flex justify-between items-center">
@@ -760,7 +849,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
                         <span>★ {data.avgRating}</span>
                       </div>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -774,7 +863,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
               </h3>
               <div className="space-y-3">
                 {matchTypeData.map(d => (
-                  <div key={d.key}>
+                  <button key={d.key} onClick={() => setDrillDown({ title: d.label, icon: 'fa-trophy', matches: filteredMatches.filter(m => (m.matchType || 'league') === d.key) })} className="w-full text-left active:bg-slate-50 rounded-lg p-1 -mx-1 transition-colors">
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: d.color }} />
@@ -795,7 +884,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
                       <span>⚽ {d.goals}</span>
                       <span>★ avg {d.avgRating}</span>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -811,7 +900,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
                 {formatData.map(d => {
                   const maxWin = Math.max(...formatData.map(x => x.winRate), 1);
                   return (
-                    <div key={d.fmt} className="flex items-center gap-3">
+                    <button key={d.fmt} onClick={() => setDrillDown({ title: d.fmt, icon: 'fa-users', matches: filteredMatches.filter(m => (m.matchFormat || 'other') === d.fmt) })} className="flex items-center gap-3 w-full text-left active:bg-slate-50 rounded-lg px-1 py-0.5 -mx-1 transition-colors">
                       <span className="text-xs font-black text-slate-600 w-12 text-center bg-slate-100 rounded px-1 py-0.5">{d.fmt}</span>
                       <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
                         <div className="h-full bg-teal-400 rounded-full transition-all"
@@ -823,7 +912,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
                         <span>{d.total}{t.matchesUnit}</span>
                         <span>★{d.avgRating}</span>
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -846,7 +935,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
                         row.key === 'hot' ? 'fa-temperature-high' : 'fa-wind';
                       const label = (t as any)[`weather${row.key.charAt(0).toUpperCase() + row.key.slice(1)}`] || row.key;
                       return (
-                        <div key={row.key} className="flex items-center gap-2">
+                        <button key={row.key} onClick={() => setDrillDown({ title: label, icon: icon, matches: filteredMatches.filter(m => m.weather === row.key) })} className="flex items-center gap-2 w-full text-left active:bg-slate-50 rounded-lg px-1 py-0.5 -mx-1 transition-colors">
                           <i className={`fas ${icon} text-sky-400 w-4 text-center text-xs`} />
                           <span className="text-xs text-slate-600 font-bold w-14">{label}</span>
                           <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -854,7 +943,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
                           </div>
                           <span className="text-[10px] font-black text-sky-600 w-8 text-right">{row.winRate}%</span>
                           <span className="text-[10px] text-slate-400 w-8 text-right">{row.total}{t.matchesUnit}</span>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -867,7 +956,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
                     {conditionData.pitchRows.map(row => {
                       const label = (t as any)[`pitch${row.key.charAt(0).toUpperCase() + row.key.slice(1)}`] || row.key;
                       return (
-                        <div key={row.key} className="flex items-center gap-2">
+                        <button key={row.key} onClick={() => setDrillDown({ title: label, icon: 'fa-layer-group', matches: filteredMatches.filter(m => m.pitchType === row.key) })} className="flex items-center gap-2 w-full text-left active:bg-slate-50 rounded-lg px-1 py-0.5 -mx-1 transition-colors">
                           <i className="fas fa-layer-group text-emerald-400 w-4 text-center text-xs" />
                           <span className="text-xs text-slate-600 font-bold w-14">{label}</span>
                           <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -875,7 +964,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
                           </div>
                           <span className="text-[10px] font-black text-emerald-600 w-8 text-right">{row.winRate}%</span>
                           <span className="text-[10px] text-slate-400 w-8 text-right">{row.total}{t.matchesUnit}</span>
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
@@ -1038,7 +1127,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
                   const isHard = d.winRate < 40;
                   const isEasy = d.winRate >= 70;
                   return (
-                    <div key={d.opp} className="flex items-center gap-2 py-1">
+                    <button key={d.opp} onClick={() => setDrillDown({ title: d.opp, icon: 'fa-chess', matches: filteredMatches.filter(m => m.opponent.trim().toLowerCase() === d.opp.trim().toLowerCase()) })} className="flex items-center gap-2 py-1 w-full text-left active:bg-slate-50 rounded-lg px-1 -mx-1 transition-colors">
                       <span className="text-base w-6 text-center">
                         {i === 0 ? '😤' : i === opponentData.length - 1 ? '😊' : ''}
                       </span>
@@ -1054,7 +1143,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
                         'bg-slate-100 text-slate-600'}`}>
                         {d.winRate}%
                       </span>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -1068,6 +1157,9 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
         </>}
 
       </div>{/* end tab content */}
+
+      {/* ── Drill-Down Sheet ──────────────────────────────────────────────── */}
+      {drillDown && <DrillDownSheet data={drillDown} />}
 
       {/* ── Badge Detail Modal ─────────────────────────────────────────────── */}
       {selectedBadge && (
