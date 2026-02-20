@@ -1125,6 +1125,6 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
       />
     </div>
   );
-
+};
 
 export default AnalyticsDashboard;
