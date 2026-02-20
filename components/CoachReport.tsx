@@ -300,7 +300,16 @@ const CoachReport: React.FC<CoachReportProps> = ({ profile, matches }) => {
                                 ))}
                             </div>
                         </div>
-                        <button onClick={handleGenerate} disabled={isLoading || monthMatches.length === 0}
+                        {monthMatches.length === 0 && selectedMonth && (
+          <div className="flex flex-col items-center py-6 text-center bg-slate-50 rounded-xl border border-slate-100">
+            <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center mb-3 shadow-sm">
+              <i className="fas fa-clipboard text-xl text-slate-300" />
+            </div>
+            <p className="text-sm font-black text-slate-500 mb-1">{language === 'zh' ? t.emptyCoachTitle : t.emptyCoachTitle}</p>
+            <p className="text-xs text-slate-400">{language === 'zh' ? t.emptyCoachDesc : t.emptyCoachDesc}</p>
+          </div>
+        )}
+        <button onClick={handleGenerate} disabled={isLoading || monthMatches.length === 0}
                             className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2
                                 ${isLoading ? 'bg-slate-400' : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500'}`}>
                             {isLoading
