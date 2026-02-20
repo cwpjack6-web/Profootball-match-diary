@@ -27,6 +27,7 @@ import TeamManager from './components/TeamManager';
 import CoachReport from './components/CoachReport';
 import WhatsNewModal from './components/WhatsNewModal';
 import QuickLogSheet from './components/QuickLogSheet';
+import OnboardingModal from './components/OnboardingModal';
 
 type AppView = 'cover' | 'setup' | 'dashboard';
 type Tab = 'matches' | 'stats' | 'teams' | 'profile' | 'coach';
@@ -55,6 +56,7 @@ const App: React.FC = () => {
   // Update Modal State
   const [showWhatsNew, setShowWhatsNew] = useState(false);
   const [showQuickLog, setShowQuickLog] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Filter & Search State
   const [quickTeamFilter, setQuickTeamFilter] = useState<string>('all');
@@ -86,11 +88,22 @@ const App: React.FC = () => {
     if (lastVersion !== APP_VERSION) {
         setShowWhatsNew(true);
     }
+
+    // Show onboarding for first-time users (no profiles, never seen onboarding)
+    const hasSeenOnboarding = localStorage.getItem('arthur_onboarding_done');
+    if (!hasSeenOnboarding && profiles.length === 0) {
+        setShowOnboarding(true);
+    }
   }, []);
   
   const handleCloseWhatsNew = () => {
       localStorage.setItem('arthur_app_version', APP_VERSION);
       setShowWhatsNew(false);
+  };
+
+  const handleOnboardingComplete = () => {
+      localStorage.setItem('arthur_onboarding_done', '1');
+      setShowOnboarding(false);
   };
 
   useEffect(() => {
@@ -594,6 +607,7 @@ const App: React.FC = () => {
       )}
 
       {selectedOpponent && <OpponentStatsModal isOpen={!!selectedOpponent} onClose={() => setSelectedOpponent(null)} opponentName={selectedOpponent} allMatches={matches} profile={activeProfile} />}
+      <OnboardingModal isOpen={showOnboarding} onComplete={handleOnboardingComplete} />
       <WhatsNewModal isOpen={showWhatsNew} onClose={handleCloseWhatsNew} />
 
       {activeProfile && (
