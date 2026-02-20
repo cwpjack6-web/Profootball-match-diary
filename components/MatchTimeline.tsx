@@ -19,11 +19,14 @@ interface MatchTimelineProps {
   onToggleExpansion: (e: React.MouseEvent, id: string) => void;
   onOpenVideo: (e: React.MouseEvent, url: string) => void;
   onOpponentClick: (e: React.MouseEvent, opponent: string) => void;
+  scrollToMatchId?: string | null;
+  onScrollToMatchDone?: () => void;
 }
 
 const MatchTimeline: React.FC<MatchTimelineProps> = ({
   matches, profile, isSelectionMode, selectedMatchIds, deleteConfirmId, expandedMatchIds,
-  onSelectMatch, onShare, onEdit, onTrashClick, onConfirmDelete, onCancelDelete, onToggleExpansion, onOpenVideo, onOpponentClick
+  onSelectMatch, onShare, onEdit, onTrashClick, onConfirmDelete, onCancelDelete, onToggleExpansion, onOpenVideo, onOpponentClick,
+  scrollToMatchId, onScrollToMatchDone
 }) => {
   const { t } = useLanguage();
   
@@ -62,6 +65,39 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
       setExpandedMonthGroups(new Set([groupKeys[0]]));
     }
   }, [groupKeys.length]);
+
+  // Auto-scroll to a specific match when navigating from Analytics
+  useEffect(() => {
+    if (!scrollToMatchId) return;
+
+    // Find which month group this match belongs to
+    const targetMatch = completed.find(m => m.id === scrollToMatchId);
+    if (!targetMatch) return;
+
+    const date = new Date(targetMatch.date);
+    const groupKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
+
+    // Ensure the month group is expanded
+    setExpandedMonthGroups(prev => {
+      if (prev.has(groupKey)) return prev;
+      const next = new Set(prev);
+      next.add(groupKey);
+      return next;
+    });
+
+    // Wait for group to render, then scroll + highlight
+    setTimeout(() => {
+      const el = document.getElementById(`match-${scrollToMatchId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Flash highlight
+        el.style.transition = 'box-shadow 0.3s';
+        el.style.boxShadow = '0 0 0 3px #3b82f6';
+        setTimeout(() => { el.style.boxShadow = ''; }, 1800);
+      }
+      if (onScrollToMatchDone) onScrollToMatchDone();
+    }, 120);
+  }, [scrollToMatchId]);
 
   const toggleMonthGroup = (key: string) => {
     setExpandedMonthGroups(prev => {
