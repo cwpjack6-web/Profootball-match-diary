@@ -1,0 +1,511 @@
+import React, { useState, useMemo, useEffect } from 'react';
+import { MatchData, UserProfile } from '../types';
+import { useLanguage } from '../context/LanguageContext';
+import { getTeamById } from '../utils/colors';
+
+interface QuickLogSheetProps {
+  isOpen: boolean;
+  onClose: () => void;
+  matches: MatchData[];
+  profile: UserProfile;
+  onSave: (matchId: string, update: Partial<MatchData>) => void;
+  onCreateMatch: (opponent: string, teamId: string) => string; // returns new match id
+}
+
+const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
+  isOpen, onClose, matches, profile, onSave, onCreateMatch
+}) => {
+  const { t, language } = useLanguage();
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  const [step, setStep] = useState<'select' | 'log'>('select');
+  const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
+  const [scoreMyTeam, setScoreMyTeam] = useState(0);
+  const [scoreOpponent, setScoreOpponent] = useState(0);
+  const [noteText, setNoteText] = useState('');
+  const [arthurGoals, setArthurGoals] = useState(0);
+  const [arthurAssists, setArthurAssists] = useState(0);
+  const [teammateGoals, setTeammateGoals] = useState<Record<string, number>>({});
+  const [newOpponent, setNewOpponent] = useState('');
+  const [selectedTeamId, setSelectedTeamId] = useState<string>('');
+  const [showNewMatchForm, setShowNewMatchForm] = useState(false);
+
+  // ── Derived ───────────────────────────────────────────────────────────────
+  const today = new Date().toISOString().split('T')[0];
+
+  const todayMatches = useMemo(() => {
+    return matches.filter(m => m.date === today)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [matches, today]);
+
+  const recentMatch = useMemo(() => {
+    if (todayMatches.length > 0) return todayMatches[0];
+    // fallback: most recent within 7 days
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 7);
+    return [...matches]
+      .filter(m => m.status !== 'scheduled' && new Date(m.date) >= cutoff)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] || null;
+  }, [matches, todayMatches]);
+
+  const selectedMatch = useMemo(() =>
+    matches.find(m => m.id === selectedMatchId) || null,
+  [matches, selectedMatchId]);
+
+  // Period count from existing dadComment (count "【節" occurrences)
+  const existingPeriodCount = useMemo(() => {
+    if (!selectedMatch?.dadComment) return 0;
+    return (selectedMatch.dadComment.match(/【節\d+】/g) || []).length;
+  }, [selectedMatch]);
+
+  const nextPeriodNum = existingPeriodCount + 1;
+
+  // For league matches, cap at standard period count
+  const isLeague = (selectedMatch?.matchType || 'league') === 'league';
+  const standardPeriods = selectedMatch?.matchStructure === 'halves' ? 2 : 4;
+  const periodLimitReached = isLeague && existingPeriodCount >= standardPeriods;
+
+  // Roster for tapping
+  const roster = useMemo(() => {
+    if (!selectedMatch) return [];
+    const team = getTeamById(profile.teams, selectedMatch.teamId);
+    return team?.roster || [];
+  }, [selectedMatch, profile]);
+
+  // ── Auto-select if only one today match ──────────────────────────────────
+  useEffect(() => {
+    if (!isOpen) return;
+    if (todayMatches.length === 1) {
+      setSelectedMatchId(todayMatches[0].id);
+      prefillFromMatch(todayMatches[0]);
+      setStep('log');
+    } else if (todayMatches.length === 0 && recentMatch) {
+      setSelectedMatchId(recentMatch.id);
+      prefillFromMatch(recentMatch);
+      setStep('log');
+    } else {
+      setStep('select');
+    }
+    setSelectedTeamId(profile.teams[0]?.id || '');
+  }, [isOpen]);
+
+  const prefillFromMatch = (m: MatchData) => {
+    setScoreMyTeam(m.scoreMyTeam || 0);
+    setScoreOpponent(m.scoreOpponent || 0);
+    setArthurGoals(0);
+    setArthurAssists(0);
+    setTeammateGoals({});
+    setNoteText('');
+  };
+
+  // ── Reset on close ────────────────────────────────────────────────────────
+  const handleClose = () => {
+    setStep('select');
+    setSelectedMatchId(null);
+    setNoteText('');
+    setArthurGoals(0);
+    setArthurAssists(0);
+    setTeammateGoals({});
+    setNewOpponent('');
+    setShowNewMatchForm(false);
+    onClose();
+  };
+
+  // ── Select match ──────────────────────────────────────────────────────────
+  const handleSelectMatch = (m: MatchData) => {
+    setSelectedMatchId(m.id);
+    prefillFromMatch(m);
+    setStep('log');
+  };
+
+  // ── Create new match then enter log ──────────────────────────────────────
+  const handleCreateAndLog = () => {
+    if (!newOpponent.trim()) return;
+    const teamId = selectedTeamId || profile.teams[0]?.id || '';
+    const newId = onCreateMatch(newOpponent.trim(), teamId);
+    setSelectedMatchId(newId);
+    setScoreMyTeam(0);
+    setScoreOpponent(0);
+    setArthurGoals(0);
+    setArthurAssists(0);
+    setTeammateGoals({});
+    setNoteText('');
+    setShowNewMatchForm(false);
+    setNewOpponent('');
+    setStep('log');
+  };
+
+  // ── Teammate goal tap ─────────────────────────────────────────────────────
+  const tapTeammateGoal = (id: string) => {
+    setTeammateGoals(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
+  };
+  const clearTeammateGoal = (id: string) => {
+    setTeammateGoals(prev => {
+      const next = { ...prev };
+      if (next[id] > 1) next[id]--;
+      else delete next[id];
+      return next;
+    });
+  };
+
+  // ── Save ──────────────────────────────────────────────────────────────────
+  const handleSave = () => {
+    if (!selectedMatchId || !selectedMatch) return;
+
+    // Build period note block
+    const periodHeader = language === 'zh'
+      ? `【節${nextPeriodNum}】`
+      : `[Period ${nextPeriodNum}]`;
+
+    const goalSummary: string[] = [];
+    if (arthurGoals > 0) goalSummary.push(`${profile.name} ⚽×${arthurGoals}`);
+    if (arthurAssists > 0) goalSummary.push(`${profile.name} 👟×${arthurAssists}`);
+    Object.entries(teammateGoals).forEach(([id, count]) => {
+      const player = roster.find(r => r.id === id);
+      if (player) goalSummary.push(`${player.name} ⚽×${count}`);
+    });
+
+    const goalLine = goalSummary.length > 0
+      ? (language === 'zh' ? `入球：${goalSummary.join('、')}\n` : `Goals: ${goalSummary.join(', ')}\n`)
+      : '';
+
+    const periodBlock = `${periodHeader}\n${goalLine}${noteText.trim()}`;
+
+    // Append to existing dadComment
+    const existingComment = selectedMatch.dadComment || '';
+    const newComment = existingComment
+      ? `${existingComment}\n\n${periodBlock}`
+      : periodBlock;
+
+    // Accumulate goals/assists
+    const totalArthurGoals = (selectedMatch.arthurGoals || 0) + arthurGoals;
+    const totalArthurAssists = (selectedMatch.arthurAssists || 0) + arthurAssists;
+
+    // Build scorers array
+    const existingScorers = selectedMatch.scorers || [];
+    const newScorers = [...existingScorers];
+    // Add Arthur goals
+    for (let i = 0; i < arthurGoals; i++) {
+      newScorers.push({ playerId: 'arthur', name: profile.name, type: 'goal' });
+    }
+    // Add teammate goals
+    Object.entries(teammateGoals).forEach(([id, count]) => {
+      const player = roster.find(r => r.id === id);
+      if (player) {
+        for (let i = 0; i < count; i++) {
+          newScorers.push({ playerId: id, name: player.name, type: 'goal' });
+        }
+      }
+    });
+
+    onSave(selectedMatchId, {
+      dadComment: newComment,
+      scoreMyTeam,
+      scoreOpponent,
+      arthurGoals: totalArthurGoals,
+      arthurAssists: totalArthurAssists,
+      scorers: newScorers,
+      status: 'completed',
+    });
+
+    handleClose();
+  };
+
+  if (!isOpen) return null;
+
+  const hasContent = noteText.trim().length > 0 || arthurGoals > 0 || arthurAssists > 0 || Object.keys(teammateGoals).length > 0;
+
+  return (
+    <div className="fixed inset-0 z-[80] flex flex-col justify-end" onClick={handleClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div
+        className="relative z-10 bg-white rounded-t-2xl shadow-2xl flex flex-col max-h-[90vh]"
+        style={{ animation: 'slideUp 0.28s cubic-bezier(0.32,0.72,0,1)' }}
+        onClick={e => e.stopPropagation()}
+      >
+        <style>{`@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
+
+        {/* Handle */}
+        <div className="flex justify-center pt-3 pb-1 shrink-0">
+          <div className="w-10 h-1 bg-slate-200 rounded-full" />
+        </div>
+
+        {/* Header */}
+        <div className="px-4 py-3 flex items-center justify-between border-b border-slate-100 shrink-0">
+          <div className="flex items-center gap-2">
+            {step === 'log' && (
+              <button onClick={() => setStep('select')} className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 mr-1">
+                <i className="fas fa-chevron-left text-xs" />
+              </button>
+            )}
+            <span className="text-sm font-black text-slate-800">
+              {step === 'select'
+                ? (language === 'zh' ? '⚡ 快速記錄' : '⚡ Quick Log')
+                : `⚡ ${language === 'zh' ? `節${nextPeriodNum}` : `Period ${nextPeriodNum}`} · vs ${selectedMatch?.opponent}`}
+            </span>
+          </div>
+          <button onClick={handleClose} className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+            <i className="fas fa-times text-xs" />
+          </button>
+        </div>
+
+        {/* ── STEP 1: Select match ─────────────────────────────────────────── */}
+        {step === 'select' && (
+          <div className="overflow-y-auto flex-1 p-4 space-y-3">
+
+            {/* Today's matches */}
+            {todayMatches.length > 0 && (
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase mb-2">
+                  {language === 'zh' ? '今日比賽' : "Today's Matches"}
+                </p>
+                <div className="space-y-2">
+                  {todayMatches.map(m => {
+                    const team = getTeamById(profile.teams, m.teamId);
+                    const periods = (m.dadComment?.match(/【節\d+】|\[Period \d+\]/g) || []).length;
+                    return (
+                      <button key={m.id} onClick={() => handleSelectMatch(m)}
+                        className="w-full flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl p-3 text-left active:scale-[0.98] transition-transform">
+                        <div className="w-9 h-9 rounded-full bg-blue-500 text-white flex items-center justify-center shrink-0">
+                          <i className="fas fa-futbol text-sm" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-black text-slate-800 text-sm">vs {m.opponent}</div>
+                          <div className="text-[10px] text-slate-500 font-bold">{team.name}
+                            {periods > 0 && <span className="ml-2 text-blue-500">
+                              {language === 'zh' ? `已記${periods}節` : `${periods} periods logged`}
+                            </span>}
+                          </div>
+                        </div>
+                        <div className="text-blue-500 font-black text-sm">{m.scoreMyTeam}–{m.scoreOpponent}</div>
+                        <i className="fas fa-chevron-right text-blue-300 text-xs" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Recent match (non-today) */}
+            {todayMatches.length === 0 && recentMatch && (
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase mb-2">
+                  {language === 'zh' ? '最近比賽' : 'Recent Match'}
+                </p>
+                <button onClick={() => handleSelectMatch(recentMatch)}
+                  className="w-full flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl p-3 text-left active:scale-[0.98] transition-transform">
+                  <div className="w-9 h-9 rounded-full bg-slate-400 text-white flex items-center justify-center shrink-0">
+                    <i className="fas fa-futbol text-sm" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-black text-slate-800 text-sm">vs {recentMatch.opponent}</div>
+                    <div className="text-[10px] text-slate-500 font-bold">{recentMatch.date}</div>
+                  </div>
+                  <i className="fas fa-chevron-right text-slate-300 text-xs" />
+                </button>
+              </div>
+            )}
+
+            {/* New match */}
+            {!showNewMatchForm ? (
+              <button onClick={() => setShowNewMatchForm(true)}
+                className="w-full flex items-center gap-3 border-2 border-dashed border-slate-200 rounded-xl p-3 text-slate-400 hover:border-blue-300 hover:text-blue-500 transition-colors">
+                <i className="fas fa-plus-circle text-lg" />
+                <span className="text-sm font-bold">
+                  {language === 'zh' ? '新增今日比賽' : 'Add new match'}
+                </span>
+              </button>
+            ) : (
+              <div className="border border-blue-200 rounded-xl p-4 space-y-3 bg-blue-50">
+                <p className="text-xs font-black text-blue-700">
+                  {language === 'zh' ? '新比賽' : 'New Match'}
+                </p>
+                <input
+                  type="text"
+                  value={newOpponent}
+                  onChange={e => setNewOpponent(e.target.value)}
+                  placeholder={language === 'zh' ? '對手名稱' : 'Opponent name'}
+                  className="w-full bg-white border border-blue-200 rounded-lg px-3 py-2 text-sm font-bold outline-none focus:border-blue-400"
+                  autoFocus
+                />
+                {profile.teams.length > 1 && (
+                  <select value={selectedTeamId} onChange={e => setSelectedTeamId(e.target.value)}
+                    className="w-full bg-white border border-blue-200 rounded-lg px-3 py-2 text-sm font-bold outline-none">
+                    {profile.teams.map(team => (
+                      <option key={team.id} value={team.id}>{team.name}</option>
+                    ))}
+                  </select>
+                )}
+                <div className="flex gap-2">
+                  <button onClick={() => setShowNewMatchForm(false)}
+                    className="flex-1 py-2 bg-white text-slate-500 rounded-lg text-sm font-bold border border-slate-200">
+                    {language === 'zh' ? '取消' : 'Cancel'}
+                  </button>
+                  <button onClick={handleCreateAndLog} disabled={!newOpponent.trim()}
+                    className="flex-1 py-2 bg-blue-500 text-white rounded-lg text-sm font-bold disabled:opacity-40">
+                    {language === 'zh' ? '建立並記錄' : 'Create & Log'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── STEP 2: Log ──────────────────────────────────────────────────── */}
+        {step === 'log' && (
+          <div className="overflow-y-auto flex-1">
+
+            {/* Existing periods summary */}
+            {existingPeriodCount > 0 && (
+              <div className="mx-4 mt-3 px-3 py-2 bg-slate-50 rounded-lg border border-slate-100">
+                <p className="text-[10px] font-black text-slate-400 uppercase">
+                  {language === 'zh' ? `已記錄 ${existingPeriodCount} 節` : `${existingPeriodCount} period(s) logged`}
+                </p>
+              </div>
+            )}
+
+            <div className="p-4 space-y-4">
+
+              {/* ① Score */}
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase mb-2">
+                  {language === 'zh' ? '累積比數' : 'Cumulative Score'}
+                </p>
+                <div className="flex items-center justify-center gap-4 bg-slate-50 rounded-xl p-4 border border-slate-100">
+                  {/* My team */}
+                  <div className="flex flex-col items-center gap-2">
+                    <span className="text-[10px] font-black text-slate-500 uppercase">{language === 'zh' ? '我方' : 'Us'}</span>
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => setScoreMyTeam(Math.max(0, scoreMyTeam - 1))}
+                        className="w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-500 text-lg font-black active:bg-slate-100 shadow-sm">−</button>
+                      <span className="text-4xl font-black text-slate-800 w-10 text-center">{scoreMyTeam}</span>
+                      <button onClick={() => setScoreMyTeam(scoreMyTeam + 1)}
+                        className="w-9 h-9 rounded-full bg-emerald-500 text-white flex items-center justify-center text-lg font-black active:bg-emerald-600 shadow-sm">+</button>
+                    </div>
+                  </div>
+                  <span className="text-2xl font-black text-slate-300 pb-1">–</span>
+                  {/* Opponent */}
+                  <div className="flex flex-col items-center gap-2">
+                    <span className="text-[10px] font-black text-slate-500 uppercase">{language === 'zh' ? '對方' : 'Them'}</span>
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => setScoreOpponent(Math.max(0, scoreOpponent - 1))}
+                        className="w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-500 text-lg font-black active:bg-slate-100 shadow-sm">−</button>
+                      <span className="text-4xl font-black text-slate-800 w-10 text-center">{scoreOpponent}</span>
+                      <button onClick={() => setScoreOpponent(scoreOpponent + 1)}
+                        className="w-9 h-9 rounded-full bg-rose-400 text-white flex items-center justify-center text-lg font-black active:bg-rose-500 shadow-sm">+</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ② Goals & Assists */}
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase mb-2">
+                  {language === 'zh' ? '本節入球 / 助攻' : 'This Period Goals / Assists'}
+                </p>
+                <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-3">
+
+                  {/* Arthur */}
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-black shrink-0">
+                      {profile.name.charAt(0)}
+                    </div>
+                    <span className="text-xs font-black text-slate-700 flex-1">{profile.name}</span>
+                    {/* Goals */}
+                    <div className="flex items-center gap-1.5">
+                      <button onClick={() => setArthurGoals(Math.max(0, arthurGoals - 1))}
+                        className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">−</button>
+                      <span className="text-sm font-black text-emerald-600 w-5 text-center">⚽{arthurGoals}</span>
+                      <button onClick={() => setArthurGoals(arthurGoals + 1)}
+                        className="w-6 h-6 rounded-full bg-emerald-500 text-white text-sm font-black flex items-center justify-center active:bg-emerald-600">+</button>
+                    </div>
+                    {/* Assists */}
+                    <div className="flex items-center gap-1.5 ml-2">
+                      <button onClick={() => setArthurAssists(Math.max(0, arthurAssists - 1))}
+                        className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">−</button>
+                      <span className="text-sm font-black text-indigo-500 w-5 text-center">👟{arthurAssists}</span>
+                      <button onClick={() => setArthurAssists(arthurAssists + 1)}
+                        className="w-6 h-6 rounded-full bg-indigo-500 text-white text-sm font-black flex items-center justify-center active:bg-indigo-600">+</button>
+                    </div>
+                  </div>
+
+                  {/* Teammates */}
+                  {roster.length > 0 && (
+                    <div className="border-t border-slate-200 pt-2 space-y-2">
+                      {roster.map(player => {
+                        const count = teammateGoals[player.id] || 0;
+                        return (
+                          <div key={player.id} className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-black shrink-0">
+                              {player.name.charAt(0)}
+                            </div>
+                            <span className="text-xs font-bold text-slate-600 flex-1">{player.name}</span>
+                            <div className="flex items-center gap-1.5">
+                              {count > 0 && (
+                                <button onClick={() => clearTeammateGoal(player.id)}
+                                  className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">−</button>
+                              )}
+                              {count > 0 && (
+                                <span className="text-sm font-black text-emerald-600 w-5 text-center">⚽{count}</span>
+                              )}
+                              <button onClick={() => tapTeammateGoal(player.id)}
+                                className={`w-7 h-7 rounded-full text-white text-xs font-black flex items-center justify-center transition-colors ${count > 0 ? 'bg-emerald-500 active:bg-emerald-600' : 'bg-slate-300 active:bg-slate-400'}`}>
+                                {count > 0 ? '+' : '⚽'}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* ③ Note */}
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase mb-2">
+                  {language === 'zh' ? `節${nextPeriodNum} 筆記` : `Period ${nextPeriodNum} Notes`}
+                </p>
+                <textarea
+                  value={noteText}
+                  onChange={e => setNoteText(e.target.value)}
+                  placeholder={language === 'zh' ? '講出今節重點…（可用語音輸入）' : 'Key moments this period… (voice input supported)'}
+                  rows={4}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-400 focus:bg-white transition-colors resize-none"
+                />
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* Save button */}
+        {step === 'log' && (
+          <div className="p-4 border-t border-slate-100 bg-white shrink-0">
+            {periodLimitReached && (
+              <p className="text-[10px] text-amber-600 bg-amber-50 rounded-lg px-3 py-2 mb-3 text-center font-bold border border-amber-100">
+                {language === 'zh'
+                  ? `聯賽節數上限為 ${standardPeriods} 節。如需更多節數，請改選杯賽或友誼賽。`
+                  : `League matches are capped at ${standardPeriods} periods. Change match type for more.`}
+              </p>
+            )}
+            <button
+              onClick={handleSave}
+              disabled={periodLimitReached || (!hasContent && scoreMyTeam === (selectedMatch?.scoreMyTeam || 0) && scoreOpponent === (selectedMatch?.scoreOpponent || 0))}
+              className="w-full py-4 bg-blue-600 text-white rounded-xl font-black text-sm flex items-center justify-center gap-2 active:bg-blue-700 disabled:opacity-40 transition-colors shadow-lg"
+            >
+              <i className="fas fa-save" />
+              {periodLimitReached
+                ? (language === 'zh' ? `聯賽已達 ${standardPeriods} 節上限` : `League max ${standardPeriods} periods reached`)
+                : language === 'zh'
+                  ? `儲存第 ${nextPeriodNum} 節`
+                  : `Save Period ${nextPeriodNum}`}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default QuickLogSheet;
