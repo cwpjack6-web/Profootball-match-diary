@@ -18,8 +18,9 @@ interface DrillDownSheetProps {
   data: DrillDownData;
   onClose: () => void;
   t: any;
+  onNavigateToMatch?: (matchId: string) => void;
 }
-const DrillDownSheet: React.FC<DrillDownSheetProps> = ({ data, onClose, t }) => {
+const DrillDownSheet: React.FC<DrillDownSheetProps> = ({ data, onClose, t, onNavigateToMatch }) => {
   const sorted = [...data.matches].sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
   return (
     <div className="fixed inset-0 z-[90] flex flex-col justify-end" onClick={onClose}>
@@ -55,7 +56,9 @@ const DrillDownSheet: React.FC<DrillDownSheetProps> = ({ data, onClose, t }) => 
             const isLoss = m.scoreMyTeam < m.scoreOpponent;
             const resultBorder = isWin ? 'border-l-emerald-500' : isLoss ? 'border-l-rose-400' : 'border-l-slate-300';
             return (
-              <div key={m.id} className={`flex items-center gap-3 px-4 py-3 border-l-4 ${resultBorder}`}>
+              <button key={m.id}
+                onClick={() => { if (onNavigateToMatch) { onNavigateToMatch(m.id); onClose(); } }}
+                className={`flex items-center gap-3 px-4 py-3 border-l-4 w-full text-left ${resultBorder} ${onNavigateToMatch ? 'active:bg-slate-50 cursor-pointer' : 'cursor-default'}`}>
                 {/* Date */}
                 <div className="w-14 shrink-0">
                   <div className="text-[10px] font-black text-slate-500">{m.date.slice(5)}</div>
@@ -88,7 +91,7 @@ const DrillDownSheet: React.FC<DrillDownSheetProps> = ({ data, onClose, t }) => 
                     <span className="text-[10px] font-black text-yellow-600">★{m.rating}</span>
                   )}
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
@@ -101,7 +104,7 @@ const DrillDownSheet: React.FC<DrillDownSheetProps> = ({ data, onClose, t }) => 
   );
 };
 
-const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
+const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (matchId: string) => void }> = ({ matches, profile, onNavigateToMatch }) => {
   const { t } = useLanguage();
   const [teamFilter, setTeamFilter] = useState<string>('all');
   const [matchTypeFilter, setMatchTypeFilter] = useState<string>('all');
@@ -1168,7 +1171,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
       </div>{/* end tab content */}
 
       {/* ── Drill-Down Sheet ──────────────────────────────────────────────── */}
-      {drillDown && <DrillDownSheet data={drillDown} onClose={() => setDrillDown(null)} t={t} />}
+      {drillDown && <DrillDownSheet data={drillDown} onClose={() => setDrillDown(null)} t={t} onNavigateToMatch={onNavigateToMatch} />}
 
       {/* ── Badge Detail Modal ─────────────────────────────────────────────── */}
       {selectedBadge && (
