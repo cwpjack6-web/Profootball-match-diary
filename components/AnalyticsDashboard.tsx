@@ -8,6 +8,99 @@ import { calculateBadges, BadgeState, getTierLabelKey } from '../utils/badges';
 type TimeFilterType = 'all' | 'year' | 'season' | 'month';
 type ChartSeries = 'rating' | 'goals' | 'assists';
 
+// ── DrillDown Sheet (external component — must not be defined inside render) ──
+interface DrillDownData {
+  title: string;
+  icon: string;
+  matches: any[];
+}
+interface DrillDownSheetProps {
+  data: DrillDownData;
+  onClose: () => void;
+  t: any;
+}
+const DrillDownSheet: React.FC<DrillDownSheetProps> = ({ data, onClose, t }) => {
+  const sorted = [...data.matches].sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  return (
+    <div className="fixed inset-0 z-[90] flex flex-col justify-end" onClick={onClose}>
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      {/* Sheet */}
+      <div
+        className="relative z-10 bg-white rounded-t-2xl shadow-2xl max-h-[75vh] flex flex-col"
+        style={{ animation: "slideUp 0.28s cubic-bezier(0.32,0.72,0,1)" }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 bg-slate-200 rounded-full" />
+        </div>
+        {/* Header */}
+        <div className="px-4 py-3 flex items-center justify-between border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <i className={`fas ${data.icon} text-blue-500`} />
+            <span className="font-black text-slate-800 text-sm">{data.title}</span>
+            <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">
+              {sorted.length}{t.matchesUnit}
+            </span>
+          </div>
+          <button onClick={onClose} className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+            <i className="fas fa-times text-xs" />
+          </button>
+        </div>
+        {/* List */}
+        <div className="overflow-y-auto flex-1 divide-y divide-slate-50">
+          {sorted.map((m: any) => {
+            const isWin  = m.scoreMyTeam > m.scoreOpponent;
+            const isLoss = m.scoreMyTeam < m.scoreOpponent;
+            const resultBorder = isWin ? 'border-l-emerald-500' : isLoss ? 'border-l-rose-400' : 'border-l-slate-300';
+            return (
+              <div key={m.id} className={`flex items-center gap-3 px-4 py-3 border-l-4 ${resultBorder}`}>
+                {/* Date */}
+                <div className="w-14 shrink-0">
+                  <div className="text-[10px] font-black text-slate-500">{m.date.slice(5)}</div>
+                  <div className="text-[9px] text-slate-300">{m.date.slice(0, 4)}</div>
+                </div>
+                {/* Opponent + badges */}
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-black text-slate-700 truncate">{m.opponent}</div>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    {m.isHome
+                      ? <span className="text-[9px] font-bold bg-blue-50 text-blue-500 px-1 rounded">{t.homeShort}</span>
+                      : <span className="text-[9px] font-bold bg-orange-50 text-orange-500 px-1 rounded">{t.awayShort}</span>}
+                    {m.matchFormat && <span className="text-[9px] text-slate-400 font-bold">{m.matchFormat}</span>}
+                    {m.isMotm && <span className="text-[9px] bg-yellow-100 text-yellow-700 font-bold px-1 rounded">MOTM</span>}
+                  </div>
+                </div>
+                {/* Score */}
+                <div className="font-mono font-black text-base text-slate-800 shrink-0">
+                  {m.scoreMyTeam}–{m.scoreOpponent}
+                </div>
+                {/* Personal stats */}
+                <div className="flex flex-col items-end gap-0.5 shrink-0 w-12">
+                  {(m.arthurGoals > 0 || m.arthurAssists > 0) && (
+                    <div className="flex gap-1 text-[9px] font-bold">
+                      {m.arthurGoals > 0 && <span className="text-emerald-600">⚽{m.arthurGoals}</span>}
+                      {m.arthurAssists > 0 && <span className="text-indigo-500">👟{m.arthurAssists}</span>}
+                    </div>
+                  )}
+                  {m.rating > 0 && (
+                    <span className="text-[10px] font-black text-yellow-600">★{m.rating}</span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {/* Footer */}
+        <div className="px-4 py-3 border-t border-slate-100 bg-slate-50/80">
+          <p className="text-[10px] text-slate-400 text-center">{t.drillDownHint}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
   const { t } = useLanguage();
   const [teamFilter, setTeamFilter] = useState<string>('all');
@@ -31,12 +124,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
   const [badgesExpanded, setBadgesExpanded] = useState(false);
 
   // Drill-down sheet
-  interface DrillDown {
-    title: string;
-    icon: string;
-    matches: typeof filteredMatches;
-  }
-  const [drillDown, setDrillDown] = useState<DrillDown | null>(null);
+  const [drillDown, setDrillDown] = useState<DrillDownData | null>(null);
 
   const completedMatches = useMemo(() => {
     return matches.filter(m => m.status !== 'scheduled');
@@ -548,85 +636,6 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
   };
 
   // ── DrillDown Sheet ──────────────────────────────────────────────────────
-  const DrillDownSheet = ({ data }: { data: DrillDown }) => {
-    const sorted = [...data.matches].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    return (
-      <div className="fixed inset-0 z-[90] flex flex-col justify-end" onClick={() => setDrillDown(null)}>
-        {/* Backdrop */}
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
-        {/* Sheet */}
-        <div className="relative z-10 bg-white rounded-t-2xl shadow-2xl max-h-[75vh] flex flex-col" style={{ animation: "slideUp 0.28s cubic-bezier(0.32,0.72,0,1)" }}
-          onClick={e => e.stopPropagation()}>
-          {/* Handle */}
-          <div className="flex justify-center pt-3 pb-1">
-            <div className="w-10 h-1 bg-slate-200 rounded-full" />
-          </div>
-          {/* Header */}
-          <div className="px-4 py-3 flex items-center justify-between border-b border-slate-100">
-            <div className="flex items-center gap-2">
-              <i className={`fas ${data.icon} text-blue-500`} />
-              <span className="font-black text-slate-800 text-sm">{data.title}</span>
-              <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">
-                {sorted.length}{t.matchesUnit}
-              </span>
-            </div>
-            <button onClick={() => setDrillDown(null)} className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
-              <i className="fas fa-times text-xs" />
-            </button>
-          </div>
-          {/* List */}
-          <div className="overflow-y-auto flex-1 divide-y divide-slate-50">
-            {sorted.map(m => {
-              const isWin  = m.scoreMyTeam > m.scoreOpponent;
-              const isLoss = m.scoreMyTeam < m.scoreOpponent;
-              const resultBg = isWin ? 'border-l-emerald-500' : isLoss ? 'border-l-rose-400' : 'border-l-slate-300';
-              return (
-                <div key={m.id} className={`flex items-center gap-3 px-4 py-3 border-l-4 ${resultBg}`}>
-                  {/* Date */}
-                  <div className="w-14 shrink-0">
-                    <div className="text-[10px] font-black text-slate-500">{m.date.slice(5)}</div>
-                    <div className="text-[9px] text-slate-300">{m.date.slice(0, 4)}</div>
-                  </div>
-                  {/* Opponent + badges */}
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-black text-slate-700 truncate">{m.opponent}</div>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      {m.isHome
-                        ? <span className="text-[9px] font-bold bg-blue-50 text-blue-500 px-1 rounded">{t.homeShort}</span>
-                        : <span className="text-[9px] font-bold bg-orange-50 text-orange-500 px-1 rounded">{t.awayShort}</span>}
-                      {m.matchFormat && <span className="text-[9px] text-slate-400 font-bold">{m.matchFormat}</span>}
-                      {m.isMotm && <span className="text-[9px] bg-yellow-100 text-yellow-700 font-bold px-1 rounded">MOTM</span>}
-                    </div>
-                  </div>
-                  {/* Score */}
-                  <div className="font-mono font-black text-base text-slate-800 shrink-0">
-                    {m.scoreMyTeam}–{m.scoreOpponent}
-                  </div>
-                  {/* Personal stats */}
-                  <div className="flex flex-col items-end gap-0.5 shrink-0 w-12">
-                    {(m.arthurGoals > 0 || m.arthurAssists > 0) && (
-                      <div className="flex gap-1 text-[9px] font-bold">
-                        {m.arthurGoals > 0 && <span className="text-emerald-600">⚽{m.arthurGoals}</span>}
-                        {m.arthurAssists > 0 && <span className="text-indigo-500">👟{m.arthurAssists}</span>}
-                      </div>
-                    )}
-                    {m.rating > 0 && (
-                      <span className="text-[10px] font-black text-yellow-600">★{m.rating}</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          {/* Footer */}
-          <div className="px-4 py-3 border-t border-slate-100 bg-slate-50/80">
-            <p className="text-[10px] text-slate-400 text-center">{t.drillDownHint}</p>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   // ── Active tab state ────────────────────────────────────────────────────
   const TABS = [
     { id: 'overview',  icon: 'fa-chart-pie',    labelZh: '總覽',  labelEn: 'Overview' },
@@ -1159,7 +1168,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
       </div>{/* end tab content */}
 
       {/* ── Drill-Down Sheet ──────────────────────────────────────────────── */}
-      {drillDown && <DrillDownSheet data={drillDown} />}
+      {drillDown && <DrillDownSheet data={drillDown} onClose={() => setDrillDown(null)} t={t} />}
 
       {/* ── Badge Detail Modal ─────────────────────────────────────────────── */}
       {selectedBadge && (
