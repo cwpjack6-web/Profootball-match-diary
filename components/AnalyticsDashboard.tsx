@@ -24,6 +24,12 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
   // Badge Modal State
   const [selectedBadge, setSelectedBadge] = useState<BadgeState | null>(null);
 
+  // Tab navigation
+  const [activeTab, setActiveTab] = useState<'overview' | 'context' | 'growth' | 'opponent'>('overview');
+
+  // Badges collapsible
+  const [badgesExpanded, setBadgesExpanded] = useState(false);
+
   const completedMatches = useMemo(() => {
     return matches.filter(m => m.status !== 'scheduled');
   }, [matches]);
@@ -533,474 +539,537 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
     );
   };
 
+  // ── Active tab state ────────────────────────────────────────────────────
+  const TABS = [
+    { id: 'overview',  icon: 'fa-chart-pie',    labelZh: '總覽',  labelEn: 'Overview' },
+    { id: 'context',   icon: 'fa-cloud-sun',    labelZh: '環境',  labelEn: 'Context'  },
+    { id: 'growth',    icon: 'fa-seedling',     labelZh: '成長',  labelEn: 'Growth'   },
+    { id: 'opponent',  icon: 'fa-chess',        labelZh: '對手',  labelEn: 'Opponent' },
+  ] as const;
+  type TabId = typeof TABS[number]['id'];
+
   return (
     <div className="pb-32 animate-fade-in">
-      {/* Filters */}
-      <div className="p-3 bg-white sticky top-0 z-20 shadow-sm border-b border-slate-100 flex flex-col gap-2">
-        <div className="flex gap-2">
-          <select value={teamFilter} onChange={(e) => setTeamFilter(e.target.value)}
-            className="flex-1 bg-slate-100 text-sm rounded-lg px-3 py-2 outline-none border border-slate-200 font-bold text-slate-700">
-            <option value="all">{t.allTeams}</option>
-            {profile.teams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}
+
+      {/* ── Sticky header: filters + tab bar ─────────────────────────────── */}
+      <div className="sticky top-0 z-20 bg-white shadow-sm border-b border-slate-100">
+
+        {/* Filters */}
+        <div className="p-3 flex flex-col gap-2">
+          <div className="flex gap-2">
+            <select value={teamFilter} onChange={(e) => setTeamFilter(e.target.value)}
+              className="flex-1 bg-slate-100 text-sm rounded-lg px-3 py-2 outline-none border border-slate-200 font-bold text-slate-700">
+              <option value="all">{t.allTeams}</option>
+              {profile.teams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}
+            </select>
+            <select value={matchTypeFilter} onChange={(e) => setMatchTypeFilter(e.target.value)}
+              className="flex-1 bg-slate-100 text-sm rounded-lg px-3 py-2 outline-none border border-slate-200 font-bold text-slate-700">
+              <option value="all">{t.allTypes}</option>
+              <option value="league">{t.typeLeague}</option>
+              <option value="cup">{t.typeCup}</option>
+              <option value="friendly">{t.typeFriendly}</option>
+            </select>
+          </div>
+          <select value={timeFilterType} onChange={(e) => handleTypeChange(e.target.value as TimeFilterType)}
+            className="w-full bg-slate-100 text-sm rounded-lg px-3 py-2 outline-none border border-slate-200 font-bold text-slate-700">
+            <option value="all">{t.allTime}</option>
+            <option value="year">{t.filterYear}</option>
+            <option value="season">{t.filterSeason}</option>
+            <option value="month">{t.filterMonth}</option>
           </select>
-          <select value={matchTypeFilter} onChange={(e) => setMatchTypeFilter(e.target.value)}
-            className="flex-1 bg-slate-100 text-sm rounded-lg px-3 py-2 outline-none border border-slate-200 font-bold text-slate-700">
-            <option value="all">{t.allTypes}</option>
-            <option value="league">{t.typeLeague}</option>
-            <option value="cup">{t.typeCup}</option>
-            <option value="friendly">{t.typeFriendly}</option>
-          </select>
+          {timeFilterType !== 'all' && (
+            <select value={timeFilterValue} onChange={(e) => setTimeFilterValue(e.target.value)}
+              className="w-full bg-blue-50 text-blue-700 text-sm rounded-lg px-3 py-2 outline-none border border-blue-200 font-bold">
+              {timeFilterType === 'year'   && timeOptions.years.map(y => <option key={y} value={y}>{y}</option>)}
+              {timeFilterType === 'season' && timeOptions.quarters.map(q => <option key={q} value={q}>{q}</option>)}
+              {timeFilterType === 'month'  && timeOptions.months.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          )}
+          {filteredMatches.length > 0 && (
+            <button onClick={() => setShowShareModal(true)}
+              className="w-full bg-slate-800 text-white text-xs font-bold py-2.5 rounded-lg flex items-center justify-center gap-2">
+              <i className="fas fa-share-alt" /> {t.shareSeason}
+            </button>
+          )}
         </div>
-        <select value={timeFilterType} onChange={(e) => handleTypeChange(e.target.value as TimeFilterType)}
-          className="w-full bg-slate-100 text-sm rounded-lg px-3 py-2 outline-none border border-slate-200 font-bold text-slate-700">
-          <option value="all">{t.allTime}</option>
-          <option value="year">{t.filterYear}</option>
-          <option value="season">{t.filterSeason}</option>
-          <option value="month">{t.filterMonth}</option>
-        </select>
-        {timeFilterType !== 'all' && (
-          <select value={timeFilterValue} onChange={(e) => setTimeFilterValue(e.target.value)}
-            className="w-full bg-blue-50 text-blue-700 text-sm rounded-lg px-3 py-2 outline-none border border-blue-200 font-bold">
-            {timeFilterType === 'year'   && timeOptions.years.map(y => <option key={y} value={y}>{y}</option>)}
-            {timeFilterType === 'season' && timeOptions.quarters.map(q => <option key={q} value={q}>{q}</option>)}
-            {timeFilterType === 'month'  && timeOptions.months.map(m => <option key={m} value={m}>{m}</option>)}
-          </select>
-        )}
-        {filteredMatches.length > 0 && (
-          <button onClick={() => setShowShareModal(true)}
-            className="w-full bg-slate-800 text-white text-xs font-bold py-2.5 rounded-lg flex items-center justify-center gap-2">
-            <i className="fas fa-share-alt" /> {t.shareSeason}
-          </button>
-        )}
+
+        {/* Tab bar */}
+        <div className="flex border-t border-slate-100">
+          {TABS.map(tab => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 flex flex-col items-center py-2.5 gap-0.5 text-[10px] font-black uppercase tracking-wide transition-colors border-b-2 ${
+                activeTab === tab.id
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-slate-400 hover:text-slate-600'
+              }`}>
+              <i className={`fas ${tab.icon} text-sm`} />
+              {(t as any)[`tab_${tab.id}`] || tab.labelEn}
+            </button>
+          ))}
+        </div>
       </div>
 
+      {/* ── Tab content ──────────────────────────────────────────────────────── */}
       <div className="p-4 space-y-4">
-        {/* Main Stats */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-xl p-4 text-white shadow-lg">
-            <div className="text-3xl font-black">{stats.totalGoals}</div>
-            <div className="text-xs opacity-80 font-bold uppercase">{t.totalGoals}</div>
-          </div>
-          <div className="bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl p-4 text-white shadow-lg">
-            <div className="text-3xl font-black">{stats.totalAssists}</div>
-            <div className="text-xs opacity-80 font-bold uppercase">{t.totalAssists}</div>
-          </div>
-        </div>
 
-        {/* Attack Contribution */}
-        {stats.teamGoals > 0 && <AttackRing />}
+        {/* ══ OVERVIEW TAB ══════════════════════════════════════════════════ */}
+        {activeTab === 'overview' && <>
 
-        {/* Rating + Goals + Assists Trend Chart */}
-        <div className="bg-white rounded-xl p-5 shadow border border-slate-100">
-          <div className="flex justify-between items-end mb-4 border-b border-slate-50 pb-2">
-            <h3 className="text-sm font-bold text-slate-800">
-              <i className="fas fa-chart-line text-blue-500 mr-2" />
-              {t.ratingTrend}
-            </h3>
-            <div className="text-right">
-              <div className="text-2xl font-black text-blue-600 leading-none">{stats.avgRating}</div>
-              <div className="text-[9px] font-bold text-slate-400 uppercase">{t.avgRating}</div>
-            </div>
-          </div>
-          <Chart />
-        </div>
-
-        {/* Growth Journey & Badges */}
-        <div className="bg-white rounded-xl shadow border border-slate-100 overflow-hidden">
-          <div className="p-4 bg-slate-50 border-b border-slate-100">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-sm font-bold text-slate-700 uppercase flex items-center gap-2">
-                <i className="fas fa-rocket text-blue-500" /> {t.achievements}
-              </h3>
-              <span className="text-xs font-black text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
-                LVL {totalLevel}
-              </span>
-            </div>
-            <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-blue-400 to-indigo-600 transition-all duration-1000"
-                style={{ width: `${(totalLevel / maxLevel) * 100}%` }} />
-            </div>
-            <div className="flex justify-between mt-1 text-[10px] text-slate-400 font-bold">
-              <span>{t.growthPoints}: {totalLevel}</span>
-              <span>Max: {maxLevel}</span>
-            </div>
-          </div>
-
-          <div className="p-4 grid grid-cols-3 gap-3">
-            {badges.map(badge => (
-              <button key={badge.id} onClick={() => setSelectedBadge(badge)}
-                className={`relative flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-300 active:scale-95 ${badge.color}`}>
-                <div className="mb-2 text-2xl"><i className={`fas ${badge.icon}`} /></div>
-                <span className="text-[10px] font-bold leading-tight uppercase tracking-wide">
-                  {t[badge.labelKey as keyof typeof t]}
-                </span>
-                {badge.currentTier !== 'diamond' && (
-                  <div className="w-full h-1 bg-black/10 rounded-full mt-2 overflow-hidden">
-                    <div className="h-full bg-current opacity-50" style={{ width: `${badge.progressPercent}%` }} />
-                  </div>
-                )}
-                <div className="mt-1 text-[9px] font-black opacity-70">
-                  {t[getTierLabelKey(badge.currentTier) as keyof typeof t]}
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ═══ NEW ANALYSIS MODULES ══════════════════════════════════════════ */}
-
-      {/* ── 4. Streak ── */}
-      {filteredMatches.length >= 2 && (
-        <div className="bg-white rounded-xl shadow border border-slate-100 p-4">
-          <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-            <i className="fas fa-fire text-orange-500" /> {t.streakTitle}
-          </h3>
-          <div className="grid grid-cols-3 gap-3 mb-3">
-            {/* Current streak */}
-            <div className={`col-span-1 rounded-xl p-3 text-center border-2 ${
-              streakData.currentType === 'win' ? 'bg-emerald-50 border-emerald-200' :
-              streakData.currentType === 'loss' ? 'bg-rose-50 border-rose-200' :
-              'bg-slate-50 border-slate-200'}`}>
-              <div className={`text-3xl font-black ${
-                streakData.currentType === 'win' ? 'text-emerald-600' :
-                streakData.currentType === 'loss' ? 'text-rose-500' : 'text-slate-500'}`}>
-                {streakData.current}
-              </div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">
-                {streakData.currentType === 'win' ? t.streakWin :
-                 streakData.currentType === 'loss' ? t.streakLoss : t.streakUnbeaten}
-              </div>
-            </div>
-            <div className="col-span-2 grid grid-cols-2 gap-3">
-              <div className="bg-emerald-50 rounded-xl p-3 text-center border border-emerald-100">
-                <div className="text-2xl font-black text-emerald-600">{streakData.bestWin}</div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">{t.bestWinStreak}</div>
-              </div>
-              <div className="bg-blue-50 rounded-xl p-3 text-center border border-blue-100">
-                <div className="text-2xl font-black text-blue-600">{streakData.bestUnbeaten}</div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">{t.bestUnbeaten}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── 1. Home vs Away ── */}
-      {(homeAwayData.home.total > 0 || homeAwayData.away.total > 0) && (
-        <div className="bg-white rounded-xl shadow border border-slate-100 p-4">
-          <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-            <i className="fas fa-home text-blue-500" /> {t.homeAwayTitle}
-          </h3>
+          {/* Stat cards */}
           <div className="grid grid-cols-2 gap-3">
-            {[
-              { label: t.home, data: homeAwayData.home, color: 'blue' },
-              { label: t.away, data: homeAwayData.away, color: 'orange' },
-            ].map(({ label, data, color }) => (
-              <div key={label} className={`rounded-xl p-3 border bg-${color}-50 border-${color}-100`}>
-                <div className={`text-xs font-black text-${color}-600 uppercase mb-2`}>{label} ({data.total}場)</div>
-                <div className="space-y-1.5">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] text-slate-500 font-bold">{t.winRate}</span>
-                    <span className={`text-sm font-black text-${color}-600`}>{data.winRate}%</span>
+            <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-xl p-4 text-white shadow-lg">
+              <div className="text-3xl font-black">{stats.totalGoals}</div>
+              <div className="text-xs opacity-80 font-bold uppercase">{t.totalGoals}</div>
+            </div>
+            <div className="bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl p-4 text-white shadow-lg">
+              <div className="text-3xl font-black">{stats.totalAssists}</div>
+              <div className="text-xs opacity-80 font-bold uppercase">{t.totalAssists}</div>
+            </div>
+          </div>
+
+          {/* Attack contribution */}
+          {stats.teamGoals > 0 && <AttackRing />}
+
+          {/* Rating trend */}
+          <div className="bg-white rounded-xl p-5 shadow border border-slate-100">
+            <div className="flex justify-between items-end mb-4 border-b border-slate-50 pb-2">
+              <h3 className="text-sm font-bold text-slate-800">
+                <i className="fas fa-chart-line text-blue-500 mr-2" />{t.ratingTrend}
+              </h3>
+              <div className="text-right">
+                <div className="text-2xl font-black text-blue-600 leading-none">{stats.avgRating}</div>
+                <div className="text-[9px] font-bold text-slate-400 uppercase">{t.avgRating}</div>
+              </div>
+            </div>
+            <Chart />
+          </div>
+
+          {/* Streak */}
+          {filteredMatches.length >= 2 && (
+            <div className="bg-white rounded-xl shadow border border-slate-100 p-4">
+              <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                <i className="fas fa-fire text-orange-500" /> {t.streakTitle}
+              </h3>
+              <div className="grid grid-cols-3 gap-3">
+                <div className={`rounded-xl p-3 text-center border-2 ${
+                  streakData.currentType === 'win'  ? 'bg-emerald-50 border-emerald-200' :
+                  streakData.currentType === 'loss' ? 'bg-rose-50 border-rose-200' :
+                  'bg-slate-50 border-slate-200'}`}>
+                  <div className={`text-3xl font-black ${
+                    streakData.currentType === 'win'  ? 'text-emerald-600' :
+                    streakData.currentType === 'loss' ? 'text-rose-500' : 'text-slate-500'}`}>
+                    {streakData.current}
                   </div>
-                  <div className="w-full h-1.5 bg-white/60 rounded-full overflow-hidden">
-                    <div className={`h-full bg-${color}-400 rounded-full`} style={{ width: `${data.winRate}%` }} />
+                  <div className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">
+                    {streakData.currentType === 'win' ? t.streakWin :
+                     streakData.currentType === 'loss' ? t.streakLoss : t.streakUnbeaten}
                   </div>
-                  <div className="flex justify-between text-[10px] font-bold text-slate-500 pt-1">
-                    <span className="text-emerald-600">{data.w}勝</span>
-                    <span>{data.d}和</span>
-                    <span className="text-rose-500">{data.l}負</span>
-                  </div>
-                  <div className="flex justify-between text-[10px] font-bold text-slate-500 border-t border-white/60 pt-1">
-                    <span>⚽ {data.goals}球</span>
-                    <span>★ {data.avgRating}</span>
-                  </div>
+                </div>
+                <div className="bg-emerald-50 rounded-xl p-3 text-center border border-emerald-100">
+                  <div className="text-2xl font-black text-emerald-600">{streakData.bestWin}</div>
+                  <div className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">{t.bestWinStreak}</div>
+                </div>
+                <div className="bg-blue-50 rounded-xl p-3 text-center border border-blue-100">
+                  <div className="text-2xl font-black text-blue-600">{streakData.bestUnbeaten}</div>
+                  <div className="text-[10px] font-bold text-slate-400 uppercase mt-0.5">{t.bestUnbeaten}</div>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+            </div>
+          )}
 
-      {/* ── 3. Match type ── */}
-      {matchTypeData.length >= 2 && (
-        <div className="bg-white rounded-xl shadow border border-slate-100 p-4">
-          <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-            <i className="fas fa-trophy text-purple-500" /> {t.matchTypeTitle}
-          </h3>
-          <div className="space-y-3">
-            {matchTypeData.map(d => (
-              <div key={d.key}>
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: d.color }} />
-                    {d.label}
-                    <span className="text-slate-400 font-normal">({d.total}場)</span>
-                  </span>
-                  <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500">
-                    <span className="text-emerald-600">{d.w}W</span>
-                    <span>{d.d}D</span>
-                    <span className="text-rose-500">{d.l}L</span>
-                    <span className="ml-1 font-black" style={{ color: d.color }}>{d.winRate}%</span>
-                  </div>
-                </div>
-                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full" style={{ width: `${d.winRate}%`, backgroundColor: d.color }} />
-                </div>
-                <div className="flex justify-between text-[10px] text-slate-400 mt-0.5">
-                  <span>⚽ {d.goals}球</span>
-                  <span>★ avg {d.avgRating}</span>
-                </div>
+          {/* Badges — collapsible */}
+          <div className="bg-white rounded-xl shadow border border-slate-100 overflow-hidden">
+            <button onClick={() => setBadgesExpanded(v => !v)}
+              className="w-full p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-700 uppercase flex items-center gap-2">
+                  <i className="fas fa-rocket text-blue-500" /> {t.achievements}
+                </h3>
+                <span className="text-xs font-black text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
+                  LVL {totalLevel}
+                </span>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ── 7. Format impact ── */}
-      {formatData.length >= 2 && (
-        <div className="bg-white rounded-xl shadow border border-slate-100 p-4">
-          <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-            <i className="fas fa-users text-teal-500" /> {t.formatTitle}
-          </h3>
-          <div className="space-y-2">
-            {formatData.map(d => {
-              const maxWin = Math.max(...formatData.map(x => x.winRate), 1);
-              return (
-                <div key={d.fmt} className="flex items-center gap-3">
-                  <span className="text-xs font-black text-slate-600 w-12 text-center bg-slate-100 rounded px-1 py-0.5">{d.fmt}</span>
-                  <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-teal-400 rounded-full transition-all"
-                      style={{ width: `${(d.winRate / maxWin) * 100}%` }} />
-                  </div>
-                  <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 w-28 justify-end">
-                    <span className="text-teal-600 font-black">{d.winRate}%</span>
-                    <span className="text-slate-300">|</span>
-                    <span>{d.total}場</span>
-                    <span>★{d.avgRating}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── 2. Position frequency ── */}
-      {positionData.length > 0 && (
-        <div className="bg-white rounded-xl shadow border border-slate-100 p-4">
-          <h3 className="text-sm font-bold text-slate-800 mb-1 flex items-center gap-2">
-            <i className="fas fa-running text-indigo-500" /> {t.positionTitle}
-          </h3>
-          <p className="text-[10px] text-slate-400 mb-3">{t.positionHint}</p>
-          <div className="flex flex-wrap gap-2">
-            {positionData.map(d => {
-              const intensity = Math.max(20, d.pct);
-              return (
-                <div key={d.pos} className="flex flex-col items-center gap-1">
-                  <div className="relative w-14 h-14 rounded-xl flex items-center justify-center border-2 border-indigo-100"
-                    style={{ backgroundColor: `rgba(99,102,241,${intensity / 150})` }}>
-                    <span className="text-sm font-black text-indigo-800">{d.pos}</span>
-                    <span className="absolute -top-1.5 -right-1.5 text-[9px] font-black bg-indigo-600 text-white rounded-full w-4 h-4 flex items-center justify-center">
-                      {d.count}
+              <i className={`fas fa-chevron-${badgesExpanded ? 'up' : 'down'} text-slate-400 text-xs`} />
+            </button>
+            {/* Always-visible progress bar */}
+            <div className="px-4 pt-3 pb-1">
+              <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-blue-400 to-indigo-600 transition-all duration-1000"
+                  style={{ width: `${(totalLevel / maxLevel) * 100}%` }} />
+              </div>
+              <div className="flex justify-between mt-1 text-[10px] text-slate-400 font-bold">
+                <span>{t.growthPoints}: {totalLevel}</span>
+                <span>Max: {maxLevel}</span>
+              </div>
+            </div>
+            {badgesExpanded && (
+              <div className="p-4 pt-2 grid grid-cols-3 gap-3 animate-fade-in">
+                {badges.map(badge => (
+                  <button key={badge.id} onClick={() => setSelectedBadge(badge)}
+                    className={`relative flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-300 active:scale-95 ${badge.color}`}>
+                    <div className="mb-2 text-2xl"><i className={`fas ${badge.icon}`} /></div>
+                    <span className="text-[10px] font-bold leading-tight uppercase tracking-wide">
+                      {t[badge.labelKey as keyof typeof t]}
                     </span>
-                  </div>
-                  <span className="text-[9px] font-bold text-slate-400">{d.pct}%</span>
-                </div>
-              );
-            })}
+                    {badge.currentTier !== 'diamond' && (
+                      <div className="w-full h-1 bg-black/10 rounded-full mt-2 overflow-hidden">
+                        <div className="h-full bg-current opacity-50" style={{ width: `${badge.progressPercent}%` }} />
+                      </div>
+                    )}
+                    <div className="mt-1 text-[9px] font-black opacity-70">
+                      {t[getTierLabelKey(badge.currentTier) as keyof typeof t]}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        </>}
 
-      {/* ── 5. Weather & Pitch ── */}
-      {(conditionData.weatherRows.length > 0 || conditionData.pitchRows.length > 0) && (
-        <div className="bg-white rounded-xl shadow border border-slate-100 p-4">
-          <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-            <i className="fas fa-cloud-sun text-sky-500" /> {t.conditionTitle}
-          </h3>
-          {conditionData.weatherRows.length > 0 && (
-            <div className="mb-4">
-              <div className="text-[10px] font-black text-slate-400 uppercase mb-2">{t.weather}</div>
+        {/* ══ CONTEXT TAB ═══════════════════════════════════════════════════ */}
+        {activeTab === 'context' && <>
+
+          {/* Home vs Away */}
+          {(homeAwayData.home.total > 0 || homeAwayData.away.total > 0) && (
+            <div className="bg-white rounded-xl shadow border border-slate-100 p-4">
+              <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                <i className="fas fa-home text-blue-500" /> {t.homeAwayTitle}
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { label: t.home, data: homeAwayData.home, color: 'blue' },
+                  { label: t.away, data: homeAwayData.away, color: 'orange' },
+                ].map(({ label, data, color }) => (
+                  <div key={label} className={`rounded-xl p-3 border bg-${color}-50 border-${color}-100`}>
+                    <div className={`text-xs font-black text-${color}-600 uppercase mb-2`}>{label} ({data.total}{t.matchesUnit})</div>
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-slate-500 font-bold">{t.winRate}</span>
+                        <span className={`text-sm font-black text-${color}-600`}>{data.winRate}%</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-white/60 rounded-full overflow-hidden">
+                        <div className={`h-full bg-${color}-400 rounded-full`} style={{ width: `${data.winRate}%` }} />
+                      </div>
+                      <div className="flex justify-between text-[10px] font-bold text-slate-500 pt-1">
+                        <span className="text-emerald-600">{data.w}{t.winShort}</span>
+                        <span>{data.d}{t.drawShort}</span>
+                        <span className="text-rose-500">{data.l}{t.lossShort}</span>
+                      </div>
+                      <div className="flex justify-between text-[10px] font-bold text-slate-500 border-t border-white/60 pt-1">
+                        <span>⚽ {data.goals}</span>
+                        <span>★ {data.avgRating}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Match type */}
+          {matchTypeData.length >= 2 && (
+            <div className="bg-white rounded-xl shadow border border-slate-100 p-4">
+              <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                <i className="fas fa-trophy text-purple-500" /> {t.matchTypeTitle}
+              </h3>
+              <div className="space-y-3">
+                {matchTypeData.map(d => (
+                  <div key={d.key}>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: d.color }} />
+                        {d.label}
+                        <span className="text-slate-400 font-normal">({d.total}{t.matchesUnit})</span>
+                      </span>
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500">
+                        <span className="text-emerald-600">{d.w}{t.winShort}</span>
+                        <span>{d.d}{t.drawShort}</span>
+                        <span className="text-rose-500">{d.l}{t.lossShort}</span>
+                        <span className="ml-1 font-black" style={{ color: d.color }}>{d.winRate}%</span>
+                      </div>
+                    </div>
+                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${d.winRate}%`, backgroundColor: d.color }} />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-slate-400 mt-0.5">
+                      <span>⚽ {d.goals}</span>
+                      <span>★ avg {d.avgRating}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Format impact */}
+          {formatData.length >= 2 && (
+            <div className="bg-white rounded-xl shadow border border-slate-100 p-4">
+              <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                <i className="fas fa-users text-teal-500" /> {t.formatTitle}
+              </h3>
               <div className="space-y-2">
-                {conditionData.weatherRows.map(row => {
-                  const icon = row.key === 'sunny' ? 'fa-sun' : row.key === 'rain' ? 'fa-cloud-rain' :
-                    row.key === 'cloudy' ? 'fa-cloud' : row.key === 'night' ? 'fa-moon' :
-                    row.key === 'hot' ? 'fa-temperature-high' : 'fa-wind';
-                  const label = (t as any)[`weather${row.key.charAt(0).toUpperCase() + row.key.slice(1)}`] || row.key;
+                {formatData.map(d => {
+                  const maxWin = Math.max(...formatData.map(x => x.winRate), 1);
                   return (
-                    <div key={row.key} className="flex items-center gap-2">
-                      <i className={`fas ${icon} text-sky-400 w-4 text-center text-xs`} />
-                      <span className="text-xs text-slate-600 font-bold w-14">{label}</span>
-                      <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full bg-sky-400" style={{ width: `${row.winRate}%` }} />
+                    <div key={d.fmt} className="flex items-center gap-3">
+                      <span className="text-xs font-black text-slate-600 w-12 text-center bg-slate-100 rounded px-1 py-0.5">{d.fmt}</span>
+                      <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-teal-400 rounded-full transition-all"
+                          style={{ width: `${(d.winRate / maxWin) * 100}%` }} />
                       </div>
-                      <span className="text-[10px] font-black text-sky-600 w-8 text-right">{row.winRate}%</span>
-                      <span className="text-[10px] text-slate-400 w-8 text-right">{row.total}場</span>
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500 w-28 justify-end">
+                        <span className="text-teal-600 font-black">{d.winRate}%</span>
+                        <span className="text-slate-300">|</span>
+                        <span>{d.total}{t.matchesUnit}</span>
+                        <span>★{d.avgRating}</span>
+                      </div>
                     </div>
                   );
                 })}
               </div>
             </div>
           )}
-          {conditionData.pitchRows.length > 0 && (
-            <div>
-              <div className="text-[10px] font-black text-slate-400 uppercase mb-2">{t.pitch}</div>
+
+          {/* Weather & Pitch */}
+          {(conditionData.weatherRows.length > 0 || conditionData.pitchRows.length > 0) && (
+            <div className="bg-white rounded-xl shadow border border-slate-100 p-4">
+              <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                <i className="fas fa-cloud-sun text-sky-500" /> {t.conditionTitle}
+              </h3>
+              {conditionData.weatherRows.length > 0 && (
+                <div className="mb-4">
+                  <div className="text-[10px] font-black text-slate-400 uppercase mb-2">{t.weather}</div>
+                  <div className="space-y-2">
+                    {conditionData.weatherRows.map(row => {
+                      const icon = row.key === 'sunny' ? 'fa-sun' : row.key === 'rain' ? 'fa-cloud-rain' :
+                        row.key === 'cloudy' ? 'fa-cloud' : row.key === 'night' ? 'fa-moon' :
+                        row.key === 'hot' ? 'fa-temperature-high' : 'fa-wind';
+                      const label = (t as any)[`weather${row.key.charAt(0).toUpperCase() + row.key.slice(1)}`] || row.key;
+                      return (
+                        <div key={row.key} className="flex items-center gap-2">
+                          <i className={`fas ${icon} text-sky-400 w-4 text-center text-xs`} />
+                          <span className="text-xs text-slate-600 font-bold w-14">{label}</span>
+                          <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full bg-sky-400" style={{ width: `${row.winRate}%` }} />
+                          </div>
+                          <span className="text-[10px] font-black text-sky-600 w-8 text-right">{row.winRate}%</span>
+                          <span className="text-[10px] text-slate-400 w-8 text-right">{row.total}{t.matchesUnit}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {conditionData.pitchRows.length > 0 && (
+                <div>
+                  <div className="text-[10px] font-black text-slate-400 uppercase mb-2">{t.pitch}</div>
+                  <div className="space-y-2">
+                    {conditionData.pitchRows.map(row => {
+                      const label = (t as any)[`pitch${row.key.charAt(0).toUpperCase() + row.key.slice(1)}`] || row.key;
+                      return (
+                        <div key={row.key} className="flex items-center gap-2">
+                          <i className="fas fa-layer-group text-emerald-400 w-4 text-center text-xs" />
+                          <span className="text-xs text-slate-600 font-bold w-14">{label}</span>
+                          <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full bg-emerald-400" style={{ width: `${row.winRate}%` }} />
+                          </div>
+                          <span className="text-[10px] font-black text-emerald-600 w-8 text-right">{row.winRate}%</span>
+                          <span className="text-[10px] text-slate-400 w-8 text-right">{row.total}{t.matchesUnit}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              <p className="text-[9px] text-slate-300 mt-3 text-center">{t.conditionDisclaimer}</p>
+            </div>
+          )}
+
+          {/* Empty state */}
+          {homeAwayData.home.total === 0 && homeAwayData.away.total === 0 &&
+           matchTypeData.length < 2 && formatData.length < 2 &&
+           conditionData.weatherRows.length === 0 && conditionData.pitchRows.length === 0 && (
+            <div className="text-center py-16 text-slate-400">
+              <i className="fas fa-cloud-sun text-4xl mb-3 opacity-30" />
+              <p className="text-sm font-bold">{t.notEnoughData}</p>
+            </div>
+          )}
+        </>}
+
+        {/* ══ GROWTH TAB ════════════════════════════════════════════════════ */}
+        {activeTab === 'growth' && <>
+
+          {/* Progress speed */}
+          {progressData ? (
+            <div className="bg-white rounded-xl shadow border border-slate-100 p-4">
+              <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                <i className="fas fa-chart-line text-violet-500" /> {t.progressTitle}
+              </h3>
+              <div className="flex items-center gap-4 mb-4">
+                <div className="flex-1 text-center bg-slate-50 rounded-xl p-3 border border-slate-100">
+                  <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">{t.progressEarly}</div>
+                  <div className="text-2xl font-black text-slate-600">{progressData.avgEarly}</div>
+                  <div className="text-[9px] text-slate-400">{t.progressFirstN.replace('{n}', String(progressData.earlyCount))}</div>
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                  <div className={`text-2xl font-black ${progressData.diff > 0 ? 'text-emerald-500' : progressData.diff < 0 ? 'text-rose-500' : 'text-slate-400'}`}>
+                    {progressData.diff > 0 ? '▲' : progressData.diff < 0 ? '▼' : '─'}
+                    {Math.abs(progressData.diff)}
+                  </div>
+                  <div className="text-[9px] text-slate-400 font-bold">{t.change}</div>
+                </div>
+                <div className="flex-1 text-center bg-violet-50 rounded-xl p-3 border border-violet-100">
+                  <div className="text-[10px] text-violet-500 font-bold uppercase mb-1">{t.progressRecent}</div>
+                  <div className="text-2xl font-black text-violet-600">{progressData.avgRecent}</div>
+                  <div className="text-[9px] text-violet-400">{t.progressRecentN.replace('{n}', String(progressData.recentCount))}</div>
+                </div>
+              </div>
+              {progressData.byQuarter.length >= 2 && (
+                <div>
+                  <div className="text-[10px] font-black text-slate-400 uppercase mb-2">{t.progressQuarterly}</div>
+                  <div className="flex items-end gap-1 h-16">
+                    {progressData.byQuarter.map((q, i) => {
+                      const maxAvg = Math.max(...progressData.byQuarter.map(x => x.avg), 1);
+                      const heightPct = (q.avg / maxAvg) * 100;
+                      return (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
+                          <span className="text-[8px] font-black text-violet-600">{q.avg}</span>
+                          <div className="w-full bg-violet-100 rounded-t-sm" style={{ height: `${heightPct}%`, minHeight: '4px' }}>
+                            <div className="w-full h-full bg-violet-400 rounded-t-sm" />
+                          </div>
+                          <span className="text-[7px] text-slate-400 truncate w-full text-center">{q.label}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              <p className="text-[9px] text-slate-400 mt-3 text-center">
+                {progressData.diff > 0.5 ? t.progressImproving :
+                 progressData.diff > 0 ? t.progressSlightImprove :
+                 progressData.diff < -0.5 ? t.progressDecline :
+                 t.progressStable}
+              </p>
+            </div>
+          ) : (
+            <div className="bg-slate-50 rounded-xl p-6 text-center text-slate-400 border border-slate-100">
+              <i className="fas fa-seedling text-3xl mb-2 opacity-40" />
+              <p className="text-xs font-bold">{t.progressNeedMore}</p>
+            </div>
+          )}
+
+          {/* Peak matches */}
+          {peakMatches.length > 0 && (
+            <div className="bg-white rounded-xl shadow border border-slate-100 p-4">
+              <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                <i className="fas fa-crown text-yellow-500" /> {t.peakTitle} Top {peakMatches.length}
+              </h3>
+              <div className="space-y-3">
+                {peakMatches.map((m, i) => {
+                  const medals = ['🥇', '🥈', '🥉'];
+                  const resultColor = m.scoreMyTeam > m.scoreOpponent ? 'text-emerald-600' :
+                    m.scoreMyTeam < m.scoreOpponent ? 'text-rose-500' : 'text-slate-500';
+                  return (
+                    <div key={m.id} className={`flex items-center gap-3 p-3 rounded-xl border ${
+                      i === 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-slate-50 border-slate-100'}`}>
+                      <span className="text-xl">{medals[i]}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <span className="text-xs font-black text-slate-700 truncate">vs {m.opponent}</span>
+                          {m.isMotm && <span className="text-[9px] bg-yellow-200 text-yellow-800 font-bold px-1 rounded">MOTM</span>}
+                        </div>
+                        <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold">
+                          <span>{m.date}</span>
+                          <span className={`font-black ${resultColor}`}>{m.scoreMyTeam}-{m.scoreOpponent}</span>
+                          {m.arthurGoals > 0 && <span className="text-emerald-600">⚽{m.arthurGoals}</span>}
+                          {m.arthurAssists > 0 && <span className="text-indigo-600">👟{m.arthurAssists}</span>}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <span className="text-lg font-black text-yellow-600">{m.rating}</span>
+                        <span className="text-[8px] text-slate-400 font-bold">{t.rating}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Position distribution */}
+          {positionData.length > 0 && (
+            <div className="bg-white rounded-xl shadow border border-slate-100 p-4">
+              <h3 className="text-sm font-bold text-slate-800 mb-1 flex items-center gap-2">
+                <i className="fas fa-running text-indigo-500" /> {t.positionTitle}
+              </h3>
+              <p className="text-[10px] text-slate-400 mb-3">{t.positionHint}</p>
+              <div className="flex flex-wrap gap-2">
+                {positionData.map(d => {
+                  const intensity = Math.max(20, d.pct);
+                  return (
+                    <div key={d.pos} className="flex flex-col items-center gap-1">
+                      <div className="relative w-14 h-14 rounded-xl flex items-center justify-center border-2 border-indigo-100"
+                        style={{ backgroundColor: `rgba(99,102,241,${intensity / 150})` }}>
+                        <span className="text-sm font-black text-indigo-800">{d.pos}</span>
+                        <span className="absolute -top-1.5 -right-1.5 text-[9px] font-black bg-indigo-600 text-white rounded-full w-4 h-4 flex items-center justify-center">
+                          {d.count}
+                        </span>
+                      </div>
+                      <span className="text-[9px] font-bold text-slate-400">{d.pct}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </>}
+
+        {/* ══ OPPONENT TAB ══════════════════════════════════════════════════ */}
+        {activeTab === 'opponent' && <>
+
+          {opponentData.length > 0 ? (
+            <div className="bg-white rounded-xl shadow border border-slate-100 p-4">
+              <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                <i className="fas fa-chess text-rose-500" /> {t.opponentDiffTitle}
+                <span className="text-[10px] font-normal text-slate-400">({t.opponentDiffHint})</span>
+              </h3>
               <div className="space-y-2">
-                {conditionData.pitchRows.map(row => {
-                  const label = (t as any)[`pitch${row.key.charAt(0).toUpperCase() + row.key.slice(1)}`] || row.key;
+                {opponentData.map((d, i) => {
+                  const isHard = d.winRate < 40;
+                  const isEasy = d.winRate >= 70;
                   return (
-                    <div key={row.key} className="flex items-center gap-2">
-                      <i className="fas fa-layer-group text-emerald-400 w-4 text-center text-xs" />
-                      <span className="text-xs text-slate-600 font-bold w-14">{label}</span>
-                      <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full bg-emerald-400" style={{ width: `${row.winRate}%` }} />
+                    <div key={d.opp} className="flex items-center gap-2 py-1">
+                      <span className="text-base w-6 text-center">
+                        {i === 0 ? '😤' : i === opponentData.length - 1 ? '😊' : ''}
+                      </span>
+                      <span className="text-xs font-bold text-slate-700 flex-1 truncate">{d.opp}</span>
+                      <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400">
+                        <span className="text-emerald-600">{d.w}{t.winShort}</span>
+                        <span>{d.d}{t.drawShort}</span>
+                        <span className="text-rose-500">{d.l}{t.lossShort}</span>
                       </div>
-                      <span className="text-[10px] font-black text-emerald-600 w-8 text-right">{row.winRate}%</span>
-                      <span className="text-[10px] text-slate-400 w-8 text-right">{row.total}場</span>
+                      <span className={`text-xs font-black px-2 py-0.5 rounded-full ${
+                        isHard ? 'bg-rose-100 text-rose-600' :
+                        isEasy ? 'bg-emerald-100 text-emerald-600' :
+                        'bg-slate-100 text-slate-600'}`}>
+                        {d.winRate}%
+                      </span>
                     </div>
                   );
                 })}
               </div>
             </div>
-          )}
-          <p className="text-[9px] text-slate-300 mt-3 text-center">{t.conditionDisclaimer}</p>
-        </div>
-      )}
-
-      {/* ── 6. Opponent difficulty ── */}
-      {opponentData.length > 0 && (
-        <div className="bg-white rounded-xl shadow border border-slate-100 p-4">
-          <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-            <i className="fas fa-chess text-rose-500" /> {t.opponentDiffTitle}
-            <span className="text-[10px] font-normal text-slate-400">({t.opponentDiffHint})</span>
-          </h3>
-          <div className="space-y-2">
-            {opponentData.map((d, i) => {
-              const isHard = d.winRate < 40;
-              const isEasy = d.winRate >= 70;
-              return (
-                <div key={d.opp} className="flex items-center gap-2">
-                  <span className={`text-[10px] font-black w-4 ${
-                    i === 0 ? 'text-rose-500' : i === opponentData.length - 1 ? 'text-emerald-500' : 'text-slate-400'}`}>
-                    {i === 0 ? '😤' : i === opponentData.length - 1 ? '😊' : `${i + 1}`}
-                  </span>
-                  <span className="text-xs font-bold text-slate-700 flex-1 truncate">{d.opp}</span>
-                  <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400">
-                    <span className="text-emerald-600">{d.w}W</span>
-                    <span>{d.d}D</span>
-                    <span className="text-rose-500">{d.l}L</span>
-                  </div>
-                  <span className={`text-xs font-black px-2 py-0.5 rounded-full ${
-                    isHard ? 'bg-rose-100 text-rose-600' :
-                    isEasy ? 'bg-emerald-100 text-emerald-600' :
-                    'bg-slate-100 text-slate-600'}`}>
-                    {d.winRate}%
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── 8. Peak matches ── */}
-      {peakMatches.length > 0 && (
-        <div className="bg-white rounded-xl shadow border border-slate-100 p-4">
-          <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-            <i className="fas fa-crown text-yellow-500" /> {t.peakTitle} Top {peakMatches.length}
-          </h3>
-          <div className="space-y-3">
-            {peakMatches.map((m, i) => {
-              const medals = ['🥇', '🥈', '🥉'];
-              const resultColor = m.scoreMyTeam > m.scoreOpponent ? 'text-emerald-600' :
-                m.scoreMyTeam < m.scoreOpponent ? 'text-rose-500' : 'text-slate-500';
-              return (
-                <div key={m.id} className={`flex items-center gap-3 p-3 rounded-xl border ${
-                  i === 0 ? 'bg-yellow-50 border-yellow-200' : 'bg-slate-50 border-slate-100'}`}>
-                  <span className="text-xl">{medals[i]}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                      <span className="text-xs font-black text-slate-700 truncate">vs {m.opponent}</span>
-                      {m.isMotm && <span className="text-[9px] bg-yellow-200 text-yellow-800 font-bold px-1 rounded">MOTM</span>}
-                    </div>
-                    <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold">
-                      <span>{m.date}</span>
-                      <span className={`font-black ${resultColor}`}>{m.scoreMyTeam}-{m.scoreOpponent}</span>
-                      {m.arthurGoals > 0 && <span className="text-emerald-600">⚽{m.arthurGoals}</span>}
-                      {m.arthurAssists > 0 && <span className="text-indigo-600">👟{m.arthurAssists}</span>}
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <span className="text-lg font-black text-yellow-600">{m.rating}</span>
-                    <span className="text-[8px] text-slate-400 font-bold">{t.rating}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── 9. Progress speed ── */}
-      {progressData && (
-        <div className="bg-white rounded-xl shadow border border-slate-100 p-4">
-          <h3 className="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-            <i className="fas fa-chart-line text-violet-500" /> {t.progressTitle}
-          </h3>
-          <div className="flex items-center gap-4 mb-4">
-            <div className="flex-1 text-center bg-slate-50 rounded-xl p-3 border border-slate-100">
-              <div className="text-[10px] text-slate-400 font-bold uppercase mb-1">{t.progressEarly}</div>
-              <div className="text-2xl font-black text-slate-600">{progressData.avgEarly}</div>
-              <div className="text-[9px] text-slate-400">{t.progressFirstN.replace("{n}", String(progressData.earlyCount))}</div>
-            </div>
-            <div className="flex flex-col items-center gap-1">
-              <div className={`text-2xl font-black ${progressData.diff > 0 ? 'text-emerald-500' : progressData.diff < 0 ? 'text-rose-500' : 'text-slate-400'}`}>
-                {progressData.diff > 0 ? '▲' : progressData.diff < 0 ? '▼' : '─'}
-                {Math.abs(progressData.diff)}
-              </div>
-              <div className="text-[9px] text-slate-400 font-bold">{t.change}</div>
-            </div>
-            <div className="flex-1 text-center bg-violet-50 rounded-xl p-3 border border-violet-100">
-              <div className="text-[10px] text-violet-500 font-bold uppercase mb-1">{t.progressRecent}</div>
-              <div className="text-2xl font-black text-violet-600">{progressData.avgRecent}</div>
-              <div className="text-[9px] text-violet-400">{t.progressRecentN.replace("{n}", String(progressData.recentCount))}</div>
-            </div>
-          </div>
-          {/* Quarter sparkline */}
-          {progressData.byQuarter.length >= 2 && (
-            <div>
-              <div className="text-[10px] font-black text-slate-400 uppercase mb-2">{t.progressQuarterly}</div>
-              <div className="flex items-end gap-1 h-16">
-                {progressData.byQuarter.map((q, i) => {
-                  const maxAvg = Math.max(...progressData.byQuarter.map(x => x.avg), 1);
-                  const heightPct = (q.avg / maxAvg) * 100;
-                  return (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
-                      <span className="text-[8px] font-black text-violet-600">{q.avg}</span>
-                      <div className="w-full bg-violet-100 rounded-t-sm" style={{ height: `${heightPct}%`, minHeight: '4px' }}>
-                        <div className="w-full h-full bg-violet-400 rounded-t-sm" />
-                      </div>
-                      <span className="text-[7px] text-slate-400 truncate w-full text-center">{q.label}</span>
-                    </div>
-                  );
-                })}
-              </div>
+          ) : (
+            <div className="text-center py-16 text-slate-400">
+              <i className="fas fa-chess text-4xl mb-3 opacity-30" />
+              <p className="text-sm font-bold">{t.opponentNeedMore}</p>
             </div>
           )}
-          <p className="text-[9px] text-slate-300 mt-2 text-center">
-            {progressData.diff > 0.5 ? t.progressImproving :
-             progressData.diff > 0 ? t.progressSlightImprove :
-             progressData.diff < -0.5 ? t.progressDecline :
-             t.progressStable}
-          </p>
-        </div>
-      )}
+        </>}
 
-      {/* ═══════════════════════════════════════════════════════════════════════ */}
+      </div>{/* end tab content */}
 
-      {/* Badge Detail Modal */}
+      {/* ── Badge Detail Modal ─────────────────────────────────────────────── */}
       {selectedBadge && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-6 animate-fade-in"
           onClick={() => setSelectedBadge(null)}>
@@ -1056,6 +1125,6 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
       />
     </div>
   );
-};
+
 
 export default AnalyticsDashboard;
