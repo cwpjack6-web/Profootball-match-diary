@@ -66,6 +66,7 @@ const App: React.FC = () => {
 
   // UI State
   const [expandedMatchIds, setExpandedMatchIds] = useState<Set<string>>(new Set());
+  const [scrollToMatchId, setScrollToMatchId] = useState<string | null>(null);
   const [shareMatch, setShareMatch] = useState<MatchData | null>(null);
   const [selectedOpponent, setSelectedOpponent] = useState<string | null>(null);
   const [viewingVideoId, setViewingVideoId] = useState<string | null>(null);
@@ -336,20 +337,8 @@ const App: React.FC = () => {
 
   // Navigate from Analytics drill-down to a specific match in the matches tab
   const handleNavigateToMatch = (matchId: string) => {
+    setScrollToMatchId(matchId);
     transitionTab('matches');
-    // Expand the target match after tab switch (small delay for render)
-    setTimeout(() => {
-      setExpandedMatchIds(prev => {
-        const next = new Set(prev);
-        next.add(matchId);
-        return next;
-      });
-      // Scroll to the match card
-      setTimeout(() => {
-        const el = document.getElementById(`match-${matchId}`);
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 100);
-    }, 50);
   };
 
   const activeTeam = quickTeamFilter !== 'all' 
@@ -459,7 +448,7 @@ const App: React.FC = () => {
                       )}
                   </div>
                 )}
-                <MatchTimeline matches={filteredMatches} profile={activeProfile} isSelectionMode={isSelectionMode} selectedMatchIds={selectedMatchIds} deleteConfirmId={deleteConfirmId} expandedMatchIds={expandedMatchIds} onSelectMatch={handleSelectMatch} onShare={handleShare} onEdit={openEditForm} onTrashClick={handleTrashClick} onConfirmDelete={handleConfirmDelete} onCancelDelete={handleCancelDelete} onToggleExpansion={toggleMatchExpansion} onOpenVideo={handleOpenVideo} onOpponentClick={handleOpponentClick} />
+                <MatchTimeline matches={filteredMatches} profile={activeProfile} isSelectionMode={isSelectionMode} selectedMatchIds={selectedMatchIds} deleteConfirmId={deleteConfirmId} expandedMatchIds={expandedMatchIds} onSelectMatch={handleSelectMatch} onShare={handleShare} onEdit={openEditForm} onTrashClick={handleTrashClick} onConfirmDelete={handleConfirmDelete} onCancelDelete={handleCancelDelete} onToggleExpansion={toggleMatchExpansion} onOpenVideo={handleOpenVideo} onOpponentClick={handleOpponentClick} scrollToMatchId={scrollToMatchId} onScrollToMatchDone={() => setScrollToMatchId(null)} />
             </div>
             )}
             
