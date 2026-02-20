@@ -713,8 +713,22 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
       {/* ── Tab content ──────────────────────────────────────────────────────── */}
       <div className="p-4 space-y-4">
 
+        {/* ══ GLOBAL EMPTY STATE ════════════════════════════════════════════ */}
+        {filteredMatches.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-20 px-8 text-center">
+            <div className="w-20 h-20 rounded-2xl bg-blue-50 flex items-center justify-center mb-5 shadow-sm">
+              <i className="fas fa-chart-pie text-3xl text-blue-300" />
+            </div>
+            <h3 className="text-base font-black text-slate-600 mb-2">{t.emptyStatsTitle}</h3>
+            <p className="text-sm text-slate-400 leading-relaxed mb-3">{t.emptyStatsDesc}</p>
+            <span className="text-xs text-blue-400 font-bold bg-blue-50 px-4 py-2 rounded-full border border-blue-100">
+              {t.emptyStatsHint}
+            </span>
+          </div>
+        )}
+
         {/* ══ OVERVIEW TAB ══════════════════════════════════════════════════ */}
-        {activeTab === 'overview' && <>
+        {activeTab === 'overview' && filteredMatches.length > 0 && <>
 
           {/* Stat cards */}
           <div className="grid grid-cols-2 gap-3">
@@ -990,15 +1004,18 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
           {homeAwayData.home.total === 0 && homeAwayData.away.total === 0 &&
            matchTypeData.length < 2 && formatData.length < 2 &&
            conditionData.weatherRows.length === 0 && conditionData.pitchRows.length === 0 && (
-            <div className="text-center py-16 text-slate-400">
-              <i className="fas fa-cloud-sun text-4xl mb-3 opacity-30" />
-              <p className="text-sm font-bold">{t.notEnoughData}</p>
+            <div className="flex flex-col items-center justify-center py-16 px-8 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+                <i className="fas fa-chart-bar text-2xl text-slate-300" />
+              </div>
+              <h3 className="text-sm font-black text-slate-500 mb-2">{t.emptyStatsTitle}</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">{t.emptyStatsDesc}</p>
             </div>
           )}
         </>}
 
         {/* ══ GROWTH TAB ════════════════════════════════════════════════════ */}
-        {activeTab === 'growth' && <>
+        {activeTab === 'growth' && filteredMatches.length > 0 && <>
 
           {/* Progress speed */}
           {progressData ? (
