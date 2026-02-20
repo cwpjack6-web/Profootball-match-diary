@@ -982,8 +982,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps> = ({ matches, profile }) => {
                       <div className="w-full bg-violet-100 rounded-t-sm" style={{ height: `${heightPct}%`, minHeight: '4px' }}>
                         <div className="w-full h-full bg-violet-400 rounded-t-sm" />
                       </div>
-                      <span className="text-[7px] text-slate-400 truncate w-full text-center">{q.label.replace(' ', '
-')}</span>
+                      <span className="text-[7px] text-slate-400 truncate w-full text-center">{q.label}</span>
                     </div>
                   );
                 })}
