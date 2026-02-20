@@ -839,7 +839,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
               </button>
             )}
 
-            {currentPage < PAGES.length ? (
+            {currentPage < PAGE_ICONS.length ? (
               <button type="button" onClick={() => setCurrentPage(p => p + 1)}
                 className={`flex-1 ${styles.button} font-bold py-3 rounded-xl shadow-md flex items-center justify-center gap-2 transition-all`}>
                 {t.nextPage} <i className="fas fa-chevron-right text-xs" />
