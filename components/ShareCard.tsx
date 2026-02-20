@@ -143,6 +143,35 @@ const ShareCard: React.FC<ShareCardProps> = ({
   // Reset image transform when image changes
   useEffect(() => { setImgScale(1); setImgPos({ x: 0, y: 0 }); }, [bgImage]);
 
+  // ── Season stats (must be before early return — React hook rules) ─────────
+
+  const seasonStats = useMemo(() => {
+    const done    = matches.filter(m => m.status !== 'scheduled');
+    const total   = done.length;
+    const wins    = done.filter(m => m.scoreMyTeam > m.scoreOpponent).length;
+    const draws   = done.filter(m => m.scoreMyTeam === m.scoreOpponent).length;
+    const losses  = total - wins - draws;
+    const goals   = done.reduce((a, m) => a + m.arthurGoals, 0);
+    const assists = done.reduce((a, m) => a + m.arthurAssists, 0);
+    const avgRating = total > 0
+      ? parseFloat((done.reduce((a, m) => a + (m.rating || 0), 0) / total).toFixed(1))
+      : 0;
+    const winRate   = total > 0 ? Math.round((wins / total) * 100) : 0;
+    const motmCount = done.filter(m => m.isMotm).length;
+    return { total, wins, draws, losses, goals, assists, avgRating, winRate, motmCount };
+  }, [matches]);
+
+  const seasonHighlights = useMemo(() => {
+    const rated = matches.filter(m => m.status !== 'scheduled' && (m.rating || 0) > 0);
+    if (!rated.length) return null;
+    const bestMatch      = rated.reduce((b, m) => (m.rating || 0) > (b.rating || 0) ? m : b, rated[0]);
+    const highestScoring = rated.reduce((b, m) => m.arthurGoals > b.arthurGoals ? m : b, rated[0]);
+    return { bestMatch, highestScoring };
+  }, [matches]);
+
+  const ringCircumference = 2 * Math.PI * 45;
+  const ringProgress      = (seasonStats.winRate / 100) * ringCircumference;
+
   if (!isOpen) return null;
 
   // ── Derived ───────────────────────────────────────────────────────────────
@@ -178,34 +207,6 @@ const ShareCard: React.FC<ShareCardProps> = ({
     });
     return list.join(' · ');
   };
-
-  // Season-specific
-  const seasonStats = useMemo(() => {
-    const done    = matches.filter(m => m.status !== 'scheduled');
-    const total   = done.length;
-    const wins    = done.filter(m => m.scoreMyTeam > m.scoreOpponent).length;
-    const draws   = done.filter(m => m.scoreMyTeam === m.scoreOpponent).length;
-    const losses  = total - wins - draws;
-    const goals   = done.reduce((a, m) => a + m.arthurGoals, 0);
-    const assists = done.reduce((a, m) => a + m.arthurAssists, 0);
-    const avgRating = total > 0
-      ? parseFloat((done.reduce((a, m) => a + (m.rating || 0), 0) / total).toFixed(1))
-      : 0;
-    const winRate   = total > 0 ? Math.round((wins / total) * 100) : 0;
-    const motmCount = done.filter(m => m.isMotm).length;
-    return { total, wins, draws, losses, goals, assists, avgRating, winRate, motmCount };
-  }, [matches]);
-
-  const seasonHighlights = useMemo(() => {
-    const rated = matches.filter(m => m.status !== 'scheduled' && (m.rating || 0) > 0);
-    if (!rated.length) return null;
-    const bestMatch      = rated.reduce((b, m) => (m.rating || 0) > (b.rating || 0) ? m : b, rated[0]);
-    const highestScoring = rated.reduce((b, m) => m.arthurGoals > b.arthurGoals ? m : b, rated[0]);
-    return { bestMatch, highestScoring };
-  }, [matches]);
-
-  const ringCircumference = 2 * Math.PI * 45;
-  const ringProgress      = (seasonStats.winRate / 100) * ringCircumference;
 
   // ── File handling ──────────────────────────────────────────────────────────
 
