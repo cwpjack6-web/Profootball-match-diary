@@ -26,6 +26,7 @@ import VideoModal from './components/VideoModal';
 import TeamManager from './components/TeamManager';
 import CoachReport from './components/CoachReport';
 import WhatsNewModal from './components/WhatsNewModal';
+import QuickLogSheet from './components/QuickLogSheet';
 
 type AppView = 'cover' | 'setup' | 'dashboard';
 type Tab = 'matches' | 'stats' | 'teams' | 'profile' | 'coach';
@@ -53,6 +54,7 @@ const App: React.FC = () => {
   
   // Update Modal State
   const [showWhatsNew, setShowWhatsNew] = useState(false);
+  const [showQuickLog, setShowQuickLog] = useState(false);
 
   // Filter & Search State
   const [quickTeamFilter, setQuickTeamFilter] = useState<string>('all');
@@ -341,6 +343,46 @@ const App: React.FC = () => {
     transitionTab('matches');
   };
 
+  // Quick Log save handler
+  const handleQuickLogSave = (matchId: string, update: Partial<MatchData>) => {
+    if (!activeProfile) return;
+    const existing = matches.find(m => m.id === matchId);
+    if (!existing) return;
+    const updated = updateMatchInStorage({ ...existing, ...update, id: matchId, profileId: activeProfile.id });
+    setMatches(updated);
+    showToast(language === 'zh' ? '已儲存 ✓' : 'Saved ✓', 'success');
+  };
+
+  // Quick Log create new match handler — returns new match id
+  const handleQuickLogCreate = (opponent: string, teamId: string): string => {
+    if (!activeProfile) return '';
+    const newId = Date.now().toString();
+    const today = new Date().toISOString().split('T')[0];
+    const updated = addMatchToStorage({
+      profileId: activeProfile.id,
+      teamId,
+      opponent,
+      date: today,
+      isHome: true,
+      matchType: 'friendly',
+      matchFormat: '',
+      scoreMyTeam: 0,
+      scoreOpponent: 0,
+      arthurGoals: 0,
+      arthurAssists: 0,
+      scorers: [],
+      rating: 0,
+      isMotm: false,
+      dadComment: '',
+      kidInterview: '',
+      videos: [],
+      status: 'completed',
+      id: newId,
+    });
+    setMatches(updated);
+    return newId;
+  };
+
   const activeTeam = quickTeamFilter !== 'all' 
       ? getTeamById(activeProfile?.teams || [], quickTeamFilter)
       : activeProfile?.teams?.[0];
@@ -481,7 +523,10 @@ const App: React.FC = () => {
 
             {!isSelectionMode && activeTab === 'matches' && (
                 <div className="fixed bottom-24 right-6 z-40 flex flex-col gap-3 items-end">
-                    {matches.length > 0 && <button onClick={handleDuplicateLast} className="bg-white text-slate-600 hover:text-blue-600 font-bold px-4 py-2 rounded-full shadow-lg flex items-center gap-2 text-xs transition-transform hover:scale-105 active:scale-95 border border-slate-100"><i className="fas fa-copy"></i>{t.duplicate}</button>}
+                    <button onClick={() => setShowQuickLog(true)}
+                        className="bg-amber-400 hover:bg-amber-500 text-white font-black px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2 text-xs transition-transform hover:scale-105 active:scale-95">
+                        <i className="fas fa-bolt"></i>{language === 'zh' ? '快速記錄' : 'Quick Log'}
+                    </button>
                     <button onClick={() => { setEditingMatch(null); setIsFormOpen(true); }} className={`w-14 h-14 ${mainTheme.button} rounded-full shadow-lg flex items-center justify-center text-xl transition-transform hover:scale-110 active:scale-95`}><i className="fas fa-plus"></i></button>
                 </div>
             )}
@@ -550,6 +595,17 @@ const App: React.FC = () => {
 
       {selectedOpponent && <OpponentStatsModal isOpen={!!selectedOpponent} onClose={() => setSelectedOpponent(null)} opponentName={selectedOpponent} allMatches={matches} profile={activeProfile} />}
       <WhatsNewModal isOpen={showWhatsNew} onClose={handleCloseWhatsNew} />
+
+      {activeProfile && (
+        <QuickLogSheet
+          isOpen={showQuickLog}
+          onClose={() => setShowQuickLog(false)}
+          matches={matches}
+          profile={activeProfile}
+          onSave={handleQuickLogSave}
+          onCreateMatch={handleQuickLogCreate}
+        />
+      )}
     </div>
   );
 };
