@@ -112,7 +112,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
   matches = [],
   title = '',
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   // Background
   const [bgImage, setBgImage]               = useState<string | null>(null);
