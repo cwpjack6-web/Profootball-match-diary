@@ -29,6 +29,10 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
   const [newOpponent, setNewOpponent] = useState('');
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [showNewMatchForm, setShowNewMatchForm] = useState(false);
+  const [ownGoalsFor, setOwnGoalsFor] = useState(0);       // opponent own goal (counts for us)
+  const [ownGoalsAgainst, setOwnGoalsAgainst] = useState(0); // our own goal (counts for them)
+  type ParticipationStatus = 'full' | 'partial' | 'none';
+  const [participation, setParticipation] = useState<ParticipationStatus>('full');
 
   // ── Derived ───────────────────────────────────────────────────────────────
   const today = new Date().toISOString().split('T')[0];
@@ -95,6 +99,9 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     setArthurGoals(0);
     setArthurAssists(0);
     setTeammateGoals({});
+    setOwnGoalsFor(0);
+    setOwnGoalsAgainst(0);
+    setParticipation('full');
     setNoteText('');
   };
 
@@ -108,6 +115,9 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     setTeammateGoals({});
     setNewOpponent('');
     setShowNewMatchForm(false);
+    setOwnGoalsFor(0);
+    setOwnGoalsAgainst(0);
+    setParticipation('full');
     onClose();
   };
 
@@ -169,7 +179,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
       ? (language === 'zh' ? `入球：${goalSummary.join('、')}\n` : `Goals: ${goalSummary.join(', ')}\n`)
       : '';
 
-    const periodBlock = `${periodHeader}\n${goalLine}${noteText.trim()}`;
+    const periodBlock = `${periodHeader} [${participationLabel}]\n${goalLine}${noteText.trim()}`;
 
     // Append to existing dadComment
     const existingComment = selectedMatch.dadComment || '';
@@ -197,6 +207,17 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
         }
       }
     });
+    // Add own goals
+    for (let i = 0; i < ownGoalsFor; i++) {
+      newScorers.push({ playerId: 'og_for', name: 'OG', type: 'own_goal_for' });
+    }
+    for (let i = 0; i < ownGoalsAgainst; i++) {
+      newScorers.push({ playerId: 'og_against', name: 'OG', type: 'own_goal_against' });
+    }
+
+    // Accumulate periodsPlayed based on participation
+    const periodContribution = participation === 'full' ? 1 : participation === 'partial' ? 0.5 : 0;
+    const totalPeriodsPlayed = (selectedMatch.periodsPlayed || 0) + periodContribution;
 
     onSave(selectedMatchId, {
       dadComment: newComment,
@@ -205,6 +226,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
       arthurGoals: totalArthurGoals,
       arthurAssists: totalArthurAssists,
       scorers: newScorers,
+      periodsPlayed: totalPeriodsPlayed,
       status: 'completed',
     });
 
@@ -213,7 +235,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
 
   if (!isOpen) return null;
 
-  const hasContent = noteText.trim().length > 0 || arthurGoals > 0 || arthurAssists > 0 || Object.keys(teammateGoals).length > 0;
+  const hasContent = noteText.trim().length > 0 || arthurGoals > 0 || arthurAssists > 0 || Object.keys(teammateGoals).length > 0 || ownGoalsFor > 0 || ownGoalsAgainst > 0;
 
   return (
     <div className="fixed inset-0 z-[80] flex flex-col justify-end" onClick={handleClose}>
@@ -461,7 +483,83 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                 </div>
               </div>
 
-              {/* ③ Note */}
+              {/* ③ Own Goals */}
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase mb-2">
+                  {language === 'zh' ? '烏龍球' : 'Own Goals'}
+                </p>
+                <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-2">
+                  {/* Opponent OG → counts for us */}
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-500 flex items-center justify-center text-xs font-black shrink-0">OG</div>
+                    <span className="text-xs font-bold text-slate-600 flex-1">
+                      {language === 'zh' ? '對方烏龍球（我方得分）' : 'Opponent OG (counts for us)'}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {ownGoalsFor > 0 && (
+                        <button onClick={() => setOwnGoalsFor(Math.max(0, ownGoalsFor - 1))}
+                          className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">−</button>
+                      )}
+                      {ownGoalsFor > 0 && <span className="text-sm font-black text-orange-500 w-5 text-center">×{ownGoalsFor}</span>}
+                      <button onClick={() => setOwnGoalsFor(ownGoalsFor + 1)}
+                        className={`w-7 h-7 rounded-full text-white text-xs font-black flex items-center justify-center transition-colors ${ownGoalsFor > 0 ? 'bg-orange-400 active:bg-orange-500' : 'bg-slate-300 active:bg-slate-400'}`}>
+                        {ownGoalsFor > 0 ? '+' : 'OG'}
+                      </button>
+                    </div>
+                  </div>
+                  {/* Our OG → counts for opponent */}
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center text-xs font-black shrink-0">OG</div>
+                    <span className="text-xs font-bold text-slate-600 flex-1">
+                      {language === 'zh' ? '我方烏龍球（對方得分）' : 'Our OG (counts for them)'}
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {ownGoalsAgainst > 0 && (
+                        <button onClick={() => setOwnGoalsAgainst(Math.max(0, ownGoalsAgainst - 1))}
+                          className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">−</button>
+                      )}
+                      {ownGoalsAgainst > 0 && <span className="text-sm font-black text-rose-500 w-5 text-center">×{ownGoalsAgainst}</span>}
+                      <button onClick={() => setOwnGoalsAgainst(ownGoalsAgainst + 1)}
+                        className={`w-7 h-7 rounded-full text-white text-xs font-black flex items-center justify-center transition-colors ${ownGoalsAgainst > 0 ? 'bg-rose-400 active:bg-rose-500' : 'bg-slate-300 active:bg-slate-400'}`}>
+                        {ownGoalsAgainst > 0 ? '+' : 'OG'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* ④ Participation */}
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase mb-2">
+                  {language === 'zh' ? `阿仔今節出場？` : `Participation This Period`}
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { key: 'full',    labelZh: '全節正選', labelEn: 'Full Period',   icon: 'fa-circle',       color: 'emerald' },
+                    { key: 'partial', labelZh: '部分上陣', labelEn: 'Partial',        icon: 'fa-adjust',       color: 'amber'   },
+                    { key: 'none',    labelZh: '未出場',   labelEn: 'Did Not Play',   icon: 'fa-circle-notch', color: 'slate'   },
+                  ] as const).map(opt => (
+                    <button key={opt.key} onClick={() => setParticipation(opt.key)}
+                      className={`flex flex-col items-center gap-1 py-2.5 rounded-xl border-2 text-xs font-black transition-all ${
+                        participation === opt.key
+                          ? opt.color === 'emerald' ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                          : opt.color === 'amber'   ? 'border-amber-400 bg-amber-50 text-amber-700'
+                          : 'border-slate-400 bg-slate-100 text-slate-600'
+                          : 'border-slate-100 bg-white text-slate-400'
+                      }`}>
+                      <i className={`fas ${opt.icon} text-sm`} />
+                      {language === 'zh' ? opt.labelZh : opt.labelEn}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-slate-400 text-center mt-1.5">
+                  {participation === 'full'    ? (language === 'zh' ? '計 1 節' : '+1 period') :
+                   participation === 'partial' ? (language === 'zh' ? '計 0.5 節' : '+0.5 period') :
+                                                  (language === 'zh' ? '唔計入上陣節數' : 'Not counted')}
+                </p>
+              </div>
+
+              {/* ⑤ Note */}
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase mb-2">
                   {language === 'zh' ? `節${nextPeriodNum} 筆記` : `Period ${nextPeriodNum} Notes`}
