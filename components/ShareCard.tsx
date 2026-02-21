@@ -293,7 +293,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
   // ── Background pattern ─────────────────────────────────────────────────────
 
-  const bgPattern = useMemo(() => {
+  const renderBgPattern = () => {
     if (!currentPreset) return null;
     switch (currentPreset.id) {
       case 'pitch':
@@ -334,15 +334,13 @@ const ShareCard: React.FC<ShareCardProps> = ({
         );
       default: return null;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPreset]);
+  };
 
   // ── Shared background layer ────────────────────────────────────────────────
 
   const renderBackground = () => (
     <>
       {bgImage ? (
-        mode === 'match' ? (
           <div className="absolute inset-0 overflow-hidden cursor-move"
             onPointerDown={onPtrDown} onPointerMove={onPtrMove}
             onPointerUp={onPtrUp} onPointerLeave={onPtrUp}
@@ -351,11 +349,8 @@ const ShareCard: React.FC<ShareCardProps> = ({
               className="absolute left-1/2 top-1/2 max-w-none min-w-full min-h-full pointer-events-none will-change-transform"
               style={{ transform: `translate(-50%,-50%) translate(${imgPos.x}px,${imgPos.y}px) scale(${imgScale})` }} />
           </div>
-        ) : (
-          <img src={bgImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
-        )
       ) : currentPreset ? (
-        <div className={`absolute inset-0 ${currentPreset.css}`}>{bgPattern}</div>
+        <div className={`absolute inset-0 ${currentPreset.css}`}>{renderBgPattern()}</div>
       ) : (
         <div className={`absolute inset-0 ${theme ? `bg-gradient-to-br ${theme.gradient}` : 'bg-gradient-to-br from-blue-900 to-slate-900'} opacity-50`} />
       )}
@@ -767,7 +762,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
         )}
 
         {/* ── Zoom slider (match + custom image) ── */}
-        {mode === 'match' && bgImage && (
+        {bgImage && (
           <div className="bg-white/10 rounded-xl p-3 flex items-center gap-3 backdrop-blur-sm">
             <i className="fas fa-search-minus text-white/50 text-xs" />
             <input type="range" min="0.2" max="3" step="0.1" value={imgScale}
