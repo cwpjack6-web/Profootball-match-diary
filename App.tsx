@@ -32,7 +32,7 @@ import OnboardingModal from './components/OnboardingModal';
 type AppView = 'cover' | 'setup' | 'dashboard';
 type Tab = 'matches' | 'stats' | 'teams' | 'profile' | 'coach';
 
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 
 const App: React.FC = () => {
   const { t, language, toggleLanguage } = useLanguage();
