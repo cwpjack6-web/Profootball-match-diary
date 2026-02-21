@@ -8,7 +8,7 @@
  *   <ShareCard mode="season" matches={list}  profile={profile} isOpen={open} onClose={close} title="U8 - 2024" />
  */
 
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import html2canvas from 'html2canvas';
 import { MatchData, UserProfile } from '../types';
 import { useLanguage } from '../context/LanguageContext';
@@ -130,8 +130,8 @@ const ShareCard: React.FC<ShareCardProps> = ({
   // Image pan/zoom (match mode)
   const [imgScale, setImgScale] = useState(1);
   const [imgPos, setImgPos]     = useState({ x: 0, y: 0 });
-  const isDraggingRef = useRef(false);
-  const dragStartRef  = useRef({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart]   = useState({ x: 0, y: 0 });
 
   // Visibility
   const [vis, setVis] = useState<VisibilityOptions>(DEFAULT_VISIBILITY);
@@ -269,25 +269,22 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
   // ── Drag (match mode) ──────────────────────────────────────────────────────
 
-  const onPtrDown = useCallback((e: React.PointerEvent) => {
+  const onPtrDown = (e: React.PointerEvent) => {
     if (!bgImage) return;
     e.preventDefault();
-    isDraggingRef.current = true;
-    setImgPos(pos => {
-      dragStartRef.current = { x: e.clientX - pos.x, y: e.clientY - pos.y };
-      return pos;
-    });
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - imgPos.x, y: e.clientY - imgPos.y });
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  }, [bgImage]);
-  const onPtrMove = useCallback((e: React.PointerEvent) => {
-    if (!isDraggingRef.current) return;
+  };
+  const onPtrMove = (e: React.PointerEvent) => {
+    if (!isDragging) return;
     e.preventDefault();
-    setImgPos({ x: e.clientX - dragStartRef.current.x, y: e.clientY - dragStartRef.current.y });
-  }, []);
-  const onPtrUp = useCallback((e: React.PointerEvent) => {
-    isDraggingRef.current = false;
+    setImgPos({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
+  };
+  const onPtrUp = (e: React.PointerEvent) => {
+    setIsDragging(false);
     (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-  }, []);
+  };
 
   // ── Visibility helper ──────────────────────────────────────────────────────
 
@@ -342,14 +339,17 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
   // ── Shared background layer ────────────────────────────────────────────────
 
-  const backgroundLayer = useMemo(() => (
+  const renderBackground = () => (
     <>
       {bgImage ? (
         mode === 'match' ? (
-          <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute inset-0 overflow-hidden cursor-move"
+            onPointerDown={onPtrDown} onPointerMove={onPtrMove}
+            onPointerUp={onPtrUp} onPointerLeave={onPtrUp}
+            style={{ touchAction: 'none' }}>
             <img src={bgImage} alt=""
               className="absolute left-1/2 top-1/2 max-w-none min-w-full min-h-full pointer-events-none will-change-transform"
-              style={{ transform: `translate(-50%,-50%) translate(${imgPos.x}px,${imgPos.y}px) scale(${imgScale})`, touchAction: 'none' }} />
+              style={{ transform: `translate(-50%,-50%) translate(${imgPos.x}px,${imgPos.y}px) scale(${imgScale})` }} />
           </div>
         ) : (
           <img src={bgImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
@@ -366,19 +366,18 @@ const ShareCard: React.FC<ShareCardProps> = ({
           style={{ boxShadow: 'inset 0 0 30px rgba(0,255,200,0.12),inset 0 0 2px rgba(0,255,200,0.5)', border: '1px solid rgba(0,255,200,0.3)' }} />
       )}
 
-      {/* Subtle overlay for photos — only darken bottom for text readability */}
+      {/* Subtle overlay for photos */}
       {bgImage && cardTheme === 'gradient' && (
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none" />
       )}
       {bgImage && cardTheme === 'broadcast' && (
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
       )}
       {bgImage && cardTheme === 'minimal' && (
-        <div className="absolute inset-0 bg-black/10" />
+        <div className="absolute inset-0 bg-black/10 pointer-events-none" />
       )}
     </>
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  ), [bgImage, mode, currentPreset, bgPattern, isNeon, cardTheme]);
+  );
 
   // ── MATCH CARD content ─────────────────────────────────────────────────────
 
@@ -745,18 +744,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
           {/* RENDER AREA */}
           <div ref={cardRef} className={`relative w-full h-full overflow-hidden flex flex-col ${isDarkText ? 'bg-amber-50' : 'bg-slate-900'}`}>
-            {backgroundLayer}
-            {/* Drag overlay — lives in render so pointer capture is never broken by useMemo */}
-            {bgImage && mode === 'match' && (
-              <div
-                className="absolute inset-0 z-[15] cursor-move"
-                style={{ touchAction: 'none' }}
-                onPointerDown={onPtrDown}
-                onPointerMove={onPtrMove}
-                onPointerUp={onPtrUp}
-                onPointerLeave={onPtrUp}
-              />
-            )}
+            {renderBackground()}
             {mode === 'match' ? matchCardContent : seasonCardContent}
           </div>
 
