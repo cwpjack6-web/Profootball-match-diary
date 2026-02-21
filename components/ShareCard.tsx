@@ -130,8 +130,8 @@ const ShareCard: React.FC<ShareCardProps> = ({
   // Image pan/zoom (match mode)
   const [imgScale, setImgScale] = useState(1);
   const [imgPos, setImgPos]     = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart]   = useState({ x: 0, y: 0 });
+  const isDraggingRef = useRef(false);
+  const dragStartRef  = useRef({ x: 0, y: 0 });
 
   // Visibility
   const [vis, setVis] = useState<VisibilityOptions>(DEFAULT_VISIBILITY);
@@ -258,21 +258,20 @@ const ShareCard: React.FC<ShareCardProps> = ({
   const onPtrDown = useCallback((e: React.PointerEvent) => {
     if (!bgImage) return;
     e.preventDefault();
-    setIsDragging(true);
-    // Use functional form to read latest imgPos without adding it to deps
+    isDraggingRef.current = true;
     setImgPos(pos => {
-      setDragStart({ x: e.clientX - pos.x, y: e.clientY - pos.y });
+      dragStartRef.current = { x: e.clientX - pos.x, y: e.clientY - pos.y };
       return pos;
     });
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
   }, [bgImage]);
   const onPtrMove = useCallback((e: React.PointerEvent) => {
-    if (!isDragging || !bgImage) return;
+    if (!isDraggingRef.current) return;
     e.preventDefault();
-    setImgPos({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
-  }, [isDragging, bgImage, dragStart]);
+    setImgPos({ x: e.clientX - dragStartRef.current.x, y: e.clientY - dragStartRef.current.y });
+  }, []);
   const onPtrUp = useCallback((e: React.PointerEvent) => {
-    setIsDragging(false);
+    isDraggingRef.current = false;
     (e.target as HTMLElement).releasePointerCapture(e.pointerId);
   }, []);
 
@@ -731,7 +730,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
             {/* Drag overlay — lives in render so pointer capture is never broken by useMemo */}
             {bgImage && mode === 'match' && (
               <div
-                className="absolute inset-0 z-[5] cursor-move"
+                className="absolute inset-0 z-[15] cursor-move"
                 style={{ touchAction: 'none' }}
                 onPointerDown={onPtrDown}
                 onPointerMove={onPtrMove}
