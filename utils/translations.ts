@@ -400,25 +400,10 @@ export const translations = {
 
     // Analytics tab labels and units
     // Analytics tab labels
-    drillDownHint: "Tap any match to view the full report",
-    drillDownHintNav: "Tap to view full match report",
-        tab_overview: "Overview",
-    tab_context: "Context",
-    tab_growth: "Growth",
-    tab_opponent: "Opponent",
-    matchesUnit: " matches",
-    winShort: "W",
-    drawShort: "D",
-    lossShort: "L",
-    notEnoughData: "Not enough data yet — keep logging matches!",
-    progressNeedMore: "Need at least 4 matches to calculate progress",
-    opponentNeedMore: "Need 2+ matches vs same opponent to show difficulty ranking",
 
     // Analytics new modules
     streakTitle: "連勝走勢",
-    streakWin: "連勝",
     streakLoss: "連敗",
-    streakUnbeaten: "不敗",
     bestWinStreak: "最長連勝",
     bestUnbeaten: "最長不敗",
     homeAwayTitle: "主客場分析",
@@ -824,9 +809,7 @@ export const translations = {
 
     // Analytics new modules
     streakTitle: "Streak",
-    streakWin: "Win Streak",
     streakLoss: "Losing Run",
-    streakUnbeaten: "Unbeaten",
     bestWinStreak: "Best Win Streak",
     bestUnbeaten: "Best Unbeaten",
     homeAwayTitle: "Home vs Away",
