@@ -8,7 +8,7 @@
  *   <ShareCard mode="season" matches={list}  profile={profile} isOpen={open} onClose={close} title="U8 - 2024" />
  */
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import html2canvas from 'html2canvas';
 import { MatchData, UserProfile } from '../types';
 import { useLanguage } from '../context/LanguageContext';
@@ -255,22 +255,26 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
   // ── Drag (match mode) ──────────────────────────────────────────────────────
 
-  const onPtrDown = (e: React.PointerEvent) => {
+  const onPtrDown = useCallback((e: React.PointerEvent) => {
     if (!bgImage) return;
     e.preventDefault();
     setIsDragging(true);
-    setDragStart({ x: e.clientX - imgPos.x, y: e.clientY - imgPos.y });
+    // Use functional form to read latest imgPos without adding it to deps
+    setImgPos(pos => {
+      setDragStart({ x: e.clientX - pos.x, y: e.clientY - pos.y });
+      return pos;
+    });
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  };
-  const onPtrMove = (e: React.PointerEvent) => {
+  }, [bgImage]);
+  const onPtrMove = useCallback((e: React.PointerEvent) => {
     if (!isDragging || !bgImage) return;
     e.preventDefault();
     setImgPos({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
-  };
-  const onPtrUp = (e: React.PointerEvent) => {
+  }, [isDragging, bgImage, dragStart]);
+  const onPtrUp = useCallback((e: React.PointerEvent) => {
     setIsDragging(false);
     (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-  };
+  }, []);
 
   // ── Visibility helper ──────────────────────────────────────────────────────
 
@@ -329,9 +333,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
     <>
       {bgImage ? (
         mode === 'match' ? (
-          <div className="absolute inset-0 overflow-hidden cursor-move"
-            onPointerDown={onPtrDown} onPointerMove={onPtrMove}
-            onPointerUp={onPtrUp}   onPointerLeave={onPtrUp}>
+          <div className="absolute inset-0 overflow-hidden">
             <img src={bgImage} alt=""
               className="absolute left-1/2 top-1/2 max-w-none min-w-full min-h-full pointer-events-none will-change-transform"
               style={{ transform: `translate(-50%,-50%) translate(${imgPos.x}px,${imgPos.y}px) scale(${imgScale})`, touchAction: 'none' }} />
@@ -363,7 +365,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
       )}
     </>
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  ), [bgImage, mode, imgPos, imgScale, onPtrDown, onPtrMove, onPtrUp, currentPreset, bgPattern, isNeon, cardTheme]);
+  ), [bgImage, mode, currentPreset, bgPattern, isNeon, cardTheme]);
 
   // ── MATCH CARD content ─────────────────────────────────────────────────────
 
@@ -726,6 +728,17 @@ const ShareCard: React.FC<ShareCardProps> = ({
           {/* RENDER AREA */}
           <div ref={cardRef} className={`relative w-full h-full overflow-hidden flex flex-col ${isDarkText ? 'bg-amber-50' : 'bg-slate-900'}`}>
             {backgroundLayer}
+            {/* Drag overlay — lives in render so pointer capture is never broken by useMemo */}
+            {bgImage && mode === 'match' && (
+              <div
+                className="absolute inset-0 z-[5] cursor-move"
+                style={{ touchAction: 'none' }}
+                onPointerDown={onPtrDown}
+                onPointerMove={onPtrMove}
+                onPointerUp={onPtrUp}
+                onPointerLeave={onPtrUp}
+              />
+            )}
             {mode === 'match' ? matchCardContent : seasonCardContent}
           </div>
 
