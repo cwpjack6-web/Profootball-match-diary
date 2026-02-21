@@ -279,7 +279,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
   // ── Background pattern ─────────────────────────────────────────────────────
 
-  const bgPattern = (() => {
+  const bgPattern = useMemo(() => {
     if (!currentPreset) return null;
     switch (currentPreset.id) {
       case 'pitch':
@@ -320,11 +320,12 @@ const ShareCard: React.FC<ShareCardProps> = ({
         );
       default: return null;
     }
-  })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPreset]);
 
   // ── Shared background layer ────────────────────────────────────────────────
 
-  const backgroundLayer = (
+  const backgroundLayer = useMemo(() => (
     <>
       {bgImage ? (
         mode === 'match' ? (
@@ -361,11 +362,12 @@ const ShareCard: React.FC<ShareCardProps> = ({
         <div className="absolute inset-0 bg-black/10" />
       )}
     </>
-  );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ), [bgImage, mode, imgPos, imgScale, onPtrDown, onPtrMove, onPtrUp, currentPreset, bgPattern, isNeon, cardTheme]);
 
   // ── MATCH CARD content ─────────────────────────────────────────────────────
 
-  const matchCardContent = (() => {
+  const matchCardContent = useMemo(() => {
     if (!match || !matchTeam) return null;
 
     const contentPos = textPosition === 'top'
@@ -497,11 +499,12 @@ const ShareCard: React.FC<ShareCardProps> = ({
         </div>
       </>
     );
-  })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [match, matchTeam, cardTheme, textPosition, isDarkText, vis, textCls, textShadow, resultColor, resultLabel, teamHex, isRetro, bgImage, t]);
 
   // ── SEASON CARD content ────────────────────────────────────────────────────
 
-  const seasonCardContent = (
+  const seasonCardContent = useMemo(() => (
     <>
       {/* Header */}
       <div className="relative z-10 p-5">
@@ -610,7 +613,8 @@ const ShareCard: React.FC<ShareCardProps> = ({
         </div>
       )}
     </>
-  );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ), [matches, title, profile, theme, vis, textCls, textShadow, isRetro, bgImage, t, isDarkText]);
 
   // ── Visibility panel config ────────────────────────────────────────────────
 
