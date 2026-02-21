@@ -350,9 +350,15 @@ const ShareCard: React.FC<ShareCardProps> = ({
           style={{ boxShadow: 'inset 0 0 30px rgba(0,255,200,0.12),inset 0 0 2px rgba(0,255,200,0.5)', border: '1px solid rgba(0,255,200,0.3)' }} />
       )}
 
-      {/* Dark overlay for photos */}
-      {bgImage && (
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/30" />
+      {/* Subtle overlay for photos — only darken bottom for text readability */}
+      {bgImage && cardTheme === 'gradient' && (
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+      )}
+      {bgImage && cardTheme === 'broadcast' && (
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+      )}
+      {bgImage && cardTheme === 'minimal' && (
+        <div className="absolute inset-0 bg-black/10" />
       )}
     </>
   );
@@ -369,7 +375,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
         : 'justify-end mt-auto';
 
     const cardStyle = cardTheme === 'broadcast'
-      ? `${isDarkText ? 'bg-amber-100/90 border-amber-300' : 'bg-slate-900/90 border-white/10'} border-t-2 w-full p-5 backdrop-blur-sm`
+      ? `${isDarkText ? 'bg-amber-100/80 border-amber-200' : 'bg-black/55 border-white/10'} border-t-2 w-full p-5 backdrop-blur-md`
       : cardTheme === 'gradient'
         ? 'pt-12 p-5'
         : 'p-5';
