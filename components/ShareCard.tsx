@@ -381,7 +381,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
   // ── MATCH CARD content ─────────────────────────────────────────────────────
 
-  const matchCardContent = useMemo(() => {
+  const renderMatchCard = () => {
     if (!match || !matchTeam) return null;
 
     const contentPos = textPosition === 'top'
@@ -513,12 +513,11 @@ const ShareCard: React.FC<ShareCardProps> = ({
         </div>
       </>
     );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [match, matchTeam, cardTheme, textPosition, isDarkText, vis, textCls, textShadow, resultColor, resultLabel, teamHex, isRetro, bgImage, t]);
+  };
 
   // ── SEASON CARD content ────────────────────────────────────────────────────
 
-  const seasonCardContent = useMemo(() => (
+  const renderSeasonCard = () => (
     <>
       {/* Header */}
       <div className="relative z-10 p-5">
@@ -627,8 +626,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
         </div>
       )}
     </>
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  ), [matches, title, profile, theme, vis, textCls, textShadow, isRetro, bgImage, t, isDarkText]);
+  );
 
   // ── Visibility panel config ────────────────────────────────────────────────
 
@@ -745,7 +743,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
           {/* RENDER AREA */}
           <div ref={cardRef} className={`relative w-full h-full overflow-hidden flex flex-col ${isDarkText ? 'bg-amber-50' : 'bg-slate-900'}`}>
             {renderBackground()}
-            {mode === 'match' ? matchCardContent : seasonCardContent}
+            {mode === 'match' ? renderMatchCard() : renderSeasonCard()}
           </div>
 
           {(bgImage || selectedPreset !== null) && (
