@@ -139,9 +139,14 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
   const cardRef      = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const objectUrlRef = useRef<string | null>(null);
 
   // Reset image transform when image changes
   useEffect(() => { setImgScale(1); setImgPos({ x: 0, y: 0 }); }, [bgImage]);
+  // Revoke Object URL when component unmounts
+  useEffect(() => {
+    return () => { if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current); };
+  }, []);
 
   // ── Season stats (must be before early return — React hook rules) ─────────
 
@@ -215,8 +220,17 @@ const ShareCard: React.FC<ShareCardProps> = ({
     if (!file) return;
     setIsProcessingImg(true);
     try {
-      const compressed = await compressImage(file, 1200, 0.85);
-      setBgImage(compressed);
+      // Compress to canvas then convert to Blob → Object URL
+      // Object URL is just a short pointer string, not full base64 in state
+      const base64 = await compressImage(file, 800, 0.72);
+      // Convert base64 → Blob → Object URL
+      const res = await fetch(base64);
+      const blob = await res.blob();
+      // Revoke previous object URL to free memory
+      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+      const url = URL.createObjectURL(blob);
+      objectUrlRef.current = url;
+      setBgImage(url);
       setSelectedPreset(null);
     } catch {
       alert('Could not load image. Please try again.');
@@ -708,9 +722,14 @@ const ShareCard: React.FC<ShareCardProps> = ({
         <div className={`relative w-full ${aspectRatio} shadow-2xl overflow-hidden rounded-xl bg-slate-900 select-none`}>
 
           {isProcessingImg && (
-            <div className="absolute inset-0 z-50 bg-black/60 flex flex-col items-center justify-center backdrop-blur-sm">
-              <i className="fas fa-spinner fa-spin text-white text-3xl mb-2" />
-              <span className="text-white text-xs font-bold">Optimizing…</span>
+            <div className="absolute inset-0 z-50 bg-black/70 flex flex-col items-center justify-center backdrop-blur-sm">
+              <i className="fas fa-compress-arrows-alt text-white text-2xl mb-3 animate-pulse" />
+              <span className="text-white text-sm font-black mb-1">
+                {language === 'zh' ? '壓縮相片中…' : 'Compressing…'}
+              </span>
+              <span className="text-white/60 text-xs">
+                {language === 'zh' ? '大相自動縮細，唔影響質素' : 'Optimising for best performance'}
+              </span>
             </div>
           )}
 
