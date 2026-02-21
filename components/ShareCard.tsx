@@ -515,7 +515,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
   const renderSeasonCard = () => (
     <>
       {/* Header */}
-      <div className="relative z-10 p-5">
+      <div className="relative z-10 p-5 pointer-events-none">
         {isRetro && !bgImage ? (
           <>
             <div className="border-t-2 border-b-2 border-slate-800 text-center py-0.5 mb-3">
@@ -537,7 +537,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
       {/* Win rate ring */}
       {vis.showWinRate && (
-        <div className="relative z-10 flex flex-col items-center justify-center py-2">
+        <div className="relative z-10 flex flex-col items-center justify-center py-2 pointer-events-none">
           <div className="relative w-28 h-28 flex items-center justify-center">
             <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
               <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="8" />
@@ -559,7 +559,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
       {/* Highlights */}
       {vis.showHighlights && seasonHighlights && (
-        <div className="relative z-10 mx-4 mb-2 rounded-lg overflow-hidden">
+        <div className="relative z-10 mx-4 mb-2 rounded-lg overflow-hidden pointer-events-none">
           <div className={`px-3 py-2 ${isDarkText ? 'bg-amber-200/60 border border-amber-300' : 'bg-white/10 backdrop-blur-sm border border-white/10'}`}>
             <div className={`text-[8px] font-black uppercase tracking-widest mb-1.5 ${isDarkText ? 'text-slate-600' : 'text-white/60'}`}>
               Season Highlights
@@ -605,7 +605,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
         } ${isDarkText
           ? 'bg-amber-200/60 border-t border-amber-300 divide-amber-300'
           : 'bg-white/10 backdrop-blur-md border-t border-white/10 divide-white/10'
-        }`}>
+        }` pointer-events-none`}>
           {[
             { value: seasonStats.total,   label: t.played,  color: '' },
             { value: seasonStats.wins,    label: t.won,     color: 'text-emerald-400' },
