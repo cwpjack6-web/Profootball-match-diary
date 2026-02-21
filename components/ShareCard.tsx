@@ -605,7 +605,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
         } ${isDarkText
           ? 'bg-amber-200/60 border-t border-amber-300 divide-amber-300'
           : 'bg-white/10 backdrop-blur-md border-t border-white/10 divide-white/10'
-        }` pointer-events-none`}>
+        } pointer-events-none`}>
           {[
             { value: seasonStats.total,   label: t.played,  color: '' },
             { value: seasonStats.wins,    label: t.won,     color: 'text-emerald-400' },
