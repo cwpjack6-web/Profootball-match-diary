@@ -30,7 +30,7 @@ const PAGE_ICONS = ['fa-calendar-alt', 'fa-futbol', 'fa-pen'];
 const MatchForm: React.FC<ExtendedMatchFormProps> = ({
   isOpen, onClose, onSubmit, profile, initialData, previousMatches, onAddTeammate
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { showToast } = useToast();
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -247,13 +247,22 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
     });
   };
 
-  const handleAction = (type: 'my_goal' | 'op_goal' | 'kid_goal' | 'kid_assist') => {
+  const handleAction = (type: 'my_goal' | 'op_goal' | 'kid_goal' | 'kid_assist' | 'og_for' | 'og_against') => {
     setFormData(prev => {
       const s = { ...prev };
       if (type === 'my_goal') s.scoreMyTeam += 1;
       else if (type === 'op_goal') s.scoreOpponent += 1;
       else if (type === 'kid_goal') { s.scoreMyTeam += 1; s.arthurGoals += 1; }
       else if (type === 'kid_assist') s.arthurAssists += 1;
+      else if (type === 'og_for') {
+        // Opponent own goal — counts for us
+        s.scoreMyTeam += 1;
+        s.scorers = [...(s.scorers || []), { playerId: 'og_for', name: 'OG', type: 'own_goal_for' }];
+      } else if (type === 'og_against') {
+        // Our own goal — counts for them
+        s.scoreOpponent += 1;
+        s.scorers = [...(s.scorers || []), { playerId: 'og_against', name: 'OG', type: 'own_goal_against' }];
+      }
       return s;
     });
   };
@@ -563,6 +572,15 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
         <button type="button" onClick={() => handleAction('op_goal')}
           className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-rose-50 border-2 border-rose-100 text-rose-600 active:scale-95 transition-all">
           <span className="font-bold text-xs">{t.scoreOpponent} +1</span>
+        </button>
+        {/* Own goal buttons */}
+        <button type="button" onClick={() => handleAction('og_for')}
+          className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-orange-50 border-2 border-orange-200 text-orange-600 active:scale-95 transition-all">
+          <span className="font-bold text-xs">OG {language === 'zh' ? '對方' : 'Opp'} +1</span>
+        </button>
+        <button type="button" onClick={() => handleAction('og_against')}
+          className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-slate-50 border-2 border-slate-200 text-slate-500 active:scale-95 transition-all">
+          <span className="font-bold text-xs">OG {language === 'zh' ? '我方' : 'Ours'} +1</span>
         </button>
       </div>
 
