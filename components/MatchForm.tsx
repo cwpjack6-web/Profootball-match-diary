@@ -320,7 +320,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
   const adjustBtnClass = "w-9 h-9 rounded-full bg-slate-100 text-slate-400 hover:bg-slate-200 flex items-center justify-center transition-colors active:scale-90";
 
   // ── Page 1: Basic Info ────────────────────────────────────────────────────────
-  const Page1 = () => (
+  const page1 = (
     <div className="space-y-4">
       {/* Fixture toggle */}
       <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
@@ -513,7 +513,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
   );
 
   // ── Page 2: Scoreboard ────────────────────────────────────────────────────────
-  const Page2 = () => (
+  const page2 = (
     <div className="space-y-5">
       {/* Big scoreboard */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
@@ -815,8 +815,8 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
 
         {/* Page content */}
         <div className="flex-1 overflow-y-auto p-4 bg-slate-50 min-h-0">
-          {currentPage === 1 && <Page1 />}
-          {currentPage === 2 && !isFixtureMode && <Page2 />}
+          {currentPage === 1 && page1}
+          {currentPage === 2 && !isFixtureMode && page2}
           {currentPage === 2 && isFixtureMode && (
             <div className="flex flex-col items-center justify-center h-48 text-slate-400">
               <i className="fas fa-calendar-check text-4xl mb-3 opacity-30" />
