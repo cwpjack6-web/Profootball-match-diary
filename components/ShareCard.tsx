@@ -726,7 +726,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
           {/* RENDER AREA */}
           <div ref={cardRef} className={`relative w-full h-full overflow-hidden flex flex-col ${isDarkText ? 'bg-amber-50' : 'bg-slate-900'}`}>
             {backgroundLayer}
-            {mode === 'match' ? {matchCardContent} : {seasonCardContent}}
+            {mode === 'match' ? matchCardContent : seasonCardContent}
           </div>
 
           {(bgImage || selectedPreset !== null) && (
