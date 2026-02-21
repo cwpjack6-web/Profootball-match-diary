@@ -279,7 +279,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
   // ── Background pattern ─────────────────────────────────────────────────────
 
-  const BgPattern = () => {
+  const bgPattern = (() => {
     if (!currentPreset) return null;
     switch (currentPreset.id) {
       case 'pitch':
@@ -320,11 +320,11 @@ const ShareCard: React.FC<ShareCardProps> = ({
         );
       default: return null;
     }
-  };
+  })();
 
   // ── Shared background layer ────────────────────────────────────────────────
 
-  const BackgroundLayer = () => (
+  const backgroundLayer = (
     <>
       {bgImage ? (
         mode === 'match' ? (
@@ -339,7 +339,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
           <img src={bgImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
         )
       ) : currentPreset ? (
-        <div className={`absolute inset-0 ${currentPreset.css}`}><BgPattern /></div>
+        <div className={`absolute inset-0 ${currentPreset.css}`}>{bgPattern}</div>
       ) : (
         <div className={`absolute inset-0 ${theme ? `bg-gradient-to-br ${theme.gradient}` : 'bg-gradient-to-br from-blue-900 to-slate-900'} opacity-50`} />
       )}
@@ -365,7 +365,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
   // ── MATCH CARD content ─────────────────────────────────────────────────────
 
-  const MatchCardContent = () => {
+  const matchCardContent = (() => {
     if (!match || !matchTeam) return null;
 
     const contentPos = textPosition === 'top'
@@ -497,11 +497,11 @@ const ShareCard: React.FC<ShareCardProps> = ({
         </div>
       </>
     );
-  };
+  })();
 
   // ── SEASON CARD content ────────────────────────────────────────────────────
 
-  const SeasonCardContent = () => (
+  const seasonCardContent = (
     <>
       {/* Header */}
       <div className="relative z-10 p-5">
@@ -721,8 +721,8 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
           {/* RENDER AREA */}
           <div ref={cardRef} className={`relative w-full h-full overflow-hidden flex flex-col ${isDarkText ? 'bg-amber-50' : 'bg-slate-900'}`}>
-            <BackgroundLayer />
-            {mode === 'match' ? <MatchCardContent /> : <SeasonCardContent />}
+            {backgroundLayer}
+            {mode === 'match' ? {matchCardContent} : {seasonCardContent}}
           </div>
 
           {(bgImage || selectedPreset !== null) && (
