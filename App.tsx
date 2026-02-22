@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { MatchData, UserProfile, Team } from './types';
 import { 
@@ -72,6 +73,7 @@ const App: React.FC = () => {
   const [expandedMatchIds, setExpandedMatchIds] = useState<Set<string>>(new Set());
   const [scrollToMatchId, setScrollToMatchId] = useState<string | null>(null);
   const [shareMatch, setShareMatch] = useState<MatchData | null>(null);
+  const [shareTournament, setShareTournament] = useState<{ name: string; matches: MatchData[] } | null>(null);
   const [selectedOpponent, setSelectedOpponent] = useState<string | null>(null);
   const [viewingVideoId, setViewingVideoId] = useState<string | null>(null);
 
@@ -503,7 +505,7 @@ const App: React.FC = () => {
                       )}
                   </div>
                 )}
-                <MatchTimeline matches={filteredMatches} profile={activeProfile} isSelectionMode={isSelectionMode} selectedMatchIds={selectedMatchIds} deleteConfirmId={deleteConfirmId} expandedMatchIds={expandedMatchIds} onSelectMatch={handleSelectMatch} onShare={handleShare} onEdit={openEditForm} onTrashClick={handleTrashClick} onConfirmDelete={handleConfirmDelete} onCancelDelete={handleCancelDelete} onToggleExpansion={toggleMatchExpansion} onOpenVideo={handleOpenVideo} onOpponentClick={handleOpponentClick} scrollToMatchId={scrollToMatchId} onScrollToMatchDone={() => setScrollToMatchId(null)} isFiltered={!!(searchQuery.trim() || quickTeamFilter !== "all")} />
+                <MatchTimeline matches={filteredMatches} profile={activeProfile} isSelectionMode={isSelectionMode} selectedMatchIds={selectedMatchIds} deleteConfirmId={deleteConfirmId} expandedMatchIds={expandedMatchIds} onSelectMatch={handleSelectMatch} onShare={handleShare} onShareTournament={(name, tMatches) => setShareTournament({ name, matches: tMatches })} onEdit={openEditForm} onTrashClick={handleTrashClick} onConfirmDelete={handleConfirmDelete} onCancelDelete={handleCancelDelete} onToggleExpansion={toggleMatchExpansion} onOpenVideo={handleOpenVideo} onOpponentClick={handleOpponentClick} scrollToMatchId={scrollToMatchId} onScrollToMatchDone={() => setScrollToMatchId(null)} isFiltered={!!(searchQuery.trim() || quickTeamFilter !== "all")} />
             </div>
             )}
             
@@ -603,6 +605,18 @@ const App: React.FC = () => {
           matches={filteredMatches}
           profile={activeProfile}
           title={seasonShareTitle}
+        />
+      )}
+
+      {/* 杯賽分享 — mode="tournament" */}
+      {shareTournament && (
+        <ShareCard
+          mode="tournament"
+          isOpen={!!shareTournament}
+          onClose={() => setShareTournament(null)}
+          matches={shareTournament.matches}
+          profile={activeProfile}
+          tournamentName={shareTournament.name}
         />
       )}
 
