@@ -664,7 +664,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
   );
 
   // ── Page 3: Report + Media ─────────────────────────────────────────────────────
-  const Page3 = () => (
+  const page3 = (
     <div className="space-y-5">
       {/* Rating */}
       <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
@@ -842,7 +842,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
               <p className="text-xs mt-1 opacity-60">{t.fixtureModeStatsHint}</p>
             </div>
           )}
-          {currentPage === 3 && !isFixtureMode && <Page3 />}
+          {currentPage === 3 && !isFixtureMode && page3}
           {currentPage === 3 && isFixtureMode && (
             <div className="flex flex-col items-center justify-center h-48 text-slate-400">
               <i className="fas fa-calendar-check text-4xl mb-3 opacity-30" />
