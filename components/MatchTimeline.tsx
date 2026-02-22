@@ -12,6 +12,7 @@ interface MatchTimelineProps {
   expandedMatchIds: Set<string>;
   onSelectMatch: (id: string) => void;
   onShare: (e: React.MouseEvent, match: MatchData) => void;
+  onShareTournament: (name: string, matches: MatchData[]) => void;
   onEdit: (e: React.MouseEvent, match: MatchData) => void;
   onTrashClick: (e: React.MouseEvent, id: string) => void;
   onConfirmDelete: (e: React.MouseEvent, id: string) => void;
@@ -26,7 +27,7 @@ interface MatchTimelineProps {
 
 const MatchTimeline: React.FC<MatchTimelineProps> = ({
   matches, profile, isSelectionMode, selectedMatchIds, deleteConfirmId, expandedMatchIds,
-  onSelectMatch, onShare, onEdit, onTrashClick, onConfirmDelete, onCancelDelete, onToggleExpansion, onOpenVideo, onOpponentClick,
+  onSelectMatch, onShare, onShareTournament, onEdit, onTrashClick, onConfirmDelete, onCancelDelete, onToggleExpansion, onOpenVideo, onOpponentClick,
   scrollToMatchId, onScrollToMatchDone, isFiltered
 }) => {
   const { t } = useLanguage();
