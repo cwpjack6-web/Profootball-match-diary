@@ -17,7 +17,7 @@ import { compressImage } from '../utils/image';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
-type ShareCardMode = 'match' | 'season';
+type ShareCardMode = 'match' | 'season' | 'tournament';
 
 interface ShareCardProps {
   mode: ShareCardMode;
@@ -29,6 +29,8 @@ interface ShareCardProps {
   // season mode
   matches?: MatchData[];
   title?: string;
+  // tournament mode
+  tournamentName?: string;
 }
 
 // ─── Background Presets ───────────────────────────────────────────────────────
@@ -57,6 +59,11 @@ interface VisibilityOptions {
   showHighlights: boolean;
   showStatsFooter: boolean;
   showAvgRating: boolean;
+  // tournament
+  showGameScore: boolean;
+  showGamePersonalStats: boolean;
+  showGameRating: boolean;
+  showTournamentSummary: boolean;
 }
 
 const DEFAULT_VISIBILITY: VisibilityOptions = {
@@ -70,6 +77,10 @@ const DEFAULT_VISIBILITY: VisibilityOptions = {
   showHighlights: true,
   showStatsFooter: true,
   showAvgRating: true,
+  showGameScore: true,
+  showGamePersonalStats: true,
+  showGameRating: true,
+  showTournamentSummary: true,
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -111,6 +122,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
   match,
   matches = [],
   title = '',
+  tournamentName = '',
 }) => {
   const { t, language } = useLanguage();
 
@@ -255,7 +267,9 @@ const ShareCard: React.FC<ShareCardProps> = ({
       const link = document.createElement('a');
       link.download = mode === 'match'
         ? `match-report-${match?.date ?? 'card'}.png`
-        : `season-recap-${(title || 'season').replace(/\s+/g, '-').toLowerCase()}.png`;
+        : mode === 'tournament'
+          ? `tournament-${(tournamentName || 'cup').replace(/\s+/g, '-').toLowerCase()}.png`
+          : `season-recap-${(title || 'season').replace(/\s+/g, '-').toLowerCase()}.png`;
       link.href = canvas.toDataURL('image/png');
       document.body.appendChild(link);
       link.click();
@@ -623,6 +637,159 @@ const ShareCard: React.FC<ShareCardProps> = ({
     </>
   );
 
+
+  // ── TOURNAMENT CARD content ───────────────────────────────────────────────
+
+  const renderTournamentCard = () => {
+    const done = matches.filter(m => m.status !== 'scheduled');
+    let tw = 0, td = 0, tl = 0, tGoals = 0, tAssists = 0;
+    done.forEach(m => {
+      if (m.scoreMyTeam > m.scoreOpponent) tw++;
+      else if (m.scoreMyTeam < m.scoreOpponent) tl++;
+      else td++;
+      tGoals += m.arthurGoals;
+      tAssists += m.arthurAssists;
+    });
+    const firstMatch = done[0];
+
+    const getPitchLabel = (type?: string) => {
+      switch (type) {
+        case 'turf': return t.pitchTurf || 'Turf';
+        case 'artificial': return t.pitchArtificial || 'Astroturf';
+        case 'hard': return t.pitchHard || 'Hard Court';
+        case 'indoor': return t.pitchIndoor || 'Indoor';
+        default: return type || '';
+      }
+    };
+    const getWeatherIcon = (type?: string) => {
+      switch (type) {
+        case 'sunny': return 'fa-sun'; case 'rain': return 'fa-cloud-rain';
+        case 'cloudy': return 'fa-cloud'; case 'night': return 'fa-moon';
+        case 'hot': return 'fa-temperature-high'; case 'windy': return 'fa-wind';
+        default: return 'fa-cloud';
+      }
+    };
+
+    return (
+      <>
+        {/* Header */}
+        <div className="relative z-10 p-5 pointer-events-none">
+          {isRetro && !bgImage ? (
+            <>
+              <div className="border-t-2 border-b-2 border-slate-800 text-center py-0.5 mb-3">
+                <span className="text-slate-800 text-[9px] font-black uppercase tracking-[0.3em]">Tournament Report</span>
+              </div>
+              <h2 className="text-2xl font-black uppercase leading-none text-slate-800 text-center">{tournamentName}</h2>
+              <div className="text-sm font-bold opacity-70 mt-1 text-center text-slate-700">{profile.name}</div>
+            </>
+          ) : (
+            <>
+              <div className="inline-flex items-center gap-1.5 border border-white/30 px-3 py-0.5 rounded text-[9px] font-black tracking-widest uppercase mb-2 backdrop-blur-sm text-white">
+                <i className="fas fa-trophy text-amber-400 text-[10px]" />
+                {language === 'zh' ? '杯賽報告' : 'Tournament Report'}
+              </div>
+              <h2 className="text-2xl font-black italic uppercase leading-none drop-shadow-md text-white">{tournamentName}</h2>
+              <div className="text-sm font-bold opacity-80 mt-1 text-white">{profile.name}</div>
+            </>
+          )}
+
+          {/* Meta: pitch, weather, time */}
+          {firstMatch && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {firstMatch.pitchType && (
+                <span className={`text-[9px] font-bold flex items-center gap-1 px-2 py-0.5 rounded ${isDarkText ? 'bg-amber-200/60 text-slate-600' : 'bg-white/10 text-white/70'}`}>
+                  <i className="fas fa-layer-group text-[8px]" /> {getPitchLabel(firstMatch.pitchType)}
+                </span>
+              )}
+              {firstMatch.weather && (
+                <span className={`text-[9px] font-bold flex items-center gap-1 px-2 py-0.5 rounded ${isDarkText ? 'bg-amber-200/60 text-slate-600' : 'bg-white/10 text-white/70'}`}>
+                  <i className={`fas ${getWeatherIcon(firstMatch.weather)} text-[8px]`} />
+                </span>
+              )}
+              {firstMatch.matchTime && (
+                <span className={`text-[9px] font-bold flex items-center gap-1 px-2 py-0.5 rounded ${isDarkText ? 'bg-amber-200/60 text-blue-600' : 'bg-white/10 text-blue-300'}`}>
+                  <i className="far fa-clock text-[8px]" /> {firstMatch.matchTime}{(firstMatch as any).matchEndTime ? ` → ${(firstMatch as any).matchEndTime}` : ''}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Game list */}
+        <div className="relative z-10 mx-4 flex-1 overflow-hidden pointer-events-none">
+          <div className={`rounded-lg overflow-hidden ${isDarkText ? 'bg-amber-100/60 border border-amber-200' : 'bg-white/10 backdrop-blur-sm border border-white/10'}`}>
+            {done.map((m, idx) => {
+              const isW = m.scoreMyTeam > m.scoreOpponent;
+              const isL = m.scoreMyTeam < m.scoreOpponent;
+              const resultColor = isW ? 'text-emerald-400' : isL ? 'text-rose-400' : 'text-slate-400';
+              const resultBg = isW
+                ? (isDarkText ? 'bg-emerald-100 text-emerald-700' : 'bg-emerald-500/20 text-emerald-300')
+                : isL
+                  ? (isDarkText ? 'bg-rose-100 text-rose-700' : 'bg-rose-500/20 text-rose-300')
+                  : (isDarkText ? 'bg-slate-100 text-slate-600' : 'bg-white/10 text-white/60');
+
+              return (
+                <div key={m.id} className={`flex items-center gap-2 px-3 py-1.5 ${idx > 0 ? (isDarkText ? 'border-t border-amber-200' : 'border-t border-white/10') : ''}`}>
+                  {/* Game number */}
+                  <span className={`text-[9px] font-black w-10 shrink-0 ${isDarkText ? 'text-slate-400' : 'text-white/40'}`}>
+                    G{idx + 1}
+                  </span>
+                  {/* Result badge */}
+                  <span className={`text-[9px] font-black px-1.5 py-0.5 rounded shrink-0 ${resultBg}`}>
+                    {isW ? 'W' : isL ? 'L' : 'D'}
+                  </span>
+                  {/* Opponent */}
+                  <span className={`text-[10px] font-bold flex-1 truncate ${isDarkText ? 'text-slate-700' : 'text-white/90'}`}>
+                    {m.opponent}
+                  </span>
+                  {/* Score */}
+                  {vis.showGameScore && (
+                    <span className={`text-[11px] font-black font-mono shrink-0 ${isDarkText ? 'text-slate-800' : 'text-white'}`}>
+                      {m.scoreMyTeam}–{m.scoreOpponent}
+                    </span>
+                  )}
+                  {/* Personal stats */}
+                  {vis.showGamePersonalStats && (m.arthurGoals > 0 || m.arthurAssists > 0) && (
+                    <span className={`text-[9px] font-bold shrink-0 ${isDarkText ? 'text-slate-500' : 'text-white/50'}`}>
+                      {m.arthurGoals > 0 && `⚽${m.arthurGoals}`}{m.arthurAssists > 0 && ` 👟${m.arthurAssists}`}
+                    </span>
+                  )}
+                  {/* Rating */}
+                  {vis.showGameRating && m.rating > 0 && (
+                    <span className="text-[9px] font-black text-amber-400 shrink-0">★{m.rating}</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Summary footer */}
+        {vis.showTournamentSummary && (
+          <div className={`relative z-10 mt-auto grid grid-cols-5 divide-x ${
+            isDarkText
+              ? 'bg-amber-200/60 border-t border-amber-300 divide-amber-300'
+              : 'bg-white/10 backdrop-blur-md border-t border-white/10 divide-white/10'
+          } pointer-events-none`}>
+            {[
+              { value: done.length,  label: language === 'zh' ? '場數' : 'Games',   color: '' },
+              { value: `${tw}W ${td}D ${tl}L`, label: language === 'zh' ? '戰績' : 'Record', color: '' },
+              { value: tGoals,       label: language === 'zh' ? '入球' : 'Goals',   color: 'text-emerald-400' },
+              { value: tAssists,     label: language === 'zh' ? '助攻' : 'Assists', color: 'text-purple-400' },
+              { value: done.filter(m => m.isMotm).length > 0 ? `×${done.filter(m => m.isMotm).length}` : '–',
+                label: 'MOTM', color: 'text-amber-400' },
+            ].map(({ value, label, color }) => (
+              <div key={label} className="py-2.5 flex flex-col items-center">
+                <span className={`text-xs font-black ${color || textCls}`}>{value}</span>
+                <span className={`text-[7px] uppercase font-bold ${isDarkText ? 'text-slate-500' : 'opacity-60 text-white'}`}>{label}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </>
+    );
+  };
+
   // ── Visibility panel config ────────────────────────────────────────────────
 
   const matchVisToggles: Array<{ key: keyof VisibilityOptions; label: string; icon: string }> = [
@@ -641,11 +808,18 @@ const ShareCard: React.FC<ShareCardProps> = ({
     { key: 'showAvgRating',  label: 'Avg Rating',  icon: 'fa-star' },
   ];
 
-  const visToggles = mode === 'match' ? matchVisToggles : seasonVisToggles;
+  const tournamentVisToggles: Array<{ key: keyof VisibilityOptions; label: string; icon: string }> = [
+    { key: 'showGameScore',          label: language === 'zh' ? '比數' : 'Scores',    icon: 'fa-futbol' },
+    { key: 'showGamePersonalStats',  label: language === 'zh' ? '入球助攻' : 'Goals/Ast', icon: 'fa-shoe-prints' },
+    { key: 'showGameRating',         label: language === 'zh' ? '評分' : 'Rating',    icon: 'fa-star' },
+    { key: 'showTournamentSummary',  label: language === 'zh' ? '總結欄' : 'Summary',  icon: 'fa-table' },
+  ];
+
+  const visToggles = mode === 'match' ? matchVisToggles : mode === 'tournament' ? tournamentVisToggles : seasonVisToggles;
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
-  const aspectRatio = mode === 'season'
+  const aspectRatio = mode === 'season' || mode === 'tournament'
     ? 'aspect-[4/5]'
     : layoutMode === 'poster' ? 'aspect-[9/16]' : 'aspect-[4/5]';
 
@@ -657,7 +831,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
         <div className="flex justify-between items-center text-white">
           <h3 className="font-bold text-lg">
             <i className={`fas ${mode === 'match' ? 'fa-share-alt' : 'fa-trophy'} mr-2`} />
-            {mode === 'match' ? t.shareMatch : t.shareSeason}
+            {mode === 'match' ? t.shareMatch : mode === 'tournament' ? (language === 'zh' ? '分享杯賽' : 'Share Tournament') : t.shareSeason}
           </h3>
           <div className="flex items-center gap-2">
             {/* Visibility toggle button */}
@@ -738,7 +912,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
           {/* RENDER AREA */}
           <div ref={cardRef} className={`relative w-full h-full overflow-hidden flex flex-col ${isDarkText ? 'bg-amber-50' : 'bg-slate-900'}`}>
             {renderBackground()}
-            {mode === 'match' ? renderMatchCard() : renderSeasonCard()}
+            {mode === 'match' ? renderMatchCard() : mode === 'tournament' ? renderTournamentCard() : renderSeasonCard()}
           </div>
 
           {(bgImage || selectedPreset !== null) && (
