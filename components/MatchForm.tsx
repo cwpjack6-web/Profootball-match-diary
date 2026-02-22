@@ -50,7 +50,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
 
     const defaultState: FormState = {
       date: new Date().toISOString().split('T')[0],
-      assemblyTime: '', matchTime: '',
+      assemblyTime: '', matchTime: '', matchEndTime: initialData?.matchEndTime || '',
       teamId: firstTeam?.id || '',
       location: '', isHome: true,
       matchType: 'league', tournamentName: '', matchLabel: '',
@@ -376,6 +376,13 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
         <div className="flex-1">
           <label className="text-xs font-bold text-slate-400 uppercase block mb-1">{t.matchTime}</label>
           <input type="time" name="matchTime" value={formData.matchTime} onChange={handleChange}
+            className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm text-slate-900 outline-none" />
+        </div>
+        <div className="flex-1">
+          <label className="text-xs font-bold text-slate-400 uppercase block mb-1">
+            {language === 'zh' ? '結束時間' : 'End Time'}
+          </label>
+          <input type="time" name="matchEndTime" value={formData.matchEndTime || ''} onChange={handleChange}
             className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm text-slate-900 outline-none" />
         </div>
       </div>
