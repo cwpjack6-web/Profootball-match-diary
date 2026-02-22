@@ -33,6 +33,7 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
   
   const [expandedMonthGroups, setExpandedMonthGroups] = useState<Set<string>>(new Set());
   const [swipedMatchId, setSwipedMatchId] = useState<string | null>(null);
+  const [expandedTournamentIds, setExpandedTournamentIds] = useState<Set<string>>(new Set());
   const touchStartX = useRef<number | null>(null);
 
   const { scheduled, completed } = useMemo(() => ({
@@ -99,6 +100,14 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
       if (onScrollToMatchDone) onScrollToMatchDone();
     }, 120);
   }, [scrollToMatchId]);
+
+  const toggleTournamentGroup = (key: string) => {
+    setExpandedTournamentIds(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
 
   const toggleMonthGroup = (key: string) => {
     setExpandedMonthGroups(prev => {
@@ -395,8 +404,256 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
 
             {isGroupExpanded && (
               <div className="p-4 space-y-4 animate-fade-in">
-                {groupMatches.map(match => {
-                  const team = getTeamById(profile.teams, match.teamId);
+                {(() => {
+                  // Split matches into tournament groups and standalone
+                  const tournamentMap: Record<string, MatchData[]> = {};
+                  const standalone: MatchData[] = [];
+                  groupMatches.forEach(m => {
+                    if (m.matchType === 'cup' && m.tournamentName) {
+                      const key = m.tournamentName;
+                      if (!tournamentMap[key]) tournamentMap[key] = [];
+                      tournamentMap[key].push(m);
+                    } else {
+                      standalone.push(m);
+                    }
+                  });
+
+                  // Build ordered items: tournaments first (by earliest date), then standalone
+                  const items: Array<{ type: 'tournament'; key: string; matches: MatchData[] } | { type: 'match'; match: MatchData }> = [];
+                  Object.entries(tournamentMap).forEach(([key, tMatches]) => {
+                    items.push({ type: 'tournament', key, matches: tMatches });
+                  });
+                  standalone.forEach(m => items.push({ type: 'match', match: m }));
+
+                  return items.map((item, itemIdx) => {
+                    if (item.type === 'tournament') {
+                      const { key: tKey, matches: tMatches } = item;
+                      const isTournamentExpanded = expandedTournamentIds.has(tKey + groupKey);
+                      const tFirst = tMatches[0];
+                      const tTeam = getTeamById(profile.teams, tFirst.teamId);
+                      const tStyles = getTeamColorStyles(tTeam.themeColor);
+                      // Tournament summary stats
+                      let tw = 0, td = 0, tl = 0, tGoals = 0;
+                      tMatches.forEach(m => {
+                        if (m.scoreMyTeam > m.scoreOpponent) tw++;
+                        else if (m.scoreMyTeam < m.scoreOpponent) tl++;
+                        else td++;
+                        tGoals += m.arthurGoals;
+                      });
+
+                      return (
+                        <div key={tKey + groupKey} className="rounded-xl overflow-hidden shadow-sm border border-amber-200">
+                          {/* Tournament Group Card */}
+                          <button
+                            onClick={() => toggleTournamentGroup(tKey + groupKey)}
+                            className={`w-full text-left ${tStyles.light} border-l-[6px] border-l-amber-400 p-4`}
+                          >
+                            {/* Header row */}
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <i className="fas fa-trophy text-amber-500 text-sm" />
+                                <span className="font-black text-slate-800 text-sm">{tKey}</span>
+                                <span className="text-[10px] bg-amber-100 text-amber-700 font-bold px-2 py-0.5 rounded-full border border-amber-200">
+                                  {tMatches.length} Games
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {/* W/D/L */}
+                                <span className="text-[10px] font-bold font-mono bg-white/80 border border-slate-200 px-1.5 py-0.5 rounded-full">
+                                  <span className="text-emerald-600">{tw}</span>
+                                  <span className="text-slate-300 mx-0.5">·</span>
+                                  <span className="text-slate-400">{td}</span>
+                                  <span className="text-slate-300 mx-0.5">·</span>
+                                  <span className="text-rose-500">{tl}</span>
+                                </span>
+                                <i className={`fas fa-chevron-${isTournamentExpanded ? 'up' : 'down'} text-xs text-slate-400`} />
+                              </div>
+                            </div>
+                            {/* Meta row: pitch, weather, time */}
+                            <div className="flex flex-wrap gap-2 text-[10px] font-bold text-slate-500">
+                              {tFirst.pitchType && (
+                                <span className="flex items-center gap-1 bg-white/60 px-2 py-0.5 rounded border border-slate-100">
+                                  <i className="fas fa-layer-group text-slate-400" /> {getPitchLabel(tFirst.pitchType)}
+                                </span>
+                              )}
+                              {tFirst.weather && (
+                                <span className="flex items-center gap-1 bg-white/60 px-2 py-0.5 rounded border border-slate-100">
+                                  <i className={`fas ${getWeatherIcon(tFirst.weather)} text-slate-400`} /> {getWeatherLabel(tFirst.weather)}
+                                </span>
+                              )}
+                              {tFirst.matchTime && (
+                                <span className="flex items-center gap-1 bg-white/60 px-2 py-0.5 rounded border border-slate-100 text-blue-600">
+                                  <i className="far fa-clock" /> {tFirst.matchTime}{tFirst.matchEndTime ? ` → ${tFirst.matchEndTime}` : ''}
+                                </span>
+                              )}
+                              {tGoals > 0 && (
+                                <span className="flex items-center gap-1 bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded border border-emerald-100 ml-auto">
+                                  <i className="fas fa-futbol text-[8px]" /> {tGoals}
+                                </span>
+                              )}
+                            </div>
+                          </button>
+
+                          {/* Expanded Game list */}
+                          {isTournamentExpanded && (
+                            <div className="bg-slate-50 divide-y divide-slate-100">
+                              {tMatches.map((match, gameIdx) => {
+                                const team = getTeamById(profile.teams, match.teamId);
+                                const styles = getTeamColorStyles(team.themeColor);
+                                const isExpanded = expandedMatchIds.has(match.id);
+                                const isSelected = selectedMatchIds.has(match.id);
+                                const isSwiped = swipedMatchId === match.id;
+
+                                const scorerDisplay = (() => {
+                                  if (!match.scorers || match.scorers.length === 0) return [];
+                                  const map: Record<string, { name: string; count: number }> = {};
+                                  match.scorers.forEach((s: any) => {
+                                    if (s.type === 'own_goal_for' || s.type === 'own_goal_against' || s.type === 'assist') return;
+                                    if (s.playerId === 'arthur') return;
+                                    if (s.teammateId) {
+                                      const tm = team.roster.find((r: any) => r.id === s.teammateId);
+                                      if (!tm) return;
+                                      if (!map[s.teammateId]) map[s.teammateId] = { name: tm.name, count: 0 };
+                                      map[s.teammateId].count += (s.count || 1);
+                                    } else if (s.playerId) {
+                                      const tm = team.roster.find((r: any) => r.id === s.playerId);
+                                      const name = tm?.name || s.name;
+                                      if (!map[s.playerId]) map[s.playerId] = { name: name || '', count: 0 };
+                                      map[s.playerId].count += 1;
+                                    }
+                                  });
+                                  return Object.values(map).filter(e => e.count > 0);
+                                })();
+                                const ownGoalsFor = match.scorers?.filter((s: any) => s.type === 'own_goal_for').length || 0;
+
+                                return (
+                                  <div key={match.id} id={`match-${match.id}`} className="relative overflow-hidden">
+                                    {/* Swipe actions */}
+                                    <div className="absolute inset-y-0 right-0 flex w-32">
+                                      <button onClick={e => onEdit(e, match)} className="w-1/2 bg-blue-500 text-white flex items-center justify-center font-bold text-xs">
+                                        <i className="fas fa-edit" />
+                                      </button>
+                                      <button onClick={e => { if (deleteConfirmId === match.id) onConfirmDelete(e, match.id); else onTrashClick(e, match.id); }}
+                                        className={`w-1/2 flex items-center justify-center font-bold text-xs text-white ${deleteConfirmId === match.id ? 'bg-red-700' : 'bg-red-500'}`}>
+                                        {deleteConfirmId === match.id ? <i className="fas fa-check" /> : <i className="fas fa-trash" />}
+                                      </button>
+                                    </div>
+
+                                    {/* Game card */}
+                                    <div
+                                      onClick={() => isSelectionMode ? onSelectMatch(match.id) : null}
+                                      onTouchStart={e => !isSelectionMode && handleTouchStart(e, match.id)}
+                                      onTouchMove={handleTouchMove}
+                                      onTouchEnd={e => !isSelectionMode && handleTouchEnd(e, match.id)}
+                                      className={`swipe-card relative z-10 bg-white transition-transform duration-200 ${isSelectionMode ? 'cursor-pointer' : ''} ${isSelected ? 'ring-2 ring-inset ring-blue-500' : ''}`}
+                                      style={{ transform: isSwiped ? 'translateX(-128px)' : 'translateX(0)' }}
+                                    >
+                                      <div className="px-4 py-3">
+                                        {/* Game header */}
+                                        <div className="flex items-center justify-between mb-2">
+                                          <div className="flex items-center gap-2">
+                                            {isSelectionMode && (
+                                              <div className={`w-5 h-5 rounded border flex items-center justify-center ${isSelected ? 'bg-blue-500 border-blue-500' : 'border-slate-300'}`}>
+                                                {isSelected && <i className="fas fa-check text-white text-[10px]" />}
+                                              </div>
+                                            )}
+                                            <span className="text-[10px] font-black text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                                              Game {gameIdx + 1}
+                                            </span>
+                                            <span className="text-[10px] font-bold text-slate-400">{new Date(match.date).getDate()}日</span>
+                                            {getResultBadge(match.scoreMyTeam, match.scoreOpponent)}
+                                            {match.matchLabel && (
+                                              <span className="bg-purple-100 text-purple-700 text-[10px] font-bold px-2 py-0.5 rounded border border-purple-200">{match.matchLabel}</span>
+                                            )}
+                                          </div>
+                                          <div className="flex items-center gap-1">
+                                            <div className="hidden sm:flex gap-1">
+                                              <button onClick={e => onShare(e, match)} className="text-slate-300 hover:text-emerald-500 p-1.5"><i className="fas fa-share-alt text-xs" /></button>
+                                              <button onClick={e => onEdit(e, match)} className="text-slate-300 hover:text-blue-500 p-1.5"><i className="fas fa-edit text-xs" /></button>
+                                            </div>
+                                            <div className="sm:hidden">
+                                              <button onClick={e => onShare(e, match)} className="text-slate-300 hover:text-emerald-500 p-1.5"><i className="fas fa-share-alt text-xs" /></button>
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        {/* Score */}
+                                        <div className="flex items-center justify-between gap-2 mb-2">
+                                          <span className={`font-black text-sm ${styles.text} truncate flex-1`}>{team.name}</span>
+                                          <div className="flex items-center gap-1 shrink-0">
+                                            <span className="text-2xl font-mono font-black text-slate-900">{match.scoreMyTeam}</span>
+                                            <span className="text-slate-400 font-bold text-sm">-</span>
+                                            <span className="text-2xl font-mono font-black text-slate-900">{match.scoreOpponent}</span>
+                                          </div>
+                                          <span className="font-black text-slate-700 text-sm truncate flex-1 text-right"
+                                            onClick={e => onOpponentClick(e, match.opponent)}>{match.opponent}</span>
+                                        </div>
+
+                                        {/* Stats bar */}
+                                        <div className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-1.5 text-xs border border-slate-100">
+                                          <div className="flex gap-3 items-center">
+                                            <span className={match.arthurGoals > 0 ? 'text-emerald-600 font-bold' : 'text-slate-300'}>
+                                              <i className="fas fa-futbol mr-1" />{match.arthurGoals}
+                                            </span>
+                                            <span className={match.arthurAssists > 0 ? 'text-indigo-600 font-bold' : 'text-slate-300'}>
+                                              <i className="fas fa-shoe-prints mr-1" />{match.arthurAssists}
+                                            </span>
+                                            {match.isMotm && <span className="text-yellow-600 font-bold"><i className="fas fa-trophy" /></span>}
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            {match.rating > 0 && <span className="text-yellow-600 font-bold bg-yellow-50 px-1.5 py-0.5 rounded border border-yellow-100">★ {match.rating}</span>}
+                                            <button onClick={e => onToggleExpansion(e, match.id)} className="w-5 h-5 flex items-center justify-center rounded-full bg-slate-200 text-slate-500">
+                                              <i className={`fas fa-chevron-${isExpanded ? 'up' : 'down'} text-[8px]`} />
+                                            </button>
+                                          </div>
+                                        </div>
+
+                                        {/* Expanded details (no pitch/weather) */}
+                                        {isExpanded && (
+                                          <div className="mt-2 pt-2 border-t border-dashed border-slate-100 space-y-2 animate-fade-in">
+                                            <div className="flex flex-wrap gap-1.5 text-[10px] font-bold text-slate-500">
+                                              {match.location && <button onClick={e => handleOpenMaps(e, match.location)} className="flex items-center gap-1 bg-emerald-50 text-emerald-600 px-2 py-1 rounded border border-emerald-100"><i className="fas fa-map" /> {t.openInMaps}</button>}
+                                              {match.periodsPlayed !== undefined && <span className="flex items-center gap-1 bg-white px-2 py-1 rounded border border-slate-100"><i className="fas fa-hourglass-half text-slate-400" /> {t.periodsPlayed}: {match.periodsPlayed}</span>}
+                                            </div>
+                                            {scorerDisplay.length > 0 && (
+                                              <div className="flex flex-wrap gap-1">
+                                                <span className="text-[10px] font-bold text-slate-400 self-center">{t.whoScored}:</span>
+                                                {scorerDisplay.map((s, i) => (
+                                                  <span key={i} className="bg-white border border-slate-200 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                                    {s.name}{s.count > 1 && ` ×${s.count}`}
+                                                  </span>
+                                                ))}
+                                                {ownGoalsFor > 0 && <span className="bg-orange-50 border border-orange-200 text-orange-600 text-[10px] font-bold px-2 py-0.5 rounded-full">OG{ownGoalsFor > 1 ? ` ×${ownGoalsFor}` : ''}</span>}
+                                              </div>
+                                            )}
+                                            {match.dadComment && (
+                                              <div className="flex gap-2">
+                                                <span className="text-[10px] font-bold text-slate-400 shrink-0">{match.commenterIdentity || 'Dad'}:</span>
+                                                <p className="text-slate-700 text-xs italic">{match.dadComment}</p>
+                                              </div>
+                                            )}
+                                            {match.kidInterview && (
+                                              <div className="flex gap-2">
+                                                <span className="text-[10px] font-bold text-slate-400 shrink-0">{t.interview}:</span>
+                                                <p className="text-slate-700 text-xs">{match.kidInterview}</p>
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    // Regular standalone match
+                    const match = item.match;
+                    const team = getTeamById(profile.teams, match.teamId);
                   const styles = getTeamColorStyles(team.themeColor);
                   const isExpanded = expandedMatchIds.has(match.id);
                   const isSelected = selectedMatchIds.has(match.id);
@@ -647,7 +904,8 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                       </div>
                     </div>
                   );
-                })}
+                  });  // end items.map
+                })()}
               </div>
             )}
           </div>
