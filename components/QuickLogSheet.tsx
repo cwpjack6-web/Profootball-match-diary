@@ -33,6 +33,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
   const [ownGoalsAgainst, setOwnGoalsAgainst] = useState(0); // our own goal (counts for them)
   type ParticipationStatus = 'full' | 'partial' | 'none';
   const [participation, setParticipation] = useState<ParticipationStatus>('full');
+  const [periodPosition, setPeriodPosition] = useState<string>('');
 
   // ── Derived ───────────────────────────────────────────────────────────────
   const today = new Date().toISOString().split('T')[0];
@@ -102,6 +103,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     setOwnGoalsFor(0);
     setOwnGoalsAgainst(0);
     setParticipation('full');
+    setPeriodPosition('');
     setNoteText('');
   };
 
@@ -179,7 +181,8 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
       ? (language === 'zh' ? `入球：${goalSummary.join('、')}\n` : `Goals: ${goalSummary.join(', ')}\n`)
       : '';
 
-    const periodBlock = `${periodHeader} [${participationLabel}]\n${goalLine}${noteText.trim()}`;
+    const posLabel = periodPosition ? ` [${periodPosition}]` : '';
+    const periodBlock = `${periodHeader} [${participationLabel}]${posLabel}\n${goalLine}${noteText.trim()}`;
 
     // Append to existing dadComment
     const existingComment = selectedMatch.dadComment || '';
@@ -219,6 +222,14 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     const periodContribution = participation === 'full' ? 1 : participation === 'partial' ? 0.5 : 0;
     const totalPeriodsPlayed = (selectedMatch.periodsPlayed || 0) + periodContribution;
 
+    // Accumulate positionPlayed (add new position if not already present)
+    const existingPositions: string[] = Array.isArray(selectedMatch.positionPlayed)
+      ? selectedMatch.positionPlayed
+      : (selectedMatch.positionPlayed ? [selectedMatch.positionPlayed as string] : []);
+    const updatedPositions = periodPosition && !existingPositions.includes(periodPosition)
+      ? [...existingPositions, periodPosition]
+      : existingPositions;
+
     onSave(selectedMatchId, {
       dadComment: newComment,
       scoreMyTeam,
@@ -227,6 +238,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
       arthurAssists: totalArthurAssists,
       scorers: newScorers,
       periodsPlayed: totalPeriodsPlayed,
+      positionPlayed: updatedPositions,
       status: 'completed',
     });
 
@@ -559,7 +571,33 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                 </p>
               </div>
 
-              {/* ⑤ Note */}
+              {/* ⑤ Position */}
+              {participation !== 'none' && (
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase mb-2">
+                    {language === 'zh' ? `阿仔今節打咩位？` : `Position This Period`}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {(['FW','LW','RW','MF','DF','GK'] as const).map(pos => (
+                      <button key={pos} onClick={() => setPeriodPosition(periodPosition === pos ? '' : pos)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-black border-2 transition-all ${
+                          periodPosition === pos
+                            ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                            : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
+                        }`}>
+                        {pos}
+                      </button>
+                    ))}
+                  </div>
+                  {periodPosition && (
+                    <p className="text-[10px] text-blue-500 font-bold mt-1.5">
+                      {language === 'zh' ? `✓ 已選：${periodPosition}` : `✓ Selected: ${periodPosition}`}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* ⑥ Note */}
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase mb-2">
                   {language === 'zh' ? `節${nextPeriodNum} 筆記` : `Period ${nextPeriodNum} Notes`}
