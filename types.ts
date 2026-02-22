@@ -50,7 +50,8 @@ export interface MatchData {
   profileId: string;
   date: string;
   assemblyTime?: string; 
-  matchTime?: string;    
+  matchTime?: string;
+  matchEndTime?: string;
   teamId: string;
   location: string;
   isHome: boolean;
