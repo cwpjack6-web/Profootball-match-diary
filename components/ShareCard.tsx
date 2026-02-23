@@ -260,10 +260,26 @@ const ShareCard: React.FC<ShareCardProps> = ({
     if (!cardRef.current) return;
     setIsGenerating(true);
     try {
-      await new Promise(r => setTimeout(r, 150));
+      // Wait for fonts (FontAwesome icons) to load
+      await document.fonts.ready;
+      // Extra settle time for layout + backdrop-blur elements
+      await new Promise(r => setTimeout(r, 300));
+
+      // Temporarily disable backdrop-filter which html2canvas cannot render
+      const blurEls = cardRef.current.querySelectorAll<HTMLElement>('[class*="backdrop-blur"]');
+      blurEls.forEach(el => { el.dataset.origFilter = el.style.backdropFilter; el.style.backdropFilter = 'none'; });
+
       const canvas = await html2canvas(cardRef.current, {
-        useCORS: true, scale: 2, backgroundColor: null, logging: false,
+        useCORS: true,
+        scale: 3,
+        backgroundColor: null,
+        logging: false,
+        allowTaint: true,
+        imageTimeout: 0,
       });
+
+      // Restore backdrop-filter
+      blurEls.forEach(el => { el.style.backdropFilter = el.dataset.origFilter || ''; });
       const link = document.createElement('a');
       link.download = mode === 'match'
         ? `match-report-${match?.date ?? 'card'}.png`
@@ -400,7 +416,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
         : 'justify-end mt-auto';
 
     const cardStyle = cardTheme === 'broadcast'
-      ? `${isDarkText ? 'bg-amber-100/80 border-amber-200' : 'bg-black/55 border-white/10'} border-t-2 w-full p-5 backdrop-blur-md`
+      ? `${isDarkText ? 'bg-amber-100/80 border-amber-200' : 'bg-black/60 border-white/10'} border-t-2 w-full p-5`
       : cardTheme === 'gradient'
         ? 'pt-12 p-5'
         : 'p-5';
@@ -540,7 +556,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
           </>
         ) : (
           <>
-            <div className="inline-block border border-white/30 px-3 py-0.5 rounded text-[9px] font-black tracking-widest uppercase mb-2 backdrop-blur-sm text-white">
+            <div className="inline-block border border-white/30 px-3 py-0.5 rounded text-[9px] font-black tracking-widest uppercase mb-2 text-white">
               {t.seasonRecap}
             </div>
             <h2 className="text-2xl font-black italic uppercase leading-none drop-shadow-md text-white">{title}</h2>
@@ -574,7 +590,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
       {/* Highlights */}
       {vis.showHighlights && seasonHighlights && (
         <div className="relative z-10 mx-4 mb-2 rounded-lg overflow-hidden pointer-events-none">
-          <div className={`px-3 py-2 ${isDarkText ? 'bg-amber-200/60 border border-amber-300' : 'bg-white/10 backdrop-blur-sm border border-white/10'}`}>
+          <div className={`px-3 py-2 ${isDarkText ? 'bg-amber-200/60 border border-amber-300' : 'bg-white/10 border border-white/10'}`}>
             <div className={`text-[8px] font-black uppercase tracking-widest mb-1.5 ${isDarkText ? 'text-slate-600' : 'text-white/60'}`}>
               Season Highlights
             </div>
@@ -618,7 +634,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
           vis.showAvgRating ? 'grid-cols-5' : 'grid-cols-4'
         } ${isDarkText
           ? 'bg-amber-200/60 border-t border-amber-300 divide-amber-300'
-          : 'bg-white/10 backdrop-blur-md border-t border-white/10 divide-white/10'
+          : 'bg-black/40 border-t border-white/10 divide-white/10'
         } pointer-events-none`}>
           {[
             { value: seasonStats.total,   label: t.played,  color: '' },
@@ -684,7 +700,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
             </>
           ) : (
             <>
-              <div className="inline-flex items-center gap-1.5 border border-white/30 px-3 py-0.5 rounded text-[9px] font-black tracking-widest uppercase mb-2 backdrop-blur-sm text-white">
+              <div className="inline-flex items-center gap-1.5 border border-white/30 px-3 py-0.5 rounded text-[9px] font-black tracking-widest uppercase mb-2 text-white">
                 <i className="fas fa-trophy text-amber-400 text-[10px]" />
                 {language === 'zh' ? '杯賽報告' : 'Tournament Report'}
               </div>
@@ -716,8 +732,8 @@ const ShareCard: React.FC<ShareCardProps> = ({
         </div>
 
         {/* Game list */}
-        <div className="relative z-10 mx-4 flex-1 overflow-hidden pointer-events-none">
-          <div className={`rounded-lg overflow-hidden ${isDarkText ? 'bg-amber-100/60 border border-amber-200' : 'bg-white/10 backdrop-blur-sm border border-white/10'}`}>
+        <div className="relative z-10 mx-4 pointer-events-none">
+          <div className={`rounded-lg overflow-hidden ${isDarkText ? 'bg-amber-100/60 border border-amber-200' : 'bg-white/10 border border-white/10'}`}>
             {done.map((m, idx) => {
               const isW = m.scoreMyTeam > m.scoreOpponent;
               const isL = m.scoreMyTeam < m.scoreOpponent;
@@ -766,10 +782,10 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
         {/* Summary footer */}
         {vis.showTournamentSummary && (
-          <div className={`relative z-10 mt-auto grid grid-cols-5 divide-x ${
+          <div className={`relative z-10 mt-2 grid grid-cols-5 divide-x ${
             isDarkText
               ? 'bg-amber-200/60 border-t border-amber-300 divide-amber-300'
-              : 'bg-white/10 backdrop-blur-md border-t border-white/10 divide-white/10'
+              : 'bg-black/40 border-t border-white/10 divide-white/10'
           } pointer-events-none`}>
             {[
               { value: done.length,  label: language === 'zh' ? '場數' : 'Games',   color: '' },
@@ -910,7 +926,8 @@ const ShareCard: React.FC<ShareCardProps> = ({
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
 
           {/* RENDER AREA */}
-          <div ref={cardRef} className={`relative w-full h-full overflow-hidden flex flex-col ${isDarkText ? 'bg-amber-50' : 'bg-slate-900'}`}>
+          <div ref={cardRef} className={`relative w-full h-full overflow-hidden ${isDarkText ? 'bg-amber-50' : 'bg-slate-900'}`}
+            style={{ display: 'flex', flexDirection: 'column' }}>
             {renderBackground()}
             {mode === 'match' ? renderMatchCard() : mode === 'tournament' ? renderTournamentCard() : renderSeasonCard()}
           </div>
