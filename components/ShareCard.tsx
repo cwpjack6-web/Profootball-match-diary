@@ -706,9 +706,9 @@ const ShareCard: React.FC<ShareCardProps> = ({
                   <i className={`fas ${getWeatherIcon(firstMatch.weather)} text-[8px]`} />
                 </span>
               )}
-              {firstMatch.matchTime && (
+              {(firstMatch.tournamentStartTime || firstMatch.matchTime) && (
                 <span className={`text-[9px] font-bold flex items-center gap-1 px-2 py-0.5 rounded ${isDarkText ? 'bg-amber-200/60 text-blue-600' : 'bg-white/10 text-blue-300'}`}>
-                  <i className="far fa-clock text-[8px]" /> {firstMatch.matchTime}{(firstMatch as any).matchEndTime ? ` → ${(firstMatch as any).matchEndTime}` : ''}
+                  <i className="far fa-clock text-[8px]" /> {firstMatch.tournamentStartTime || firstMatch.matchTime}{firstMatch.tournamentEndTime ? ` → ${firstMatch.tournamentEndTime}` : ''}
                 </span>
               )}
             </div>
