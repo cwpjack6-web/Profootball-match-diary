@@ -545,7 +545,6 @@ const ShareCard: React.FC<ShareCardProps> = ({
             </div>
           </div>
         </div>
-      </div>
     );
   };
 
