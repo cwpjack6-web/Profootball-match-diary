@@ -786,13 +786,14 @@ const ShareCard: React.FC<ShareCardProps> = ({
               { value: done.filter(m => m.isMotm).length > 0 ? `×${done.filter(m => m.isMotm).length}` : '–',
                 label: 'MOTM', color: 'text-amber-400' },
             ] : [
-              { value: done.length,  label: language === 'zh' ? '場數' : 'Games',   color: '' },
+              { value: done.length,  label: language === 'zh' ? '場數' : 'Games',      color: '' },
               { value: `${tw}W ${td}D ${tl}L`, label: language === 'zh' ? '戰績' : 'Record', color: '' },
-              { value: tGoals,       label: language === 'zh' ? '入球' : 'Goals',   color: 'text-emerald-400' },
+              { value: tTeamGoals,   label: language === 'zh' ? '入球' : 'Goals',      color: 'text-emerald-400' },
+              { value: tTeamConceded,label: language === 'zh' ? '失球' : 'Conceded',   color: 'text-rose-400' },
             ]).map(({ value, label, color }) => (
-              <div key={label} className="py-2.5 flex flex-col items-center">
-                <span className={`text-xs font-black ${color || textCls}`}>{value}</span>
-                <span className={`text-[7px] uppercase font-bold ${isDarkText ? 'text-slate-500' : 'opacity-60 text-white'}`}>{label}</span>
+              <div key={label} className={`flex flex-col items-center justify-center ${shareView === 'team' ? 'py-4' : 'py-2.5'}`}>
+                <span className={`font-black ${shareView === 'team' ? 'text-xl' : 'text-xs'} ${color || textCls}`}>{value}</span>
+                <span className={`text-[7px] uppercase font-bold mt-0.5 ${isDarkText ? 'text-slate-500' : 'opacity-60 text-white'}`}>{label}</span>
               </div>
             ))}
           </div>
