@@ -444,22 +444,23 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
 
                       return (
                         <div key={tKey + groupKey} className="rounded-xl overflow-hidden shadow-sm border border-amber-200">
-                          {/* Tournament Group Card */}
-                          <button
-                            onClick={() => toggleTournamentGroup(tKey + groupKey)}
-                            className={`w-full text-left ${tStyles.light} border-l-[6px] border-l-amber-400 p-4`}
-                          >
+                          {/* Tournament Group Card — div instead of button to allow nested buttons */}
+                          <div className={`w-full ${tStyles.light} border-l-[6px] border-l-amber-400 p-4`}>
                             {/* Header row */}
                             <div className="flex items-start justify-between mb-2">
-                              <div className="flex items-center gap-2 flex-wrap">
+                              {/* Left: clickable area to expand/collapse */}
+                              <div
+                                className="flex items-center gap-2 flex-wrap flex-1 cursor-pointer"
+                                onClick={() => toggleTournamentGroup(tKey + groupKey)}
+                              >
                                 <i className="fas fa-trophy text-amber-500 text-sm" />
                                 <span className="font-black text-slate-800 text-sm">{tKey}</span>
                                 <span className="text-[10px] bg-amber-100 text-amber-700 font-bold px-2 py-0.5 rounded-full border border-amber-200">
                                   {tMatches.length} Games
                                 </span>
                               </div>
-                              <div className="flex items-center gap-2">
-                                {/* W/D/L */}
+                              {/* Right: action buttons + W/D/L + chevron */}
+                              <div className="flex items-center gap-1.5 shrink-0">
                                 <span className="text-[10px] font-bold font-mono bg-white/80 border border-slate-200 px-1.5 py-0.5 rounded-full">
                                   <span className="text-emerald-600">{tw}</span>
                                   <span className="text-slate-300 mx-0.5">·</span>
@@ -467,11 +468,33 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                                   <span className="text-slate-300 mx-0.5">·</span>
                                   <span className="text-rose-500">{tl}</span>
                                 </span>
-                                <i className={`fas fa-chevron-${isTournamentExpanded ? 'up' : 'down'} text-xs text-slate-400`} />
+                                {/* Share button */}
+                                <button
+                                  onClick={e => { e.stopPropagation(); onShareTournament(tKey, tMatches); }}
+                                  className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center hover:bg-emerald-200 transition-colors"
+                                  title="Share tournament"
+                                >
+                                  <i className="fas fa-share-alt text-xs" />
+                                </button>
+                                {/* Edit button — edits first match (shared fields: pitch, weather, time) */}
+                                <button
+                                  onClick={e => { e.stopPropagation(); onEdit(e, tFirst); }}
+                                  className="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center hover:bg-blue-200 transition-colors"
+                                  title="Edit tournament details"
+                                >
+                                  <i className="fas fa-edit text-xs" />
+                                </button>
+                                <i
+                                  className={`fas fa-chevron-${isTournamentExpanded ? 'up' : 'down'} text-xs text-slate-400 cursor-pointer ml-1`}
+                                  onClick={() => toggleTournamentGroup(tKey + groupKey)}
+                                />
                               </div>
                             </div>
                             {/* Meta row: pitch, weather, time */}
-                            <div className="flex flex-wrap gap-2 text-[10px] font-bold text-slate-500">
+                            <div
+                              className="flex flex-wrap gap-2 text-[10px] font-bold text-slate-500 cursor-pointer"
+                              onClick={() => toggleTournamentGroup(tKey + groupKey)}
+                            >
                               {tFirst.pitchType && (
                                 <span className="flex items-center gap-1 bg-white/60 px-2 py-0.5 rounded border border-slate-100">
                                   <i className="fas fa-layer-group text-slate-400" /> {getPitchLabel(tFirst.pitchType)}
@@ -484,7 +507,7 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                               )}
                               {tFirst.matchTime && (
                                 <span className="flex items-center gap-1 bg-white/60 px-2 py-0.5 rounded border border-slate-100 text-blue-600">
-                                  <i className="far fa-clock" /> {tFirst.matchTime}{tFirst.matchEndTime ? ` → ${tFirst.matchEndTime}` : ''}
+                                  <i className="far fa-clock" /> {tFirst.matchTime}{(tFirst as any).matchEndTime ? ` → ${(tFirst as any).matchEndTime}` : ''}
                                 </span>
                               )}
                               {tGoals > 0 && (
@@ -493,7 +516,7 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                                 </span>
                               )}
                             </div>
-                          </button>
+                          </div>
 
                           {/* Expanded Game list */}
                           {isTournamentExpanded && (
