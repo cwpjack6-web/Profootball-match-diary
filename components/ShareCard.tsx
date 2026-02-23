@@ -266,10 +266,11 @@ const ShareCard: React.FC<ShareCardProps> = ({
         useCORS: true, scale: 2, backgroundColor: null, logging: false,
       });
       const link = document.createElement('a');
+      const viewSuffix = mode === 'tournament' ? `-${shareView}` : '';
       link.download = mode === 'match'
-        ? `match-report-${match?.date ?? 'card'}.png`
+        ? `match-report-${match?.date ?? 'card'}-${shareView}.png`
         : mode === 'tournament'
-          ? `tournament-${(tournamentName || 'cup').replace(/\s+/g, '-').toLowerCase()}.png`
+          ? `tournament-${(tournamentName || 'cup').replace(/\s+/g, '-').toLowerCase()}${viewSuffix}.png`
           : `season-recap-${(title || 'season').replace(/\s+/g, '-').toLowerCase()}.png`;
       link.href = canvas.toDataURL('image/png');
       document.body.appendChild(link);
