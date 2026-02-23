@@ -135,7 +135,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Match-only layout
-  const [layoutMode, setLayoutMode]     = useState<'card' | 'poster'>(mode === 'tournament' ? 'poster' : 'card');
+  const [layoutMode, setLayoutMode]     = useState<'card' | 'poster'>('card');
   const [textPosition, setTextPosition] = useState<LayoutPosition>('bottom');
   const [cardTheme, setCardTheme]       = useState<CardTheme>('broadcast');
 
@@ -804,7 +804,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
               { value: tTeamConceded,label: language === 'zh' ? '失球' : 'Conceded',   color: 'text-rose-400' },
             ]).map(({ value, label, color }) => (
               <div key={label} className={`flex flex-col items-center justify-center ${shareView === 'team' ? 'py-4' : 'py-2.5'}`}>
-                <span className={`font-black ${shareView === 'team' ? 'text-xl' : 'text-xs'} ${color || textCls}`}>{value}</span>
+                <span className={`font-black whitespace-nowrap ${shareView === 'team' ? 'text-lg' : 'text-xs'} ${color || textCls}`}>{value}</span>
                 <span className={`text-[7px] uppercase font-bold mt-0.5 ${isDarkText ? 'text-slate-500' : 'opacity-60 text-white'}`}>{label}</span>
               </div>
             ))}
