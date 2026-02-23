@@ -506,7 +506,7 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                                 />
                               </div>
                             </div>
-                            {/* Meta row: pitch, weather, time */}
+                            {/* Meta row: pitch, weather, time, date, location */}
                             <div
                               className="flex flex-wrap gap-2 text-[10px] font-bold text-slate-500 cursor-pointer"
                               onClick={() => toggleTournamentGroup(tKey + groupKey)}
@@ -524,6 +524,16 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                               {(tFirst.tournamentStartTime || tFirst.matchTime) && (
                                 <span className="flex items-center gap-1 bg-white/60 px-2 py-0.5 rounded border border-slate-100 text-blue-600">
                                   <i className="far fa-clock" /> {tFirst.tournamentStartTime || tFirst.matchTime}{tFirst.tournamentEndTime ? ` → ${tFirst.tournamentEndTime}` : ''}
+                                </span>
+                              )}
+                              {tFirst.date && (
+                                <span className="flex items-center gap-1 bg-white/60 px-2 py-0.5 rounded border border-slate-100">
+                                  <i className="far fa-calendar text-slate-400" /> {tFirst.date}
+                                </span>
+                              )}
+                              {tFirst.location && (
+                                <span className="flex items-center gap-1 bg-white/60 px-2 py-0.5 rounded border border-slate-100 text-emerald-600">
+                                  <i className="fas fa-map-marker-alt text-[8px]" /> {tFirst.location}
                                 </span>
                               )}
                               {tGoals > 0 && (
