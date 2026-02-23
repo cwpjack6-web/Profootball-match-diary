@@ -258,19 +258,13 @@ const ShareCard: React.FC<ShareCardProps> = ({
   const selectPreset = (i: number) => { setSelectedPreset(i); setBgImage(null); };
 
   // ── Measure card height for html2canvas ──────────────────────────────────
-  React.useEffect(() => {
+  useEffect(() => {
     const measure = () => {
-      if (previewRef.current) {
-        setCardHeight(previewRef.current.offsetHeight);
-      }
+      if (previewRef.current) setCardHeight(previewRef.current.offsetHeight);
     };
-    // Small delay to ensure DOM has rendered at correct size
     const timer = setTimeout(measure, 50);
     window.addEventListener('resize', measure);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('resize', measure);
-    };
+    return () => { clearTimeout(timer); window.removeEventListener('resize', measure); };
   }, [isOpen, layoutMode, selectedPreset]);
 
   // ── Download ───────────────────────────────────────────────────────────────
@@ -281,17 +275,15 @@ const ShareCard: React.FC<ShareCardProps> = ({
     try {
       await new Promise(r => setTimeout(r, 300));
       const el = cardRef.current;
-      const w = el.offsetWidth;
-      const h = el.offsetHeight;
       const canvas = await html2canvas(el, {
         useCORS: true, scale: 2, backgroundColor: null, logging: false,
-        width: w, height: h,
-        windowWidth: w, windowHeight: h,
+        width: el.offsetWidth, height: el.offsetHeight,
+        windowWidth: el.offsetWidth, windowHeight: el.offsetHeight,
       });
       const link = document.createElement('a');
-      const viewSuffix = mode === 'tournament' ? `-${shareView}` : '';
+      const viewSuffix = shareView === 'team' ? '-team' : '-personal';
       link.download = mode === 'match'
-        ? `match-report-${match?.date ?? 'card'}-${shareView}.png`
+        ? `match-report-${match?.date ?? 'card'}${viewSuffix}.png`
         : mode === 'tournament'
           ? `tournament-${(tournamentName || 'cup').replace(/\s+/g, '-').toLowerCase()}${viewSuffix}.png`
           : `season-recap-${(title || 'season').replace(/\s+/g, '-').toLowerCase()}.png`;
@@ -337,7 +329,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
     switch (currentPreset.id) {
       case 'pitch':
         return (
-          <div className="absolute inset-0 pointer-events-none opacity-20">
+          <div className="absolute inset-0 pointer-events-none opacity-10 z-0">
             <div className="absolute top-4 left-4 right-4 bottom-4 border-2 border-white rounded-lg" />
             <div className="absolute top-1/2 left-1/2 w-48 h-48 border-2 border-white rounded-full -translate-x-1/2 -translate-y-1/2" />
             <div className="absolute top-1/2 left-4 right-4 h-px bg-white -translate-y-1/2" />
@@ -421,7 +413,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
     const contentPos = textPosition === 'top'
       ? 'justify-start'
       : textPosition === 'center'
-        ? 'justify-center'
+        ? 'justify-center h-full'
         : 'justify-end mt-auto';
 
     const cardStyle = cardTheme === 'broadcast'
@@ -452,7 +444,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
           <div className={`w-full ${cardStyle} ${textCls}`}>
 
             {/* Team name + badges */}
-            <div className="flex justify-between items-start mb-4">
+            <div className="flex justify-between items-start mb-2">
               <div>
                 <span className="text-[9px] font-bold tracking-widest uppercase opacity-70 block mb-0.5" style={textShadow}>
                   {t.matchResult}
@@ -483,7 +475,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
             </div>
 
             {/* Score row */}
-            <div className="flex items-center justify-center gap-2 w-full mb-4">
+            <div className="flex items-center justify-center gap-2 w-full mb-2">
               <div className="text-center flex-1">
                 <span className="text-4xl font-black" style={textShadow}>{match.scoreMyTeam}</span>
                 <span className="block text-[9px] font-bold uppercase mt-0.5 opacity-80" style={textShadow}>{t.us}</span>
@@ -508,14 +500,14 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
             {/* Result bar */}
             {cardTheme === 'broadcast' && vis.showResult && (
-              <div className="w-full h-0.5 rounded-full bg-white/10 mb-4 overflow-hidden flex justify-center">
+              <div className="w-full h-0.5 rounded-full bg-white/10 mb-3 overflow-hidden flex justify-center">
                 <div className="h-full w-20 rounded-full" style={{ backgroundColor: resultColor }} />
               </div>
             )}
 
             {/* Personal stats pills */}
             {vis.showPersonalStats && (match.arthurGoals > 0 || match.arthurAssists > 0) && (
-              <div className="flex gap-2 justify-center mb-3">
+              <div className="flex gap-2 justify-center mb-2">
                 {match.arthurGoals > 0 && (
                   <div className="flex items-center gap-1 bg-emerald-500/20 border border-emerald-400/40 px-2 py-0.5 rounded-full">
                     <i className="fas fa-futbol text-emerald-400 text-[9px]" />
@@ -545,6 +537,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
             </div>
           </div>
         </div>
+      </>
     );
   };
 
@@ -564,11 +557,11 @@ const ShareCard: React.FC<ShareCardProps> = ({
           </>
         ) : (
           <>
-            <div className="inline-block border border-white/30 px-3 py-0.5 rounded text-[9px] font-black tracking-widest uppercase mb-2 text-white">
+            <div className="inline-block border border-white/30 px-3 py-0.5 rounded text-[9px] font-black tracking-widest uppercase mb-2 backdrop-blur-sm text-white">
               {t.seasonRecap}
             </div>
             <h2 className="text-2xl font-black italic uppercase leading-none drop-shadow-md text-white">{title}</h2>
-            <div className="text-sm font-bold opacity-80 mt-1 text-white">{profile.name}</div>
+            {shareView === 'personal' && <div className="text-sm font-bold opacity-80 mt-1 text-white">{profile.name}</div>}
           </>
         )}
       </div>
@@ -598,7 +591,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
       {/* Highlights */}
       {vis.showHighlights && seasonHighlights && (
         <div className="relative z-10 mx-4 mb-2 rounded-lg overflow-hidden pointer-events-none">
-          <div className={`px-3 py-2 ${isDarkText ? 'bg-amber-200/60 border border-amber-300' : 'bg-white/10 border border-white/10'}`}>
+          <div className={`px-3 py-2 ${isDarkText ? 'bg-amber-200/60 border border-amber-300' : 'bg-white/10 backdrop-blur-sm border border-white/10'}`}>
             <div className={`text-[8px] font-black uppercase tracking-widest mb-1.5 ${isDarkText ? 'text-slate-600' : 'text-white/60'}`}>
               Season Highlights
             </div>
@@ -715,7 +708,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
                 {language === 'zh' ? '杯賽報告' : 'Tournament Report'}
               </div>
               <h2 className="text-2xl font-black italic uppercase leading-none drop-shadow-md text-white">{tournamentName}</h2>
-              {shareView === 'personal' && <div className="text-sm font-bold opacity-80 mt-1 text-white">{profile.name}</div>}
+              <div className="text-sm font-bold opacity-80 mt-1 text-white">{profile.name}</div>
             </>
           )}
 
@@ -753,7 +746,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
         {/* Game list */}
         <div className="mx-4">
-          <div className={`rounded-lg overflow-hidden ${isDarkText ? 'bg-amber-100/60 border border-amber-200' : 'bg-white/10 border border-white/10'}`}>
+          <div className={`rounded-lg overflow-hidden ${isDarkText ? 'bg-amber-100/60 border border-amber-200' : 'bg-white/10 backdrop-blur-sm border border-white/10'}`}>
             {done.map((m, idx) => {
               const isW = m.scoreMyTeam > m.scoreOpponent;
               const isL = m.scoreMyTeam < m.scoreOpponent;
@@ -765,7 +758,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
                   : (isDarkText ? 'bg-slate-100 text-slate-600' : 'bg-white/10 text-white/60');
 
               return (
-                <div key={m.id} className={`flex items-start gap-2 px-3 py-2 ${idx > 0 ? (isDarkText ? 'border-t border-amber-200' : 'border-t border-white/10') : ''}`}>
+                <div key={m.id} className={`flex items-center gap-2 px-3 py-1.5 ${idx > 0 ? (isDarkText ? 'border-t border-amber-200' : 'border-t border-white/10') : ''}`}>
                   {/* Game number */}
                   <span className={`text-[9px] font-black w-10 shrink-0 ${isDarkText ? 'text-slate-400' : 'text-white/40'}`}>
                     G{idx + 1}
@@ -860,7 +853,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
-  const aspectRatio = mode === 'season'
+  const aspectRatio = mode === 'season' || mode === 'tournament'
     ? 'aspect-[4/5]'
     : layoutMode === 'poster' ? 'aspect-[9/16]' : 'aspect-[4/5]';
 
@@ -894,23 +887,13 @@ const ShareCard: React.FC<ShareCardProps> = ({
         {/* ── Personal / Team toggle ── */}
         {(mode === 'match' || mode === 'tournament') && (
           <div className="flex bg-white/10 rounded-xl p-1 gap-1">
-            <button
-              onClick={() => setShareView('personal')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-black transition-all ${
-                shareView === 'personal' ? 'bg-white text-slate-900 shadow' : 'text-white/60 hover:text-white'
-              }`}
-            >
-              <i className="fas fa-user text-[10px]" />
-              {language === 'zh' ? '個人版' : 'Personal'}
+            <button onClick={() => setShareView('personal')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-black transition-all ${shareView === 'personal' ? 'bg-white text-slate-900 shadow' : 'text-white/60 hover:text-white'}`}>
+              <i className="fas fa-user text-[10px]" />{language === 'zh' ? '個人版' : 'Personal'}
             </button>
-            <button
-              onClick={() => setShareView('team')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-black transition-all ${
-                shareView === 'team' ? 'bg-white text-slate-900 shadow' : 'text-white/60 hover:text-white'
-              }`}
-            >
-              <i className="fas fa-users text-[10px]" />
-              {language === 'zh' ? '球隊版' : 'Team'}
+            <button onClick={() => setShareView('team')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-black transition-all ${shareView === 'team' ? 'bg-white text-slate-900 shadow' : 'text-white/60 hover:text-white'}`}>
+              <i className="fas fa-users text-[10px]" />{language === 'zh' ? '球隊版' : 'Team'}
             </button>
           </div>
         )}
