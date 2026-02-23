@@ -148,6 +148,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
   // Visibility
   const [vis, setVis] = useState<VisibilityOptions>(DEFAULT_VISIBILITY);
   const [showVisPanel, setShowVisPanel] = useState(false);
+  const [shareView, setShareView] = useState<'personal' | 'team'>('personal');
 
   const cardRef      = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -856,6 +857,30 @@ const ShareCard: React.FC<ShareCardProps> = ({
             </button>
           </div>
         </div>
+
+        {/* ── Personal / Team toggle ── */}
+        {(mode === 'match' || mode === 'tournament') && (
+          <div className="flex bg-white/10 rounded-xl p-1 gap-1">
+            <button
+              onClick={() => setShareView('personal')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-black transition-all ${
+                shareView === 'personal' ? 'bg-white text-slate-900 shadow' : 'text-white/60 hover:text-white'
+              }`}
+            >
+              <i className="fas fa-user text-[10px]" />
+              {language === 'zh' ? '個人版' : 'Personal'}
+            </button>
+            <button
+              onClick={() => setShareView('team')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-black transition-all ${
+                shareView === 'team' ? 'bg-white text-slate-900 shadow' : 'text-white/60 hover:text-white'
+              }`}
+            >
+              <i className="fas fa-users text-[10px]" />
+              {language === 'zh' ? '球隊版' : 'Team'}
+            </button>
+          </div>
+        )}
 
         {/* ── Visibility Panel ── */}
         {showVisPanel && (
