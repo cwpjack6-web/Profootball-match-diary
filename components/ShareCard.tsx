@@ -135,7 +135,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Match-only layout
-  const [layoutMode, setLayoutMode]     = useState<'card' | 'poster'>('card');
+  const [layoutMode, setLayoutMode]     = useState<'card' | 'poster'>(mode === 'tournament' ? 'poster' : 'card');
   const [textPosition, setTextPosition] = useState<LayoutPosition>('bottom');
   const [cardTheme, setCardTheme]       = useState<CardTheme>('broadcast');
 
@@ -575,7 +575,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
       {/* Highlights */}
       {vis.showHighlights && seasonHighlights && (
         <div className="relative z-10 mx-4 mb-2 rounded-lg overflow-hidden pointer-events-none">
-          <div className={`px-3 py-2 ${isDarkText ? 'bg-amber-200/60 border border-amber-300' : 'bg-white/10 backdrop-blur-sm border border-white/10'}`}>
+          <div className={`px-3 py-2 ${isDarkText ? 'bg-amber-200/60 border border-amber-300' : 'bg-white/10 border border-white/10'}`}>
             <div className={`text-[8px] font-black uppercase tracking-widest mb-1.5 ${isDarkText ? 'text-slate-600' : 'text-white/60'}`}>
               Season Highlights
             </div>
@@ -729,7 +729,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
         </div>
 
         {/* Game list */}
-        <div className="relative z-10 mx-4 flex-1 overflow-hidden pointer-events-none">
+        <div className="relative z-10 mx-4 pointer-events-none">
           <div className={`rounded-lg overflow-hidden ${isDarkText ? 'bg-amber-100/60 border border-amber-200' : 'bg-white/10 backdrop-blur-sm border border-white/10'}`}>
             {done.map((m, idx) => {
               const isW = m.scoreMyTeam > m.scoreOpponent;
@@ -742,7 +742,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
                   : (isDarkText ? 'bg-slate-100 text-slate-600' : 'bg-white/10 text-white/60');
 
               return (
-                <div key={m.id} className={`flex items-center gap-2 px-3 py-1.5 ${idx > 0 ? (isDarkText ? 'border-t border-amber-200' : 'border-t border-white/10') : ''}`}>
+                <div key={m.id} className={`flex items-start gap-2 px-3 py-2 ${idx > 0 ? (isDarkText ? 'border-t border-amber-200' : 'border-t border-white/10') : ''}`}>
                   {/* Game number */}
                   <span className={`text-[9px] font-black w-10 shrink-0 ${isDarkText ? 'text-slate-400' : 'text-white/40'}`}>
                     G{idx + 1}
@@ -752,7 +752,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
                     {isW ? 'W' : isL ? 'L' : 'D'}
                   </span>
                   {/* Opponent */}
-                  <span className={`text-[10px] font-bold flex-1 truncate ${isDarkText ? 'text-slate-700' : 'text-white/90'}`}>
+                  <span className={`text-[10px] font-bold flex-1 leading-tight ${isDarkText ? 'text-slate-700' : 'text-white/90'}`}>
                     {m.opponent}
                   </span>
                   {/* Score */}
