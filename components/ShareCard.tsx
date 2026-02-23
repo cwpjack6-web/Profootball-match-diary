@@ -135,7 +135,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Match-only layout
-  const [layoutMode, setLayoutMode]     = useState<'card' | 'poster'>('card');
+  const [layoutMode, setLayoutMode]     = useState<'card' | 'poster'>(mode === 'tournament' ? 'poster' : 'card');
   const [textPosition, setTextPosition] = useState<LayoutPosition>('bottom');
   const [cardTheme, setCardTheme]       = useState<CardTheme>('broadcast');
 
@@ -702,7 +702,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
             </>
           )}
 
-          {/* Meta: pitch, weather, time */}
+          {/* Meta: pitch, weather, time, date, location */}
           {firstMatch && (
             <div className="flex flex-wrap gap-2 mt-2">
               {firstMatch.pitchType && (
@@ -720,12 +720,22 @@ const ShareCard: React.FC<ShareCardProps> = ({
                   <i className="far fa-clock text-[8px]" /> {firstMatch.tournamentStartTime || firstMatch.matchTime}{firstMatch.tournamentEndTime ? ` → ${firstMatch.tournamentEndTime}` : ''}
                 </span>
               )}
+              {firstMatch.date && (
+                <span className={`text-[9px] font-bold flex items-center gap-1 px-2 py-0.5 rounded ${isDarkText ? 'bg-amber-200/60 text-slate-600' : 'bg-white/10 text-white/70'}`}>
+                  <i className="far fa-calendar text-[8px]" /> {firstMatch.date}
+                </span>
+              )}
+              {firstMatch.location && (
+                <span className={`text-[9px] font-bold flex items-center gap-1 px-2 py-0.5 rounded ${isDarkText ? 'bg-amber-200/60 text-emerald-600' : 'bg-white/10 text-emerald-300'}`}>
+                  <i className="fas fa-map-marker-alt text-[8px]" /> {firstMatch.location}
+                </span>
+              )}
             </div>
           )}
         </div>
 
         {/* Game list */}
-        <div className="relative z-10 mx-4 pointer-events-none">
+        <div className="relative z-10 mx-3 pointer-events-none">
           <div className={`rounded-lg overflow-hidden ${isDarkText ? 'bg-amber-100/60 border border-amber-200' : 'bg-white/10 border border-white/10'}`}>
             {done.map((m, idx) => {
               const isW = m.scoreMyTeam > m.scoreOpponent;
@@ -747,14 +757,9 @@ const ShareCard: React.FC<ShareCardProps> = ({
                   <span className={`text-[9px] font-black px-1.5 py-0.5 rounded shrink-0 ${resultBg}`}>
                     {isW ? 'W' : isL ? 'L' : 'D'}
                   </span>
-                  {/* Opponent + date/location */}
-                  <span className={`text-[10px] font-bold flex-1 min-w-0`}>
-                    <span className={`block truncate ${isDarkText ? 'text-slate-700' : 'text-white/90'}`}>{m.opponent}</span>
-                    {(m.date || m.location) && (
-                      <span className={`block text-[8px] font-bold truncate mt-0.5 ${isDarkText ? 'text-slate-400' : 'text-white/40'}`}>
-                        {m.date}{m.location ? ` · ${m.location}` : ''}
-                      </span>
-                    )}
+                  {/* Opponent */}
+                  <span className={`text-[10px] font-bold flex-1 truncate ${isDarkText ? 'text-slate-700' : 'text-white/90'}`}>
+                    {m.opponent}
                   </span>
                   {/* Score */}
                   {vis.showGameScore && (
@@ -838,7 +843,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
-  const aspectRatio = mode === 'season' || mode === 'tournament'
+  const aspectRatio = mode === 'season'
     ? 'aspect-[4/5]'
     : layoutMode === 'poster' ? 'aspect-[9/16]' : 'aspect-[4/5]';
 
@@ -905,8 +910,8 @@ const ShareCard: React.FC<ShareCardProps> = ({
           </div>
         )}
 
-        {/* ── Match-only layout/theme controls ── */}
-        {mode === 'match' && (
+        {/* ── Match/Tournament layout/theme controls ── */}
+        {(mode === 'match' || mode === 'tournament') && (
           <div className="bg-white/10 p-2 rounded-xl backdrop-blur-sm grid grid-cols-2 gap-2">
             <div className="flex bg-black/20 rounded-lg p-1 gap-1">
               {(['top', 'center', 'bottom'] as LayoutPosition[]).map((pos, i) => (
