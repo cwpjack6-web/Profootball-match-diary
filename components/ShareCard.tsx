@@ -745,9 +745,14 @@ const ShareCard: React.FC<ShareCardProps> = ({
                   <span className={`text-[9px] font-black px-1.5 py-0.5 rounded shrink-0 ${resultBg}`}>
                     {isW ? 'W' : isL ? 'L' : 'D'}
                   </span>
-                  {/* Opponent */}
-                  <span className={`text-[10px] font-bold flex-1 truncate ${isDarkText ? 'text-slate-700' : 'text-white/90'}`}>
-                    {m.opponent}
+                  {/* Opponent + date/location */}
+                  <span className={`text-[10px] font-bold flex-1 min-w-0`}>
+                    <span className={`block truncate ${isDarkText ? 'text-slate-700' : 'text-white/90'}`}>{m.opponent}</span>
+                    {(m.date || m.location) && (
+                      <span className={`block text-[8px] font-bold truncate mt-0.5 ${isDarkText ? 'text-slate-400' : 'text-white/40'}`}>
+                        {m.date}{m.location ? ` · ${m.location}` : ''}
+                      </span>
+                    )}
                   </span>
                   {/* Score */}
                   {vis.showGameScore && (
