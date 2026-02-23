@@ -149,6 +149,8 @@ const ShareCard: React.FC<ShareCardProps> = ({
   const [vis, setVis] = useState<VisibilityOptions>(DEFAULT_VISIBILITY);
   const [showVisPanel, setShowVisPanel] = useState(false);
   const [shareView, setShareView] = useState<'personal' | 'team'>('personal');
+  const [cardHeight, setCardHeight] = useState<number | null>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
 
   const cardRef      = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -254,6 +256,22 @@ const ShareCard: React.FC<ShareCardProps> = ({
   };
 
   const selectPreset = (i: number) => { setSelectedPreset(i); setBgImage(null); };
+
+  // ── Measure card height for html2canvas ──────────────────────────────────
+  React.useEffect(() => {
+    const measure = () => {
+      if (previewRef.current) {
+        setCardHeight(previewRef.current.offsetHeight);
+      }
+    };
+    // Small delay to ensure DOM has rendered at correct size
+    const timer = setTimeout(measure, 50);
+    window.addEventListener('resize', measure);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', measure);
+    };
+  }, [isOpen, layoutMode, selectedPreset]);
 
   // ── Download ───────────────────────────────────────────────────────────────
 
@@ -933,7 +951,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
         )}
 
         {/* ── Card Preview ── */}
-        <div className={`relative w-full ${aspectRatio} shadow-2xl overflow-hidden rounded-xl bg-slate-900 select-none`}>
+        <div ref={previewRef} className={`relative w-full ${aspectRatio} shadow-2xl overflow-hidden rounded-xl bg-slate-900 select-none`}>
 
           {isProcessingImg && (
             <div className="absolute inset-0 z-50 bg-black/70 flex flex-col items-center justify-center backdrop-blur-sm">
@@ -958,7 +976,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
 
           {/* RENDER AREA */}
-          <div ref={cardRef} className={`relative w-full h-full overflow-hidden flex flex-col ${isDarkText ? 'bg-amber-50' : 'bg-slate-900'}`}>
+          <div ref={cardRef} className={`relative w-full overflow-hidden flex flex-col ${isDarkText ? 'bg-amber-50' : 'bg-slate-900'}`} style={{ height: cardHeight ? `${cardHeight}px` : '100%' }}>
             {renderBackground()}
             {mode === 'match' ? renderMatchCard() : mode === 'tournament' ? renderTournamentCard() : renderSeasonCard()}
           </div>
