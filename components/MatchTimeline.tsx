@@ -470,6 +470,11 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                                 onClick={() => toggleTournamentGroup(tKey + groupKey)}
                               >
                                 <i className="fas fa-trophy text-amber-500 text-sm" />
+                                {tFirst.date && (
+                                  <span className="text-[10px] font-bold text-slate-500">
+                                    {new Date(tFirst.date).getDate()}日
+                                  </span>
+                                )}
                                 <span className="font-black text-slate-800 text-sm">{tKey}</span>
                                 <span className="text-[10px] bg-amber-100 text-amber-700 font-bold px-2 py-0.5 rounded-full border border-amber-200">
                                   {tMatches.length} Games
@@ -524,11 +529,6 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                               {(tFirst.tournamentStartTime || tFirst.matchTime) && (
                                 <span className="flex items-center gap-1 bg-white/60 px-2 py-0.5 rounded border border-slate-100 text-blue-600">
                                   <i className="far fa-clock" /> {tFirst.tournamentStartTime || tFirst.matchTime}{tFirst.tournamentEndTime ? ` → ${tFirst.tournamentEndTime}` : ''}
-                                </span>
-                              )}
-                              {tFirst.date && (
-                                <span className="flex items-center gap-1 bg-white/60 px-2 py-0.5 rounded border border-slate-100">
-                                  <i className="far fa-calendar text-slate-400" /> {tFirst.date}
                                 </span>
                               )}
                               {tFirst.location && (
