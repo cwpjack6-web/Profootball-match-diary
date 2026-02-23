@@ -13,6 +13,7 @@ interface MatchTimelineProps {
   onSelectMatch: (id: string) => void;
   onShare: (e: React.MouseEvent, match: MatchData) => void;
   onShareTournament: (name: string, matches: MatchData[]) => void;
+  onEditTournament: (name: string, matches: MatchData[]) => void;
   onEdit: (e: React.MouseEvent, match: MatchData) => void;
   onTrashClick: (e: React.MouseEvent, id: string) => void;
   onConfirmDelete: (e: React.MouseEvent, id: string) => void;
@@ -27,7 +28,7 @@ interface MatchTimelineProps {
 
 const MatchTimeline: React.FC<MatchTimelineProps> = ({
   matches, profile, isSelectionMode, selectedMatchIds, deleteConfirmId, expandedMatchIds,
-  onSelectMatch, onShare, onShareTournament, onEdit, onTrashClick, onConfirmDelete, onCancelDelete, onToggleExpansion, onOpenVideo, onOpponentClick,
+  onSelectMatch, onShare, onShareTournament, onEditTournament, onEdit, onTrashClick, onConfirmDelete, onCancelDelete, onToggleExpansion, onOpenVideo, onOpponentClick,
   scrollToMatchId, onScrollToMatchDone, isFiltered
 }) => {
   const { t } = useLanguage();
@@ -428,7 +429,22 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
 
                   return items.map((item, itemIdx) => {
                     if (item.type === 'tournament') {
-                      const { key: tKey, matches: tMatches } = item;
+                      const { key: tKey, matches: tMatchesRaw } = item;
+                      // Sort by matchLabel (Game 1, Game 2...) if available, fallback to date then id
+                      const tMatches = [...tMatchesRaw].sort((a, b) => {
+                        const labelA = a.matchLabel || '';
+                        const labelB = b.matchLabel || '';
+                        if (labelA && labelB) {
+                          // Extract numeric part: "Game 1" → 1, "G3" → 3
+                          const numA = parseInt(labelA.replace(/[^0-9]/g, '')) || 0;
+                          const numB = parseInt(labelB.replace(/[^0-9]/g, '')) || 0;
+                          if (numA !== numB) return numA - numB;
+                        }
+                        // Fallback: label present vs absent, then date, then id
+                        if (labelA && !labelB) return -1;
+                        if (!labelA && labelB) return 1;
+                        return new Date(a.date).getTime() - new Date(b.date).getTime() || a.id.localeCompare(b.id);
+                      });
                       const isTournamentExpanded = expandedTournamentIds.has(tKey + groupKey);
                       const tFirst = tMatches[0];
                       const tTeam = getTeamById(profile.teams, tFirst.teamId);
@@ -478,7 +494,7 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                                 </button>
                                 {/* Edit button — edits first match (shared fields: pitch, weather, time) */}
                                 <button
-                                  onClick={e => { e.stopPropagation(); onEdit(e, tFirst); }}
+                                  onClick={e => { e.stopPropagation(); onEditTournament(tKey, tMatches); }}
                                   className="w-7 h-7 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center hover:bg-blue-200 transition-colors"
                                   title="Edit tournament details"
                                 >
@@ -505,9 +521,9 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                                   <i className={`fas ${getWeatherIcon(tFirst.weather)} text-slate-400`} /> {getWeatherLabel(tFirst.weather)}
                                 </span>
                               )}
-                              {tFirst.matchTime && (
+                              {(tFirst.tournamentStartTime || tFirst.matchTime) && (
                                 <span className="flex items-center gap-1 bg-white/60 px-2 py-0.5 rounded border border-slate-100 text-blue-600">
-                                  <i className="far fa-clock" /> {tFirst.matchTime}{(tFirst as any).matchEndTime ? ` → ${(tFirst as any).matchEndTime}` : ''}
+                                  <i className="far fa-clock" /> {tFirst.tournamentStartTime || tFirst.matchTime}{tFirst.tournamentEndTime ? ` → ${tFirst.tournamentEndTime}` : ''}
                                 </span>
                               )}
                               {tGoals > 0 && (
