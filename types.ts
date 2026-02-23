@@ -52,6 +52,8 @@ export interface MatchData {
   assemblyTime?: string; 
   matchTime?: string;
   matchEndTime?: string;
+  tournamentStartTime?: string;
+  tournamentEndTime?: string;
   teamId: string;
   location: string;
   isHome: boolean;
