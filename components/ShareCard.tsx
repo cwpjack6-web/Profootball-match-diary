@@ -642,13 +642,15 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
   const renderTournamentCard = () => {
     const done = matches.filter(m => m.status !== 'scheduled');
-    let tw = 0, td = 0, tl = 0, tGoals = 0, tAssists = 0;
+    let tw = 0, td = 0, tl = 0, tGoals = 0, tAssists = 0, tTeamGoals = 0, tTeamConceded = 0;
     done.forEach(m => {
       if (m.scoreMyTeam > m.scoreOpponent) tw++;
       else if (m.scoreMyTeam < m.scoreOpponent) tl++;
       else td++;
       tGoals += m.arthurGoals;
       tAssists += m.arthurAssists;
+      tTeamGoals += m.scoreMyTeam;
+      tTeamConceded += m.scoreOpponent;
     });
     const firstMatch = done[0];
 
@@ -769,19 +771,24 @@ const ShareCard: React.FC<ShareCardProps> = ({
           <div className={`relative z-10 mt-auto grid ${shareView === 'personal' ? 'grid-cols-5' : 'grid-cols-4'} divide-x ${
             isDarkText
               ? 'bg-amber-200/60 border-t border-amber-300 divide-amber-300'
-              : 'bg-white/10 backdrop-blur-md border-t border-white/10 divide-white/10'
+              : 'bg-black/40 border-t border-white/10 divide-white/10'
           } pointer-events-none`}>
-            {[
+            {(shareView === 'personal' ? [
               { value: done.length,  label: language === 'zh' ? '場數' : 'Games',   color: '' },
               { value: `${tw}W ${td}D ${tl}L`, label: language === 'zh' ? '戰績' : 'Record', color: '' },
               { value: tGoals,       label: language === 'zh' ? '入球' : 'Goals',   color: 'text-emerald-400' },
               { value: tAssists,     label: language === 'zh' ? '助攻' : 'Assists', color: 'text-purple-400' },
               { value: done.filter(m => m.isMotm).length > 0 ? `×${done.filter(m => m.isMotm).length}` : '–',
                 label: 'MOTM', color: 'text-amber-400' },
-            ].map(({ value, label, color }) => (
-              <div key={label} className="py-2.5 flex flex-col items-center">
-                <span className={`text-xs font-black ${color || textCls}`}>{value}</span>
-                <span className={`text-[7px] uppercase font-bold ${isDarkText ? 'text-slate-500' : 'opacity-60 text-white'}`}>{label}</span>
+            ] : [
+              { value: done.length,       label: language === 'zh' ? '場數' : 'Games',    color: '' },
+              { value: `${tw}W ${td}D ${tl}L`, label: language === 'zh' ? '戰績' : 'Record', color: '' },
+              { value: tTeamGoals,        label: language === 'zh' ? '入球' : 'Goals',    color: 'text-emerald-400' },
+              { value: tTeamConceded,     label: language === 'zh' ? '失球' : 'Conceded', color: 'text-rose-400' },
+            ]).map(({ value, label, color }) => (
+              <div key={label} className={`flex flex-col items-center justify-center ${shareView === 'team' ? 'py-4' : 'py-2.5'}`}>
+                <span className={`font-black whitespace-nowrap ${shareView === 'team' ? 'text-lg' : 'text-xs'} ${color || textCls}`}>{value}</span>
+                <span className={`text-[7px] uppercase font-bold mt-0.5 ${isDarkText ? 'text-slate-500' : 'opacity-60 text-white'}`}>{label}</span>
               </div>
             ))}
           </div>
