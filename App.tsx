@@ -20,7 +20,8 @@ import ProfileSetup from './components/ProfileSetup';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
 import CoverPage from './components/CoverPage';
 import SyncModal from './components/SyncModal';
-import ShareCard from './components/ShareCard';           // ← 換成統一組件
+import ShareCard from './components/ShareCard';
+import TournamentEditModal from './components/TournamentEditModal';           // ← 換成統一組件
 import OpponentStatsModal from './components/OpponentStatsModal';
 import MatchTimeline from './components/MatchTimeline';
 import VideoModal from './components/VideoModal';
@@ -74,6 +75,7 @@ const App: React.FC = () => {
   const [scrollToMatchId, setScrollToMatchId] = useState<string | null>(null);
   const [shareMatch, setShareMatch] = useState<MatchData | null>(null);
   const [shareTournament, setShareTournament] = useState<{ name: string; matches: MatchData[] } | null>(null);
+  const [editingTournament, setEditingTournament] = useState<{ name: string; matches: MatchData[] } | null>(null);
   const [selectedOpponent, setSelectedOpponent] = useState<string | null>(null);
   const [viewingVideoId, setViewingVideoId] = useState<string | null>(null);
 
@@ -263,6 +265,16 @@ const App: React.FC = () => {
   };
   const openEditForm = (e: React.MouseEvent, match: MatchData) => { e.stopPropagation(); setEditingMatch(match); setIsFormOpen(true); };
   const handleShare = (e: React.MouseEvent, match: MatchData) => { e.stopPropagation(); setShareMatch(match); };
+  const handleTournamentSave = (name: string, tMatches: MatchData[], updates: Partial<MatchData>) => {
+    if (!activeProfile) return;
+    let updatedList = [...matches];
+    tMatches.forEach(m => {
+      updatedList = updateMatchInStorage({ ...m, ...updates, id: m.id, profileId: activeProfile.id });
+    });
+    setMatches(updatedList);
+    setEditingTournament(null);
+    showToast(language === 'zh' ? `已同步到 ${tMatches.length} 場比賽` : `Synced to ${tMatches.length} games`, 'success');
+  };
   const handleTrashClick = (e: React.MouseEvent, id: string) => { e.stopPropagation(); setDeleteConfirmId(id); };
   const handleConfirmDelete = (e: React.MouseEvent, id: string) => { e.stopPropagation(); if(activeProfile) setMatches(deleteMatchFromStorage(id, activeProfile.id)); setDeleteConfirmId(null); showToast(t.deleteSuccess, 'info'); };
   const handleCancelDelete = (e: React.MouseEvent) => { e.stopPropagation(); setDeleteConfirmId(null); };
@@ -505,7 +517,7 @@ const App: React.FC = () => {
                       )}
                   </div>
                 )}
-                <MatchTimeline matches={filteredMatches} profile={activeProfile} isSelectionMode={isSelectionMode} selectedMatchIds={selectedMatchIds} deleteConfirmId={deleteConfirmId} expandedMatchIds={expandedMatchIds} onSelectMatch={handleSelectMatch} onShare={handleShare} onShareTournament={(name, tMatches) => setShareTournament({ name, matches: tMatches })} onEdit={openEditForm} onTrashClick={handleTrashClick} onConfirmDelete={handleConfirmDelete} onCancelDelete={handleCancelDelete} onToggleExpansion={toggleMatchExpansion} onOpenVideo={handleOpenVideo} onOpponentClick={handleOpponentClick} scrollToMatchId={scrollToMatchId} onScrollToMatchDone={() => setScrollToMatchId(null)} isFiltered={!!(searchQuery.trim() || quickTeamFilter !== "all")} />
+                <MatchTimeline matches={filteredMatches} profile={activeProfile} isSelectionMode={isSelectionMode} selectedMatchIds={selectedMatchIds} deleteConfirmId={deleteConfirmId} expandedMatchIds={expandedMatchIds} onSelectMatch={handleSelectMatch} onShare={handleShare} onShareTournament={(name, tMatches) => setShareTournament({ name, matches: tMatches })} onEditTournament={(name, tMatches) => setEditingTournament({ name, matches: tMatches })} onEdit={openEditForm} onTrashClick={handleTrashClick} onConfirmDelete={handleConfirmDelete} onCancelDelete={handleCancelDelete} onToggleExpansion={toggleMatchExpansion} onOpenVideo={handleOpenVideo} onOpponentClick={handleOpponentClick} scrollToMatchId={scrollToMatchId} onScrollToMatchDone={() => setScrollToMatchId(null)} isFiltered={!!(searchQuery.trim() || quickTeamFilter !== "all")} />
             </div>
             )}
             
@@ -617,6 +629,17 @@ const App: React.FC = () => {
           matches={shareTournament.matches}
           profile={activeProfile}
           tournamentName={shareTournament.name}
+        />
+      )}
+
+      {/* 杯賽編輯 — TournamentEditModal */}
+      {editingTournament && (
+        <TournamentEditModal
+          isOpen={!!editingTournament}
+          onClose={() => setEditingTournament(null)}
+          tournamentName={editingTournament.name}
+          matches={editingTournament.matches}
+          onSave={updates => handleTournamentSave(editingTournament.name, editingTournament.matches, updates)}
         />
       )}
 
