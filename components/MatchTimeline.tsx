@@ -627,27 +627,7 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                                           </div>
                                         </div>
 
-                                        {/* Date + Location row */}
-                                        {(match.date || match.location || match.matchTime) && (
-                                          <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold mb-2 flex-wrap">
-                                            <span className="flex items-center gap-1">
-                                              <i className="far fa-calendar text-[9px]" /> {match.date}
-                                            </span>
-                                            {match.matchTime && (
-                                              <span className="flex items-center gap-1 text-blue-500">
-                                                <i className="far fa-clock text-[9px]" /> {match.matchTime}
-                                              </span>
-                                            )}
-                                            {match.location && (
-                                              <button
-                                                onClick={e => handleOpenMaps(e, match.location)}
-                                                className="flex items-center gap-1 text-emerald-600 hover:underline"
-                                              >
-                                                <i className="fas fa-map-marker-alt text-[9px]" /> {match.location}
-                                              </button>
-                                            )}
-                                          </div>
-                                        )}
+                                        
 
                                         {/* Score */}
                                         <div className="flex items-center justify-between gap-2 mb-2">
