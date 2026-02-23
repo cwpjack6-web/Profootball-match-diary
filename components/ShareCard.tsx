@@ -145,9 +145,6 @@ const ShareCard: React.FC<ShareCardProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart]   = useState({ x: 0, y: 0 });
 
-  // Share view mode
-  const [shareView, setShareView] = useState<'personal' | 'team'>('personal');
-
   // Visibility
   const [vis, setVis] = useState<VisibilityOptions>(DEFAULT_VISIBILITY);
   const [showVisPanel, setShowVisPanel] = useState(false);
@@ -263,14 +260,10 @@ const ShareCard: React.FC<ShareCardProps> = ({
     if (!cardRef.current) return;
     setIsGenerating(true);
     try {
-      await document.fonts.ready;
-      await new Promise(r => setTimeout(r, 300));
-      const blurEls = cardRef.current.querySelectorAll<HTMLElement>('[class*="backdrop-blur"]');
-      blurEls.forEach(el => { el.dataset.origFilter = el.style.backdropFilter; el.style.backdropFilter = 'none'; });
+      await new Promise(r => setTimeout(r, 150));
       const canvas = await html2canvas(cardRef.current, {
-        useCORS: true, scale: 3, backgroundColor: null, logging: false, allowTaint: true, imageTimeout: 0,
+        useCORS: true, scale: 2, backgroundColor: null, logging: false,
       });
-      blurEls.forEach(el => { el.style.backdropFilter = el.dataset.origFilter || ''; });
       const link = document.createElement('a');
       link.download = mode === 'match'
         ? `match-report-${match?.date ?? 'card'}.png`
@@ -407,7 +400,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
         : 'justify-end mt-auto';
 
     const cardStyle = cardTheme === 'broadcast'
-      ? `${isDarkText ? 'bg-amber-100/80 border-amber-200' : 'bg-black/60 border-white/10'} border-t-2 w-full p-5`
+      ? `${isDarkText ? 'bg-amber-100/80 border-amber-200' : 'bg-black/55 border-white/10'} border-t-2 w-full p-5 backdrop-blur-md`
       : cardTheme === 'gradient'
         ? 'pt-12 p-5'
         : 'p-5';
@@ -456,7 +449,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
                     {resultLabel}
                   </div>
                 )}
-                {shareView === 'personal' && vis.showMotm && match.isMotm && (
+                {vis.showMotm && match.isMotm && (
                   <div className="bg-yellow-500 text-black px-2 py-0.5 rounded-full font-black text-[9px] shadow flex items-center gap-1">
                     <i className="fas fa-trophy" /> MOTM
                   </div>
@@ -472,7 +465,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
               </div>
               <div className="flex flex-col items-center gap-1">
                 <div className="h-8 w-px bg-white/40" />
-                {shareView === 'personal' && vis.showRating && match.rating > 0 && (
+                {vis.showRating && match.rating > 0 && (
                   <div className="flex items-center gap-1 px-2 py-0.5 rounded-full border"
                     style={{ borderColor: ratingColor(match.rating), backgroundColor: `${ratingColor(match.rating)}22` }}>
                     <i className="fas fa-star text-[8px]" style={{ color: ratingColor(match.rating) }} />
@@ -496,7 +489,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
             )}
 
             {/* Personal stats pills */}
-            {shareView === 'personal' && vis.showPersonalStats && (match.arthurGoals > 0 || match.arthurAssists > 0) && (
+            {vis.showPersonalStats && (match.arthurGoals > 0 || match.arthurAssists > 0) && (
               <div className="flex gap-2 justify-center mb-2">
                 {match.arthurGoals > 0 && (
                   <div className="flex items-center gap-1 bg-emerald-500/20 border border-emerald-400/40 px-2 py-0.5 rounded-full">
@@ -547,7 +540,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
           </>
         ) : (
           <>
-            <div className="inline-block border border-white/30 px-3 py-0.5 rounded text-[9px] font-black tracking-widest uppercase mb-2 text-white">
+            <div className="inline-block border border-white/30 px-3 py-0.5 rounded text-[9px] font-black tracking-widest uppercase mb-2 backdrop-blur-sm text-white">
               {t.seasonRecap}
             </div>
             <h2 className="text-2xl font-black italic uppercase leading-none drop-shadow-md text-white">{title}</h2>
@@ -581,7 +574,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
       {/* Highlights */}
       {vis.showHighlights && seasonHighlights && (
         <div className="relative z-10 mx-4 mb-2 rounded-lg overflow-hidden pointer-events-none">
-          <div className={`px-3 py-2 ${isDarkText ? 'bg-amber-200/60 border border-amber-300' : 'bg-white/10 border border-white/10'}`}>
+          <div className={`px-3 py-2 ${isDarkText ? 'bg-amber-200/60 border border-amber-300' : 'bg-white/10 backdrop-blur-sm border border-white/10'}`}>
             <div className={`text-[8px] font-black uppercase tracking-widest mb-1.5 ${isDarkText ? 'text-slate-600' : 'text-white/60'}`}>
               Season Highlights
             </div>
@@ -625,7 +618,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
           vis.showAvgRating ? 'grid-cols-5' : 'grid-cols-4'
         } ${isDarkText
           ? 'bg-amber-200/60 border-t border-amber-300 divide-amber-300'
-          : 'bg-black/40 border-t border-white/10 divide-white/10'
+          : 'bg-white/10 backdrop-blur-md border-t border-white/10 divide-white/10'
         } pointer-events-none`}>
           {[
             { value: seasonStats.total,   label: t.played,  color: '' },
@@ -649,15 +642,13 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
   const renderTournamentCard = () => {
     const done = matches.filter(m => m.status !== 'scheduled');
-    let tw = 0, td = 0, tl = 0, tGoals = 0, tAssists = 0, tTeamGoals = 0, tTeamConceded = 0;
+    let tw = 0, td = 0, tl = 0, tGoals = 0, tAssists = 0;
     done.forEach(m => {
       if (m.scoreMyTeam > m.scoreOpponent) tw++;
       else if (m.scoreMyTeam < m.scoreOpponent) tl++;
       else td++;
       tGoals += m.arthurGoals;
       tAssists += m.arthurAssists;
-      tTeamGoals += m.scoreMyTeam;
-      tTeamConceded += m.scoreOpponent;
     });
     const firstMatch = done[0];
 
@@ -689,20 +680,20 @@ const ShareCard: React.FC<ShareCardProps> = ({
                 <span className="text-slate-800 text-[9px] font-black uppercase tracking-[0.3em]">Tournament Report</span>
               </div>
               <h2 className="text-2xl font-black uppercase leading-none text-slate-800 text-center">{tournamentName}</h2>
-              {shareView === 'personal' && <div className="text-sm font-bold opacity-70 mt-1 text-center text-slate-700">{profile.name}</div>}
+              <div className="text-sm font-bold opacity-70 mt-1 text-center text-slate-700">{profile.name}</div>
             </>
           ) : (
             <>
-              <div className="inline-flex items-center gap-1.5 border border-white/30 px-3 py-0.5 rounded text-[9px] font-black tracking-widest uppercase mb-2 text-white">
+              <div className="inline-flex items-center gap-1.5 border border-white/30 px-3 py-0.5 rounded text-[9px] font-black tracking-widest uppercase mb-2 backdrop-blur-sm text-white">
                 <i className="fas fa-trophy text-amber-400 text-[10px]" />
                 {language === 'zh' ? '杯賽報告' : 'Tournament Report'}
               </div>
               <h2 className="text-2xl font-black italic uppercase leading-none drop-shadow-md text-white">{tournamentName}</h2>
-              {shareView === 'personal' && <div className="text-sm font-bold opacity-80 mt-1 text-white">{profile.name}</div>}
+              <div className="text-sm font-bold opacity-80 mt-1 text-white">{profile.name}</div>
             </>
           )}
 
-          {/* Meta: pitch, weather, time, date, location */}
+          {/* Meta: pitch, weather, time */}
           {firstMatch && (
             <div className="flex flex-wrap gap-2 mt-2">
               {firstMatch.pitchType && (
@@ -720,23 +711,13 @@ const ShareCard: React.FC<ShareCardProps> = ({
                   <i className="far fa-clock text-[8px]" /> {firstMatch.tournamentStartTime || firstMatch.matchTime}{firstMatch.tournamentEndTime ? ` → ${firstMatch.tournamentEndTime}` : ''}
                 </span>
               )}
-              {firstMatch.date && (
-                <span className={`text-[9px] font-bold flex items-center gap-1 px-2 py-0.5 rounded ${isDarkText ? 'bg-amber-200/60 text-slate-600' : 'bg-white/10 text-white/70'}`}>
-                  <i className="far fa-calendar text-[8px]" /> {firstMatch.date}
-                </span>
-              )}
-              {firstMatch.location && (
-                <span className={`text-[9px] font-bold flex items-center gap-1 px-2 py-0.5 rounded ${isDarkText ? 'bg-amber-200/60 text-emerald-600' : 'bg-white/10 text-emerald-300'}`}>
-                  <i className="fas fa-map-marker-alt text-[8px]" /> {firstMatch.location}
-                </span>
-              )}
             </div>
           )}
         </div>
 
         {/* Game list */}
-        <div className="relative z-10 mx-3 pointer-events-none">
-          <div className={`rounded-lg overflow-hidden ${isDarkText ? 'bg-amber-100/60 border border-amber-200' : 'bg-white/10 border border-white/10'}`}>
+        <div className="relative z-10 mx-4 flex-1 overflow-hidden pointer-events-none">
+          <div className={`rounded-lg overflow-hidden ${isDarkText ? 'bg-amber-100/60 border border-amber-200' : 'bg-white/10 backdrop-blur-sm border border-white/10'}`}>
             {done.map((m, idx) => {
               const isW = m.scoreMyTeam > m.scoreOpponent;
               const isL = m.scoreMyTeam < m.scoreOpponent;
@@ -768,13 +749,13 @@ const ShareCard: React.FC<ShareCardProps> = ({
                     </span>
                   )}
                   {/* Personal stats */}
-                  {shareView === 'personal' && vis.showGamePersonalStats && (m.arthurGoals > 0 || m.arthurAssists > 0) && (
+                  {vis.showGamePersonalStats && (m.arthurGoals > 0 || m.arthurAssists > 0) && (
                     <span className={`text-[9px] font-bold shrink-0 ${isDarkText ? 'text-slate-500' : 'text-white/50'}`}>
                       {m.arthurGoals > 0 && `⚽${m.arthurGoals}`}{m.arthurAssists > 0 && ` 👟${m.arthurAssists}`}
                     </span>
                   )}
                   {/* Rating */}
-                  {shareView === 'personal' && vis.showGameRating && m.rating > 0 && (
+                  {vis.showGameRating && m.rating > 0 && (
                     <span className="text-[9px] font-black text-amber-400 shrink-0">★{m.rating}</span>
                   )}
                 </div>
@@ -785,27 +766,22 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
         {/* Summary footer */}
         {vis.showTournamentSummary && (
-          <div className={`relative z-10 mt-2 grid grid-cols-5 divide-x ${
+          <div className={`relative z-10 mt-auto grid ${shareView === 'personal' ? 'grid-cols-5' : 'grid-cols-4'} divide-x ${
             isDarkText
               ? 'bg-amber-200/60 border-t border-amber-300 divide-amber-300'
-              : 'bg-black/40 border-t border-white/10 divide-white/10'
+              : 'bg-white/10 backdrop-blur-md border-t border-white/10 divide-white/10'
           } pointer-events-none`}>
-            {(shareView === 'personal' ? [
+            {[
               { value: done.length,  label: language === 'zh' ? '場數' : 'Games',   color: '' },
               { value: `${tw}W ${td}D ${tl}L`, label: language === 'zh' ? '戰績' : 'Record', color: '' },
               { value: tGoals,       label: language === 'zh' ? '入球' : 'Goals',   color: 'text-emerald-400' },
               { value: tAssists,     label: language === 'zh' ? '助攻' : 'Assists', color: 'text-purple-400' },
               { value: done.filter(m => m.isMotm).length > 0 ? `×${done.filter(m => m.isMotm).length}` : '–',
                 label: 'MOTM', color: 'text-amber-400' },
-            ] : [
-              { value: done.length,  label: language === 'zh' ? '場數' : 'Games',      color: '' },
-              { value: `${tw}W ${td}D ${tl}L`, label: language === 'zh' ? '戰績' : 'Record', color: '' },
-              { value: tTeamGoals,   label: language === 'zh' ? '入球' : 'Goals',      color: 'text-emerald-400' },
-              { value: tTeamConceded,label: language === 'zh' ? '失球' : 'Conceded',   color: 'text-rose-400' },
-            ]).map(({ value, label, color }) => (
-              <div key={label} className={`flex flex-col items-center justify-center ${shareView === 'team' ? 'py-4' : 'py-2.5'}`}>
-                <span className={`font-black whitespace-nowrap ${shareView === 'team' ? 'text-lg' : 'text-xs'} ${color || textCls}`}>{value}</span>
-                <span className={`text-[7px] uppercase font-bold mt-0.5 ${isDarkText ? 'text-slate-500' : 'opacity-60 text-white'}`}>{label}</span>
+            ].map(({ value, label, color }) => (
+              <div key={label} className="py-2.5 flex flex-col items-center">
+                <span className={`text-xs font-black ${color || textCls}`}>{value}</span>
+                <span className={`text-[7px] uppercase font-bold ${isDarkText ? 'text-slate-500' : 'opacity-60 text-white'}`}>{label}</span>
               </div>
             ))}
           </div>
@@ -843,7 +819,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
-  const aspectRatio = mode === 'season'
+  const aspectRatio = mode === 'season' || mode === 'tournament'
     ? 'aspect-[4/5]'
     : layoutMode === 'poster' ? 'aspect-[9/16]' : 'aspect-[4/5]';
 
@@ -874,30 +850,6 @@ const ShareCard: React.FC<ShareCardProps> = ({
           </div>
         </div>
 
-        {/* ── Personal / Team toggle ── */}
-        {(mode === 'match' || mode === 'tournament') && (
-          <div className="flex bg-white/10 rounded-xl p-1 gap-1">
-            <button
-              onClick={() => setShareView('personal')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-black transition-all ${
-                shareView === 'personal' ? 'bg-white text-slate-900 shadow' : 'text-white/60 hover:text-white'
-              }`}
-            >
-              <i className="fas fa-user text-[10px]" />
-              {language === 'zh' ? '個人版' : 'Personal'}
-            </button>
-            <button
-              onClick={() => setShareView('team')}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-black transition-all ${
-                shareView === 'team' ? 'bg-white text-slate-900 shadow' : 'text-white/60 hover:text-white'
-              }`}
-            >
-              <i className="fas fa-users text-[10px]" />
-              {language === 'zh' ? '球隊版' : 'Team'}
-            </button>
-          </div>
-        )}
-
         {/* ── Visibility Panel ── */}
         {showVisPanel && (
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/10 animate-fade-in">
@@ -910,8 +862,8 @@ const ShareCard: React.FC<ShareCardProps> = ({
           </div>
         )}
 
-        {/* ── Match/Tournament layout/theme controls ── */}
-        {(mode === 'match' || mode === 'tournament') && (
+        {/* ── Match-only layout/theme controls ── */}
+        {mode === 'match' && (
           <div className="bg-white/10 p-2 rounded-xl backdrop-blur-sm grid grid-cols-2 gap-2">
             <div className="flex bg-black/20 rounded-lg p-1 gap-1">
               {(['top', 'center', 'bottom'] as LayoutPosition[]).map((pos, i) => (
@@ -958,7 +910,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
 
           {/* RENDER AREA */}
-          <div ref={cardRef} className={`relative w-full h-full overflow-hidden ${isDarkText ? 'bg-amber-50' : 'bg-slate-900'}`} style={{ display: 'flex', flexDirection: 'column' }}>
+          <div ref={cardRef} className={`relative w-full h-full overflow-hidden flex flex-col ${isDarkText ? 'bg-amber-50' : 'bg-slate-900'}`}>
             {renderBackground()}
             {mode === 'match' ? renderMatchCard() : mode === 'tournament' ? renderTournamentCard() : renderSeasonCard()}
           </div>
@@ -971,8 +923,8 @@ const ShareCard: React.FC<ShareCardProps> = ({
           )}
         </div>
 
-        {/* ── Match layout toggle ── */}
-        {mode === 'match' && (
+        {/* ── Match/Tournament layout toggle ── */}
+        {(mode === 'match' || mode === 'tournament') && (
           <div className="flex bg-white/10 p-1 rounded-lg backdrop-blur-sm self-center gap-1">
             {(['card', 'poster'] as const).map(m => (
               <button key={m} onClick={() => setLayoutMode(m)}
