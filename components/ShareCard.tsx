@@ -649,13 +649,15 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
   const renderTournamentCard = () => {
     const done = matches.filter(m => m.status !== 'scheduled');
-    let tw = 0, td = 0, tl = 0, tGoals = 0, tAssists = 0;
+    let tw = 0, td = 0, tl = 0, tGoals = 0, tAssists = 0, tTeamGoals = 0, tTeamConceded = 0;
     done.forEach(m => {
       if (m.scoreMyTeam > m.scoreOpponent) tw++;
       else if (m.scoreMyTeam < m.scoreOpponent) tl++;
       else td++;
       tGoals += m.arthurGoals;
       tAssists += m.arthurAssists;
+      tTeamGoals += m.scoreMyTeam;
+      tTeamConceded += m.scoreOpponent;
     });
     const firstMatch = done[0];
 
