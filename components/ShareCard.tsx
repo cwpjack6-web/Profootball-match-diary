@@ -145,6 +145,9 @@ const ShareCard: React.FC<ShareCardProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart]   = useState({ x: 0, y: 0 });
 
+  // Share view mode
+  const [shareView, setShareView] = useState<'personal' | 'team'>('personal');
+
   // Visibility
   const [vis, setVis] = useState<VisibilityOptions>(DEFAULT_VISIBILITY);
   const [showVisPanel, setShowVisPanel] = useState(false);
@@ -260,25 +263,13 @@ const ShareCard: React.FC<ShareCardProps> = ({
     if (!cardRef.current) return;
     setIsGenerating(true);
     try {
-      // Wait for fonts (FontAwesome icons) to load
       await document.fonts.ready;
-      // Extra settle time for layout + backdrop-blur elements
       await new Promise(r => setTimeout(r, 300));
-
-      // Temporarily disable backdrop-filter which html2canvas cannot render
       const blurEls = cardRef.current.querySelectorAll<HTMLElement>('[class*="backdrop-blur"]');
       blurEls.forEach(el => { el.dataset.origFilter = el.style.backdropFilter; el.style.backdropFilter = 'none'; });
-
       const canvas = await html2canvas(cardRef.current, {
-        useCORS: true,
-        scale: 3,
-        backgroundColor: null,
-        logging: false,
-        allowTaint: true,
-        imageTimeout: 0,
+        useCORS: true, scale: 3, backgroundColor: null, logging: false, allowTaint: true, imageTimeout: 0,
       });
-
-      // Restore backdrop-filter
       blurEls.forEach(el => { el.style.backdropFilter = el.dataset.origFilter || ''; });
       const link = document.createElement('a');
       link.download = mode === 'match'
@@ -465,7 +456,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
                     {resultLabel}
                   </div>
                 )}
-                {vis.showMotm && match.isMotm && (
+                {shareView === 'personal' && vis.showMotm && match.isMotm && (
                   <div className="bg-yellow-500 text-black px-2 py-0.5 rounded-full font-black text-[9px] shadow flex items-center gap-1">
                     <i className="fas fa-trophy" /> MOTM
                   </div>
@@ -481,7 +472,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
               </div>
               <div className="flex flex-col items-center gap-1">
                 <div className="h-8 w-px bg-white/40" />
-                {vis.showRating && match.rating > 0 && (
+                {shareView === 'personal' && vis.showRating && match.rating > 0 && (
                   <div className="flex items-center gap-1 px-2 py-0.5 rounded-full border"
                     style={{ borderColor: ratingColor(match.rating), backgroundColor: `${ratingColor(match.rating)}22` }}>
                     <i className="fas fa-star text-[8px]" style={{ color: ratingColor(match.rating) }} />
@@ -505,7 +496,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
             )}
 
             {/* Personal stats pills */}
-            {vis.showPersonalStats && (match.arthurGoals > 0 || match.arthurAssists > 0) && (
+            {shareView === 'personal' && vis.showPersonalStats && (match.arthurGoals > 0 || match.arthurAssists > 0) && (
               <div className="flex gap-2 justify-center mb-2">
                 {match.arthurGoals > 0 && (
                   <div className="flex items-center gap-1 bg-emerald-500/20 border border-emerald-400/40 px-2 py-0.5 rounded-full">
@@ -696,7 +687,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
                 <span className="text-slate-800 text-[9px] font-black uppercase tracking-[0.3em]">Tournament Report</span>
               </div>
               <h2 className="text-2xl font-black uppercase leading-none text-slate-800 text-center">{tournamentName}</h2>
-              <div className="text-sm font-bold opacity-70 mt-1 text-center text-slate-700">{profile.name}</div>
+              {shareView === 'personal' && <div className="text-sm font-bold opacity-70 mt-1 text-center text-slate-700">{profile.name}</div>}
             </>
           ) : (
             <>
@@ -705,7 +696,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
                 {language === 'zh' ? '杯賽報告' : 'Tournament Report'}
               </div>
               <h2 className="text-2xl font-black italic uppercase leading-none drop-shadow-md text-white">{tournamentName}</h2>
-              <div className="text-sm font-bold opacity-80 mt-1 text-white">{profile.name}</div>
+              {shareView === 'personal' && <div className="text-sm font-bold opacity-80 mt-1 text-white">{profile.name}</div>}
             </>
           )}
 
@@ -765,13 +756,13 @@ const ShareCard: React.FC<ShareCardProps> = ({
                     </span>
                   )}
                   {/* Personal stats */}
-                  {vis.showGamePersonalStats && (m.arthurGoals > 0 || m.arthurAssists > 0) && (
+                  {shareView === 'personal' && vis.showGamePersonalStats && (m.arthurGoals > 0 || m.arthurAssists > 0) && (
                     <span className={`text-[9px] font-bold shrink-0 ${isDarkText ? 'text-slate-500' : 'text-white/50'}`}>
                       {m.arthurGoals > 0 && `⚽${m.arthurGoals}`}{m.arthurAssists > 0 && ` 👟${m.arthurAssists}`}
                     </span>
                   )}
                   {/* Rating */}
-                  {vis.showGameRating && m.rating > 0 && (
+                  {shareView === 'personal' && vis.showGameRating && m.rating > 0 && (
                     <span className="text-[9px] font-black text-amber-400 shrink-0">★{m.rating}</span>
                   )}
                 </div>
@@ -787,14 +778,18 @@ const ShareCard: React.FC<ShareCardProps> = ({
               ? 'bg-amber-200/60 border-t border-amber-300 divide-amber-300'
               : 'bg-black/40 border-t border-white/10 divide-white/10'
           } pointer-events-none`}>
-            {[
+            {(shareView === 'personal' ? [
               { value: done.length,  label: language === 'zh' ? '場數' : 'Games',   color: '' },
               { value: `${tw}W ${td}D ${tl}L`, label: language === 'zh' ? '戰績' : 'Record', color: '' },
               { value: tGoals,       label: language === 'zh' ? '入球' : 'Goals',   color: 'text-emerald-400' },
               { value: tAssists,     label: language === 'zh' ? '助攻' : 'Assists', color: 'text-purple-400' },
               { value: done.filter(m => m.isMotm).length > 0 ? `×${done.filter(m => m.isMotm).length}` : '–',
                 label: 'MOTM', color: 'text-amber-400' },
-            ].map(({ value, label, color }) => (
+            ] : [
+              { value: done.length,  label: language === 'zh' ? '場數' : 'Games',   color: '' },
+              { value: `${tw}W ${td}D ${tl}L`, label: language === 'zh' ? '戰績' : 'Record', color: '' },
+              { value: tGoals,       label: language === 'zh' ? '入球' : 'Goals',   color: 'text-emerald-400' },
+            ]).map(({ value, label, color }) => (
               <div key={label} className="py-2.5 flex flex-col items-center">
                 <span className={`text-xs font-black ${color || textCls}`}>{value}</span>
                 <span className={`text-[7px] uppercase font-bold ${isDarkText ? 'text-slate-500' : 'opacity-60 text-white'}`}>{label}</span>
@@ -866,6 +861,30 @@ const ShareCard: React.FC<ShareCardProps> = ({
           </div>
         </div>
 
+        {/* ── Personal / Team toggle ── */}
+        {(mode === 'match' || mode === 'tournament') && (
+          <div className="flex bg-white/10 rounded-xl p-1 gap-1">
+            <button
+              onClick={() => setShareView('personal')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-black transition-all ${
+                shareView === 'personal' ? 'bg-white text-slate-900 shadow' : 'text-white/60 hover:text-white'
+              }`}
+            >
+              <i className="fas fa-user text-[10px]" />
+              {language === 'zh' ? '個人版' : 'Personal'}
+            </button>
+            <button
+              onClick={() => setShareView('team')}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-black transition-all ${
+                shareView === 'team' ? 'bg-white text-slate-900 shadow' : 'text-white/60 hover:text-white'
+              }`}
+            >
+              <i className="fas fa-users text-[10px]" />
+              {language === 'zh' ? '球隊版' : 'Team'}
+            </button>
+          </div>
+        )}
+
         {/* ── Visibility Panel ── */}
         {showVisPanel && (
           <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/10 animate-fade-in">
@@ -926,8 +945,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
 
           {/* RENDER AREA */}
-          <div ref={cardRef} className={`relative w-full h-full overflow-hidden ${isDarkText ? 'bg-amber-50' : 'bg-slate-900'}`}
-            style={{ display: 'flex', flexDirection: 'column' }}>
+          <div ref={cardRef} className={`relative w-full h-full overflow-hidden ${isDarkText ? 'bg-amber-50' : 'bg-slate-900'}`} style={{ display: 'flex', flexDirection: 'column' }}>
             {renderBackground()}
             {mode === 'match' ? renderMatchCard() : mode === 'tournament' ? renderTournamentCard() : renderSeasonCard()}
           </div>
