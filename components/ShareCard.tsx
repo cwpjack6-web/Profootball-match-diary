@@ -9,7 +9,6 @@
  */
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import domtoimage from 'dom-to-image-more';
 import html2canvas from 'html2canvas';
 import { MatchData, UserProfile } from '../types';
 import { useLanguage } from '../context/LanguageContext';
@@ -258,6 +257,71 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
   // ── Download ───────────────────────────────────────────────────────────────
 
+  // ── Inline DOM-to-PNG via SVG foreignObject (no external library) ──────────
+  const domToPng = async (el: HTMLElement, scale = 2): Promise<string> => {
+    const w = el.offsetWidth;
+    const h = el.offsetHeight;
+
+    // Collect all stylesheets into one string
+    const cssText = Array.from(document.styleSheets).map(sheet => {
+      try { return Array.from(sheet.cssRules).map(r => r.cssText).join('\n'); }
+      catch { return ''; }
+    }).join('\n');
+
+    // Clone node and embed all computed styles inline
+    const clone = el.cloneNode(true) as HTMLElement;
+    const allEls = [clone, ...Array.from(clone.querySelectorAll('*'))] as HTMLElement[];
+    const srcEls = [el,   ...Array.from(el.querySelectorAll('*'))]   as HTMLElement[];
+    allEls.forEach((clEl, i) => {
+      const computed = window.getComputedStyle(srcEls[i]);
+      // Copy every computed style property inline
+      Array.from(computed).forEach(prop => {
+        try { (clEl as HTMLElement).style.setProperty(prop, computed.getPropertyValue(prop)); }
+        catch { /* skip read-only */ }
+      });
+    });
+
+    // Convert images to data URLs
+    const imgs = Array.from(clone.querySelectorAll('img')) as HTMLImageElement[];
+    const srcImgs = Array.from(el.querySelectorAll('img')) as HTMLImageElement[];
+    await Promise.all(imgs.map(async (img, i) => {
+      const src = srcImgs[i]?.src;
+      if (!src || src.startsWith('data:')) return;
+      try {
+        const res = await fetch(src);
+        const blob = await res.blob();
+        img.src = await new Promise<string>(resolve => {
+          const fr = new FileReader();
+          fr.onload = () => resolve(fr.result as string);
+          fr.readAsDataURL(blob);
+        });
+      } catch { /* keep original src */ }
+    }));
+
+    const serialized = new XMLSerializer().serializeToString(clone);
+    const svgStr = \`<svg xmlns="http://www.w3.org/2000/svg" width="\${w}" height="\${h}">
+      <defs><style>\${cssText.replace(/</g, '&lt;')}</style></defs>
+      <foreignObject width="\${w}" height="\${h}">
+        <div xmlns="http://www.w3.org/1999/xhtml">\${serialized}</div>
+      </foreignObject>
+    </svg>\`;
+
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = w * scale;
+        canvas.height = h * scale;
+        const ctx = canvas.getContext('2d')!;
+        ctx.scale(scale, scale);
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = reject;
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgStr);
+    });
+  };
+
   const handleDownload = async () => {
     if (!cardRef.current) return;
     setIsGenerating(true);
@@ -265,29 +329,15 @@ const ShareCard: React.FC<ShareCardProps> = ({
     const el = cardRef.current;
     const w = el.offsetWidth;
     const h = el.offsetHeight;
-
-    // ── Pre-capture: fix margin:auto centering for any capture library ──
-    const panel = el.querySelector('[data-match-panel]') as HTMLElement | null;
-    if (panel) {
-      const panelH = panel.offsetHeight;
-      const topPad = Math.max(0, Math.round((h - panelH) / 2));
-      panel.style.marginTop = `${topPad}px`;
-      panel.style.marginBottom = '0px';
-    }
-    el.style.height = `${h}px`;
-
-    const cleanup = () => {
-      el.style.height = '';
-      if (panel) { panel.style.marginTop = ''; panel.style.marginBottom = ''; }
-    };
+    el.style.height = \`\${h}px\`;
 
     const getFilename = () => {
       const viewSuffix = shareView === 'team' ? '-team' : '-personal';
       return mode === 'match'
-        ? `match-report-${match?.date ?? 'card'}${viewSuffix}.png`
+        ? \`match-report-\${match?.date ?? 'card'}\${viewSuffix}.png\`
         : mode === 'tournament'
-          ? `tournament-${(tournamentName || 'cup').replace(/\s+/g, '-').toLowerCase()}${viewSuffix}.png`
-          : `season-recap-${(title || 'season').replace(/\s+/g, '-').toLowerCase()}.png`;
+          ? \`tournament-\${(tournamentName || 'cup').replace(/\s+/g, '-').toLowerCase()}\${viewSuffix}.png\`
+          : \`season-recap-\${(title || 'season').replace(/\s+/g, '-').toLowerCase()}.png\`;
     };
 
     const saveDataUrl = (dataUrl: string) => {
@@ -301,16 +351,12 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
     try {
       await new Promise(r => setTimeout(r, 300));
-      // ── Attempt 1: dom-to-image-more (better CSS support) ──
+      // ── Attempt 1: SVG foreignObject (respects all CSS natively) ──
       try {
-        const dataUrl = await domtoimage.toPng(el, {
-          width: w, height: h,
-          style: { transform: 'none' },
-          quality: 1, scale: 2,
-        });
+        const dataUrl = await domToPng(el, 2);
         saveDataUrl(dataUrl);
       } catch {
-        // ── Attempt 2: fallback to html2canvas ──
+        // ── Attempt 2: html2canvas fallback ──
         const canvas = await html2canvas(el, {
           useCORS: true, scale: 2, backgroundColor: null, logging: false,
           width: w, height: h,
@@ -320,7 +366,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
     } catch {
       alert('Could not generate image. Please try again.');
     } finally {
-      cleanup();
+      el.style.height = '';
       setIsGenerating(false);
     }
   };
