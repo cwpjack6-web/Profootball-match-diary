@@ -299,12 +299,12 @@ const ShareCard: React.FC<ShareCardProps> = ({
     }));
 
     const serialized = new XMLSerializer().serializeToString(clone);
-    const svgStr = \`<svg xmlns="http://www.w3.org/2000/svg" width="\${w}" height="\${h}">
-      <defs><style>\${cssText.replace(/</g, '&lt;')}</style></defs>
-      <foreignObject width="\${w}" height="\${h}">
-        <div xmlns="http://www.w3.org/1999/xhtml">\${serialized}</div>
+    const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">
+      <defs><style>${cssText.replace(/</g, '&lt;')}</style></defs>
+      <foreignObject width="${w}" height="${h}">
+        <div xmlns="http://www.w3.org/1999/xhtml">${serialized}</div>
       </foreignObject>
-    </svg>\`;
+    </svg>`;
 
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -329,15 +329,15 @@ const ShareCard: React.FC<ShareCardProps> = ({
     const el = cardRef.current;
     const w = el.offsetWidth;
     const h = el.offsetHeight;
-    el.style.height = \`\${h}px\`;
+    el.style.height = `${h}px`;
 
     const getFilename = () => {
       const viewSuffix = shareView === 'team' ? '-team' : '-personal';
       return mode === 'match'
-        ? \`match-report-\${match?.date ?? 'card'}\${viewSuffix}.png\`
+        ? `match-report-${match?.date ?? 'card'}${viewSuffix}.png`
         : mode === 'tournament'
-          ? \`tournament-\${(tournamentName || 'cup').replace(/\s+/g, '-').toLowerCase()}\${viewSuffix}.png\`
-          : \`season-recap-\${(title || 'season').replace(/\s+/g, '-').toLowerCase()}.png\`;
+          ? `tournament-${(tournamentName || 'cup').replace(/\s+/g, '-').toLowerCase()}${viewSuffix}.png`
+          : `season-recap-${(title || 'season').replace(/\s+/g, '-').toLowerCase()}.png`;
     };
 
     const saveDataUrl = (dataUrl: string) => {
