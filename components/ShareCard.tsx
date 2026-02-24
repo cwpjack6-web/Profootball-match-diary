@@ -265,18 +265,17 @@ const ShareCard: React.FC<ShareCardProps> = ({
       const el = cardRef.current;
       const w = el.offsetWidth;
       const h = el.offsetHeight;
-      // Pin height for html2canvas
-      el.style.height = `${h}px`;
-      // Fix margin:auto centering — html2canvas doesn't compute it from flex
-      // Find the broadcast panel and manually center it with padding
-      const panel = el.querySelector('[data-broadcast-panel]') as HTMLElement | null;
-      let panelH = 0;
+      // Fix margin:auto centering BEFORE pinning height
+      // html2canvas doesn't compute margin:auto in flex containers
+      const panel = el.querySelector('[data-match-panel]') as HTMLElement | null;
       if (panel) {
-        panelH = panel.offsetHeight;
+        const panelH = panel.offsetHeight;
         const topPad = Math.max(0, Math.round((h - panelH) / 2));
         panel.style.marginTop = `${topPad}px`;
-        panel.style.marginBottom = '0';
+        panel.style.marginBottom = '0px';
       }
+      // Pin height AFTER adjusting margins
+      el.style.height = `${h}px`;
       const canvas = await html2canvas(el, {
         useCORS: true, scale: 2, backgroundColor: null, logging: false,
         width: w, height: h,
@@ -447,7 +446,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
         )}
 
         <div className={`relative z-10 w-full h-full flex flex-col pointer-events-none ${contentPos}`}>
-          <div className={`w-full ${cardStyle} ${textCls}`} style={cardTheme === 'broadcast' ? { marginTop: 'auto', marginBottom: 'auto' } : undefined} {...(cardTheme === 'broadcast' ? { 'data-broadcast-panel': 'true' } : {})}>
+          <div data-match-panel="true" className={`w-full ${cardStyle} ${textCls}`} style={{ marginTop: 'auto', marginBottom: 'auto', flexShrink: 0 }}>
 
             {/* Team name + badges */}
             <div className="flex justify-between items-start mb-2">
