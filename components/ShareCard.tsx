@@ -464,10 +464,10 @@ const ShareCard: React.FC<ShareCardProps> = ({
                   </h2>
                 </div>
               </div>
-              <div className="flex flex-col items-end gap-1">
+              <div style={{ textAlign: 'right' }}>
                 {vis.showResult && (
                   <div className="px-2 rounded font-black text-[10px] border"
-                    style={{ color: resultColor, borderColor: resultColor, backgroundColor: `${resultColor}22`, lineHeight: '20px', display: 'inline-block' }}>
+                    style={{ color: resultColor, borderColor: resultColor, backgroundColor: `${resultColor}22`, lineHeight: '20px', display: 'inline-block', marginBottom: '4px' }}>
                     {resultLabel}
                   </div>
                 )}
@@ -481,16 +481,16 @@ const ShareCard: React.FC<ShareCardProps> = ({
             </div>
 
             {/* Score row */}
-            <div className="flex items-center justify-center gap-2 w-full mb-2">
-              <div className="text-center flex-1">
+            <div style={{ display: 'table', width: '100%', marginBottom: '8px' }}>
+              <div style={{ display: 'table-cell', textAlign: 'center', width: '40%', verticalAlign: 'middle' }}>
                 <span className="text-4xl font-black" style={textShadow}>{match.scoreMyTeam}</span>
                 <span className="block text-[9px] font-bold uppercase mt-0.5 opacity-80" style={textShadow}>{t.us}</span>
               </div>
-              <div className="flex flex-col items-center gap-1">
-                <div className="h-8 w-px bg-white/40" />
+              <div style={{ display: 'table-cell', textAlign: 'center', verticalAlign: 'middle', width: '20%' }}>
+                <div className="h-8 w-px bg-white/40" style={{ display: 'inline-block' }} />
                 {vis.showRating && match.rating > 0 && (
                   <div className="px-2 rounded-full border"
-                    style={{ borderColor: ratingColor(match.rating), backgroundColor: `${ratingColor(match.rating)}22`, lineHeight: '22px', display: 'inline-block', whiteSpace: 'nowrap' }}>
+                    style={{ borderColor: ratingColor(match.rating), backgroundColor: `${ratingColor(match.rating)}22`, lineHeight: '22px', display: 'block', whiteSpace: 'nowrap', textAlign: 'center', marginTop: '4px' }}>
                     <i className="fas fa-star text-[8px]" style={{ color: ratingColor(match.rating) }} />
                     <span className="text-[11px] font-black" style={{ color: ratingColor(match.rating), ...textShadow }}>
                       {match.rating}
@@ -498,7 +498,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
                   </div>
                 )}
               </div>
-              <div className="text-center flex-1">
+              <div style={{ display: 'table-cell', textAlign: 'center', width: '40%', verticalAlign: 'middle' }}>
                 <span className="text-4xl font-black opacity-90" style={textShadow}>{match.scoreOpponent}</span>
                 <span className="block text-[9px] font-bold uppercase mt-0.5 opacity-70" style={textShadow}>{match.opponent}</span>
               </div>
@@ -513,10 +513,10 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
             {/* Personal stats pills */}
             {vis.showPersonalStats && (match.arthurGoals > 0 || match.arthurAssists > 0) && (
-              <div className="flex gap-2 justify-center mb-2">
+              <div style={{ textAlign: 'center', marginBottom: '8px' }}>
                 {match.arthurGoals > 0 && (
                   <div className="bg-emerald-500/20 border border-emerald-400/40 px-2 rounded-full"
-                    style={{ lineHeight: '22px', display: 'inline-block', whiteSpace: 'nowrap' }}>
+                    style={{ lineHeight: '22px', display: 'inline-block', whiteSpace: 'nowrap', marginRight: '6px' }}>
                     <i className="fas fa-futbol text-emerald-400 text-[9px]" />
                     <span className="text-[10px] font-black text-emerald-400">{match.arthurGoals}G</span>
                   </div>
