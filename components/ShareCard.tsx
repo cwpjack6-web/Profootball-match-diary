@@ -466,13 +466,14 @@ const ShareCard: React.FC<ShareCardProps> = ({
               </div>
               <div className="flex flex-col items-end gap-1">
                 {vis.showResult && (
-                  <div className="px-2 py-0.5 rounded font-black text-[10px] border"
-                    style={{ color: resultColor, borderColor: resultColor, backgroundColor: `${resultColor}22` }}>
+                  <div className="px-2 rounded font-black text-[10px] border"
+                    style={{ color: resultColor, borderColor: resultColor, backgroundColor: `${resultColor}22`, lineHeight: '20px', display: 'inline-block' }}>
                     {resultLabel}
                   </div>
                 )}
                 {vis.showMotm && match.isMotm && (
-                  <div className="bg-yellow-500 text-black px-2 py-0.5 rounded-full font-black text-[9px] shadow flex items-center gap-1">
+                  <div className="bg-yellow-500 text-black px-2 rounded-full font-black text-[9px] shadow"
+                    style={{ lineHeight: '20px', display: 'inline-block' }}>
                     <i className="fas fa-trophy" /> MOTM
                   </div>
                 )}
@@ -488,8 +489,8 @@ const ShareCard: React.FC<ShareCardProps> = ({
               <div className="flex flex-col items-center gap-1">
                 <div className="h-8 w-px bg-white/40" />
                 {vis.showRating && match.rating > 0 && (
-                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-full border"
-                    style={{ borderColor: ratingColor(match.rating), backgroundColor: `${ratingColor(match.rating)}22` }}>
+                  <div className="px-2 rounded-full border"
+                    style={{ borderColor: ratingColor(match.rating), backgroundColor: `${ratingColor(match.rating)}22`, lineHeight: '22px', display: 'inline-block', whiteSpace: 'nowrap' }}>
                     <i className="fas fa-star text-[8px]" style={{ color: ratingColor(match.rating) }} />
                     <span className="text-[11px] font-black" style={{ color: ratingColor(match.rating), ...textShadow }}>
                       {match.rating}
@@ -514,13 +515,15 @@ const ShareCard: React.FC<ShareCardProps> = ({
             {vis.showPersonalStats && (match.arthurGoals > 0 || match.arthurAssists > 0) && (
               <div className="flex gap-2 justify-center mb-2">
                 {match.arthurGoals > 0 && (
-                  <div className="flex items-center gap-1 bg-emerald-500/20 border border-emerald-400/40 px-2 py-0.5 rounded-full">
+                  <div className="bg-emerald-500/20 border border-emerald-400/40 px-2 rounded-full"
+                    style={{ lineHeight: '22px', display: 'inline-block', whiteSpace: 'nowrap' }}>
                     <i className="fas fa-futbol text-emerald-400 text-[9px]" />
                     <span className="text-[10px] font-black text-emerald-400">{match.arthurGoals}G</span>
                   </div>
                 )}
                 {match.arthurAssists > 0 && (
-                  <div className="flex items-center gap-1 bg-blue-500/20 border border-blue-400/40 px-2 py-0.5 rounded-full">
+                  <div className="bg-blue-500/20 border border-blue-400/40 px-2 rounded-full"
+                    style={{ lineHeight: '22px', display: 'inline-block', whiteSpace: 'nowrap' }}>
                     <i className="fas fa-hands-helping text-blue-400 text-[9px]" />
                     <span className="text-[10px] font-black text-blue-400">{match.arthurAssists}A</span>
                   </div>
