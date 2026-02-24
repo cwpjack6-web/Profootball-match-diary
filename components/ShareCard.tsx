@@ -263,16 +263,29 @@ const ShareCard: React.FC<ShareCardProps> = ({
     try {
       await new Promise(r => setTimeout(r, 300));
       const el = cardRef.current;
-      // Snapshot the rendered dimensions before capture
       const w = el.offsetWidth;
       const h = el.offsetHeight;
-      // Temporarily pin height so html2canvas sees exact pixel size
+      // Pin height for html2canvas
       el.style.height = `${h}px`;
+      // Fix margin:auto centering — html2canvas doesn't compute it from flex
+      // Find the broadcast panel and manually center it with padding
+      const panel = el.querySelector('[data-broadcast-panel]') as HTMLElement | null;
+      let panelH = 0;
+      if (panel) {
+        panelH = panel.offsetHeight;
+        const topPad = Math.max(0, Math.round((h - panelH) / 2));
+        panel.style.marginTop = `${topPad}px`;
+        panel.style.marginBottom = '0';
+      }
       const canvas = await html2canvas(el, {
         useCORS: true, scale: 2, backgroundColor: null, logging: false,
         width: w, height: h,
       });
       el.style.height = '';
+      if (panel) {
+        panel.style.marginTop = '';
+        panel.style.marginBottom = '';
+      }
       const link = document.createElement('a');
       const viewSuffix = shareView === 'team' ? '-team' : '-personal';
       link.download = mode === 'match'
@@ -410,7 +423,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
         : 'justify-end mt-auto';
 
     const cardStyle = cardTheme === 'broadcast'
-      ? `${isDarkText ? 'bg-amber-100/80 border-amber-200' : 'bg-black/55 border-white/10'} border-t-2 w-full px-5 py-6 backdrop-blur-md`
+      ? `${isDarkText ? 'bg-amber-100/80 border-amber-200' : 'bg-black/55 border-white/10'} border-t-2 w-full px-5 py-6`
       : cardTheme === 'gradient'
         ? 'pt-12 p-5'
         : 'p-5';
@@ -434,7 +447,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
         )}
 
         <div className={`relative z-10 w-full h-full flex flex-col pointer-events-none ${contentPos}`}>
-          <div className={`w-full ${cardStyle} ${textCls}`} style={cardTheme === 'broadcast' ? { marginTop: 'auto', marginBottom: 'auto' } : undefined}>
+          <div className={`w-full ${cardStyle} ${textCls}`} style={cardTheme === 'broadcast' ? { marginTop: 'auto', marginBottom: 'auto' } : undefined} {...(cardTheme === 'broadcast' ? { 'data-broadcast-panel': 'true' } : {})}>
 
             {/* Team name + badges */}
             <div className="flex justify-between items-start mb-2">
