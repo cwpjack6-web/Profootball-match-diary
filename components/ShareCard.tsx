@@ -785,33 +785,39 @@ const ShareCard: React.FC<ShareCardProps> = ({
             </>
           )}
 
-          {/* Meta: pitch, weather, time */}
+          {/* Meta: pitch, weather, time, date, location — two tidy rows */}
           {firstMatch && (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {firstMatch.pitchType && (
-                <span className={`text-[9px] font-bold flex items-center gap-1 px-2 py-0.5 rounded ${isDarkText ? 'bg-amber-200/60 text-slate-600' : 'bg-white/10 text-white/70'}`}>
-                  <i className="fas fa-layer-group text-[8px]" /> {getPitchLabel(firstMatch.pitchType)}
-                </span>
-              )}
-              {firstMatch.weather && (
-                <span className={`text-[9px] font-bold flex items-center gap-1 px-2 py-0.5 rounded ${isDarkText ? 'bg-amber-200/60 text-slate-600' : 'bg-white/10 text-white/70'}`}>
-                  <i className={`fas ${getWeatherIcon(firstMatch.weather)} text-[8px]`} />
-                </span>
-              )}
-              {(firstMatch.tournamentStartTime || firstMatch.matchTime) && (
-                <span className={`text-[9px] font-bold flex items-center gap-1 px-2 py-0.5 rounded ${isDarkText ? 'bg-amber-200/60 text-blue-600' : 'bg-white/10 text-blue-300'}`}>
-                  <i className="far fa-clock text-[8px]" /> {firstMatch.tournamentStartTime || firstMatch.matchTime}{firstMatch.tournamentEndTime ? ` → ${firstMatch.tournamentEndTime}` : ''}
-                </span>
-              )}
-              {firstMatch.date && (
-                <span className={`text-[9px] font-bold flex items-center gap-1 px-2 py-0.5 rounded ${isDarkText ? 'bg-amber-200/60 text-slate-600' : 'bg-white/10 text-white/70'}`}>
-                  <i className="far fa-calendar text-[8px]" /> {firstMatch.date}
-                </span>
-              )}
+            <div className="mt-2" style={{ fontSize: '9px', lineHeight: '1.4' }}>
+              {/* Row 1: pitch + weather + time */}
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'nowrap', marginBottom: '4px', overflow: 'hidden' }}>
+                {firstMatch.pitchType && (
+                  <span className={`font-bold px-2 rounded ${isDarkText ? 'bg-amber-200/60 text-slate-600' : 'bg-white/10 text-white/70'}`} style={{ lineHeight: '18px', display: 'inline-block', whiteSpace: 'nowrap' }}>
+                    <i className="fas fa-layer-group" /> {getPitchLabel(firstMatch.pitchType)}
+                  </span>
+                )}
+                {firstMatch.weather && (
+                  <span className={`font-bold px-2 rounded ${isDarkText ? 'bg-amber-200/60 text-slate-600' : 'bg-white/10 text-white/70'}`} style={{ lineHeight: '18px', display: 'inline-block' }}>
+                    <i className={`fas ${getWeatherIcon(firstMatch.weather)}`} />
+                  </span>
+                )}
+                {(firstMatch.tournamentStartTime || firstMatch.matchTime) && (
+                  <span className={`font-bold px-2 rounded ${isDarkText ? 'bg-amber-200/60 text-blue-600' : 'bg-white/10 text-blue-300'}`} style={{ lineHeight: '18px', display: 'inline-block', whiteSpace: 'nowrap' }}>
+                    <i className="far fa-clock" /> {firstMatch.tournamentStartTime || firstMatch.matchTime}{firstMatch.tournamentEndTime ? ` → ${firstMatch.tournamentEndTime}` : ''}
+                  </span>
+                )}
+                {firstMatch.date && (
+                  <span className={`font-bold px-2 rounded ${isDarkText ? 'bg-amber-200/60 text-slate-600' : 'bg-white/10 text-white/70'}`} style={{ lineHeight: '18px', display: 'inline-block', whiteSpace: 'nowrap' }}>
+                    <i className="far fa-calendar" /> {firstMatch.date}
+                  </span>
+                )}
+              </div>
+              {/* Row 2: location (full width) */}
               {firstMatch.location && (
-                <span className={`text-[9px] font-bold flex items-center gap-1 px-2 py-0.5 rounded ${isDarkText ? 'bg-amber-200/60 text-emerald-700' : 'bg-white/10 text-emerald-300'}`}>
-                  <i className="fas fa-map-marker-alt text-[8px]" /> {firstMatch.location}
-                </span>
+                <div>
+                  <span className={`font-bold px-2 rounded ${isDarkText ? 'bg-amber-200/60 text-emerald-700' : 'bg-white/10 text-emerald-300'}`} style={{ lineHeight: '18px', display: 'inline-block' }}>
+                    <i className="fas fa-map-marker-alt" /> {firstMatch.location}
+                  </span>
+                </div>
               )}
             </div>
           )}
@@ -831,35 +837,39 @@ const ShareCard: React.FC<ShareCardProps> = ({
                   : (isDarkText ? 'bg-slate-100 text-slate-600' : 'bg-white/10 text-white/60');
 
               return (
-                <div key={m.id} className={`flex items-center gap-2 px-3 py-1.5 ${idx > 0 ? (isDarkText ? 'border-t border-amber-200' : 'border-t border-white/10') : ''}`}>
+                <div key={m.id} style={{ display: 'table', width: '100%', borderCollapse: 'collapse' }} className={`px-3 ${idx > 0 ? (isDarkText ? 'border-t border-amber-200' : 'border-t border-white/10') : ''}`}>
+                  <div style={{ display: 'table-row' }}>
                   {/* Game number */}
-                  <span className={`text-[9px] font-black w-10 shrink-0 ${isDarkText ? 'text-slate-400' : 'text-white/40'}`}>
+                  <span style={{ display: 'table-cell', verticalAlign: 'middle', width: '32px', padding: '6px 0' }} className={`text-[9px] font-black ${isDarkText ? 'text-slate-400' : 'text-white/40'}`}>
                     G{idx + 1}
                   </span>
                   {/* Result badge */}
-                  <span className={`text-[9px] font-black px-1.5 py-0.5 rounded shrink-0 ${resultBg}`}>
-                    {isW ? 'W' : isL ? 'L' : 'D'}
+                  <span style={{ display: 'table-cell', verticalAlign: 'middle', width: '24px', padding: '6px 2px' }}>
+                    <span className={`text-[9px] font-black px-1.5 rounded ${resultBg}`} style={{ lineHeight: '18px', display: 'inline-block' }}>
+                      {isW ? 'W' : isL ? 'L' : 'D'}
+                    </span>
                   </span>
                   {/* Opponent */}
-                  <span className={`text-[10px] font-bold flex-1 leading-tight ${isDarkText ? 'text-slate-700' : 'text-white/90'}`}>
+                  <span style={{ display: 'table-cell', verticalAlign: 'middle', padding: '6px 4px' }} className={`text-[10px] font-bold leading-tight ${isDarkText ? 'text-slate-700' : 'text-white/90'}`}>
                     {m.opponent}
                   </span>
                   {/* Score */}
                   {vis.showGameScore && (
-                    <span className={`text-[11px] font-black font-mono shrink-0 ${isDarkText ? 'text-slate-800' : 'text-white'}`}>
+                    <span style={{ display: 'table-cell', verticalAlign: 'middle', width: '1px', whiteSpace: 'nowrap', paddingLeft: '4px' }} className={`text-[11px] font-black font-mono ${isDarkText ? 'text-slate-800' : 'text-white'}`}>
                       {m.scoreMyTeam}–{m.scoreOpponent}
                     </span>
                   )}
                   {/* Personal stats */}
                   {vis.showGamePersonalStats && (m.arthurGoals > 0 || m.arthurAssists > 0) && (
-                    <span className={`text-[9px] font-bold shrink-0 ${isDarkText ? 'text-slate-500' : 'text-white/50'}`}>
+                    <span style={{ display: 'table-cell', verticalAlign: 'middle', width: '1px', whiteSpace: 'nowrap', paddingLeft: '4px' }} className={`text-[9px] font-bold ${isDarkText ? 'text-slate-500' : 'text-white/50'}`}>
                       {m.arthurGoals > 0 && `⚽${m.arthurGoals}`}{m.arthurAssists > 0 && ` 👟${m.arthurAssists}`}
                     </span>
                   )}
                   {/* Rating */}
                   {vis.showGameRating && m.rating > 0 && (
-                    <span className="text-[9px] font-black text-amber-400 shrink-0">★{m.rating}</span>
+                    <span style={{ display: 'table-cell', verticalAlign: 'middle', width: '1px', whiteSpace: 'nowrap', paddingLeft: '4px' }} className="text-[9px] font-black text-amber-400">★{m.rating}</span>
                   )}
+                  </div>
                 </div>
               );
             })}
