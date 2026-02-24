@@ -532,16 +532,15 @@ const ShareCard: React.FC<ShareCardProps> = ({
                   </h2>
                 </div>
               </div>
-              <div className="flex flex-col items-end gap-1">
+              <div style={{ textAlign: 'right' }}>
                 {vis.showResult && (
-                  <div className="flex items-center px-2 py-0.5 rounded font-black text-[10px] border"
-                    style={{ color: resultColor, borderColor: resultColor, backgroundColor: `${resultColor}22` }}>
+                  <div className="px-2 rounded font-black text-[10px] border" style={{ color: resultColor, borderColor: resultColor, backgroundColor: `${resultColor}22`, lineHeight: '20px', display: 'inline-block', whiteSpace: 'nowrap', marginBottom: '3px' }}>
                     {resultLabel}
                   </div>
                 )}
                 {vis.showMotm && match.isMotm && (
-                  <div className="bg-yellow-500 text-black px-2 py-0.5 rounded-full font-black text-[9px] shadow flex items-center gap-1">
-                    <i className="fas fa-trophy" /> MOTM
+                  <div className="bg-yellow-500 text-black px-2 rounded-full font-black text-[9px] shadow" style={{ lineHeight: '20px', display: 'inline-block', whiteSpace: 'nowrap' }}>
+                    <i className="fas fa-trophy" style={{ marginRight: '3px' }} />MOTM
                   </div>
                 )}
               </div>
@@ -553,15 +552,11 @@ const ShareCard: React.FC<ShareCardProps> = ({
                 <span className="text-4xl font-black" style={textShadow}>{match.scoreMyTeam}</span>
                 <span className="block text-[9px] font-bold uppercase mt-0.5 opacity-80" style={textShadow}>{t.us}</span>
               </div>
-              <div className="flex flex-col items-center gap-1">
-                <div className="h-8 w-px bg-white/40" />
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ width: '1px', height: '32px', background: 'rgba(255,255,255,0.4)', display: 'inline-block', verticalAlign: 'middle' }} />
                 {vis.showRating && match.rating > 0 && (
-                  <div className="flex items-center gap-1 px-2 py-0.5 rounded-full border"
-                    style={{ borderColor: ratingColor(match.rating), backgroundColor: `${ratingColor(match.rating)}22` }}>
-                    <i className="fas fa-star text-[8px]" style={{ color: ratingColor(match.rating) }} />
-                    <span className="text-[11px] font-black" style={{ color: ratingColor(match.rating), ...textShadow }}>
-                      {match.rating}
-                    </span>
+                  <div className="px-2 rounded-full border" style={{ borderColor: ratingColor(match.rating), backgroundColor: `${ratingColor(match.rating)}22`, lineHeight: '22px', display: 'inline-block', whiteSpace: 'nowrap' }}>
+                    <i className="fas fa-star text-[8px]" style={{ color: ratingColor(match.rating), marginRight: '2px' }} /><span className="text-[11px] font-black" style={{ color: ratingColor(match.rating), ...textShadow }}>{match.rating}</span>
                   </div>
                 )}
               </div>
@@ -580,17 +575,15 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
             {/* Personal stats pills */}
             {vis.showPersonalStats && (match.arthurGoals > 0 || match.arthurAssists > 0) && (
-              <div className="flex gap-2 justify-center mb-2">
+              <div style={{ textAlign: 'center', marginBottom: '8px' }}>
                 {match.arthurGoals > 0 && (
-                  <div className="flex items-center gap-1 bg-emerald-500/20 border border-emerald-400/40 px-2 py-0.5 rounded-full">
-                    <i className="fas fa-futbol text-emerald-400 text-[9px]" />
-                    <span className="text-[10px] font-black text-emerald-400">{match.arthurGoals}G</span>
+                  <div className="bg-emerald-500/20 border border-emerald-400/40 px-2 rounded-full" style={{ lineHeight: '22px', display: 'inline-block', whiteSpace: 'nowrap', marginRight: '6px' }}>
+                    <i className="fas fa-futbol text-emerald-400 text-[9px]" style={{ marginRight: '2px' }} /><span className="text-[10px] font-black text-emerald-400">{match.arthurGoals}G</span>
                   </div>
                 )}
                 {match.arthurAssists > 0 && (
-                  <div className="flex items-center gap-1 bg-blue-500/20 border border-blue-400/40 px-2 py-0.5 rounded-full">
-                    <i className="fas fa-hands-helping text-blue-400 text-[9px]" />
-                    <span className="text-[10px] font-black text-blue-400">{match.arthurAssists}A</span>
+                  <div className="bg-blue-500/20 border border-blue-400/40 px-2 rounded-full" style={{ lineHeight: '22px', display: 'inline-block', whiteSpace: 'nowrap' }}>
+                    <i className="fas fa-hands-helping text-blue-400 text-[9px]" style={{ marginRight: '2px' }} /><span className="text-[10px] font-black text-blue-400">{match.arthurAssists}A</span>
                   </div>
                 )}
               </div>
@@ -598,15 +591,14 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
             {/* Scoresheet */}
             {vis.showScoresheet && getScorersText() && (
-              <p className="text-[9px] font-bold text-center opacity-80 mb-1 leading-relaxed" style={textShadow}>
-                <i className="fas fa-futbol mr-1 text-emerald-400" />{getScorersText()}
+              <p style={{ textAlign: 'center', fontSize: '9px', fontWeight: 'bold', opacity: 0.8, marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', ...textShadow }}>
+                <i className="fas fa-futbol text-emerald-400" style={{ marginRight: '4px' }} />{getScorersText()}
               </p>
             )}
 
             {/* Date + location */}
-            <div className="flex items-center justify-center gap-2 text-[9px] font-bold opacity-70 uppercase tracking-wide" style={textShadow}>
-              <span>{match.date}</span>
-              {vis.showLocation && match.location && <><span>·</span><span>{match.location}</span></>}
+            <div style={{ textAlign: 'center', fontSize: '9px', fontWeight: 'bold', opacity: 0.7, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...textShadow }}>
+              {match.date}{vis.showLocation && match.location && <span> · {match.location}</span>}
             </div>
           </div>
         </div>
@@ -776,9 +768,8 @@ const ShareCard: React.FC<ShareCardProps> = ({
             </>
           ) : (
             <>
-              <div className="inline-flex items-center gap-1.5 border border-white/30 px-3 py-0.5 rounded text-[9px] font-black tracking-widest uppercase mb-2 backdrop-blur-sm text-white">
-                <i className="fas fa-trophy text-amber-400 text-[10px]" />
-                {language === 'zh' ? '杯賽報告' : 'Tournament Report'}
+              <div className="border border-white/30 px-3 rounded text-[9px] font-black tracking-widest uppercase mb-2 text-white" style={{ display: 'inline-block', lineHeight: '20px', whiteSpace: 'nowrap' }}>
+                <i className="fas fa-trophy text-amber-400" style={{ marginRight: '4px' }} />{language === 'zh' ? '杯賽報告' : 'Tournament Report'}
               </div>
               <h2 className="text-2xl font-black italic uppercase leading-none drop-shadow-md text-white">{tournamentName}</h2>
               <div className="text-sm font-bold opacity-80 mt-1 text-white">{profile.name}</div>
@@ -813,8 +804,8 @@ const ShareCard: React.FC<ShareCardProps> = ({
               </div>
               {/* Row 2: location (full width) */}
               {firstMatch.location && (
-                <div>
-                  <span className={`font-bold px-2 rounded ${isDarkText ? 'bg-amber-200/60 text-emerald-700' : 'bg-white/10 text-emerald-300'}`} style={{ lineHeight: '18px', display: 'inline-block' }}>
+                <div style={{ overflow: 'hidden' }}>
+                  <span className={`font-bold px-2 rounded ${isDarkText ? 'bg-amber-200/60 text-emerald-700' : 'bg-white/10 text-emerald-300'}`} style={{ lineHeight: '18px', display: 'inline-block', whiteSpace: 'nowrap', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     <i className="fas fa-map-marker-alt" /> {firstMatch.location}
                   </span>
                 </div>
