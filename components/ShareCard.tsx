@@ -406,7 +406,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
     const contentPos = textPosition === 'top'
       ? 'justify-start'
       : textPosition === 'center'
-        ? 'justify-center h-full'
+        ? 'h-full'
         : 'justify-end mt-auto';
 
     const cardStyle = cardTheme === 'broadcast'
@@ -434,7 +434,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
         )}
 
         <div className={`relative z-10 w-full h-full flex flex-col pointer-events-none ${contentPos}`}>
-          <div className={`w-full ${cardStyle} ${textCls}`}>
+          <div className={`w-full ${cardStyle} ${textCls}`} style={cardTheme === 'broadcast' ? { marginTop: 'auto', marginBottom: 'auto' } : undefined}>
 
             {/* Team name + badges */}
             <div className="flex justify-between items-start mb-2">
