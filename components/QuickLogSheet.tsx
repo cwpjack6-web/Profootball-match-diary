@@ -330,10 +330,10 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
   const canSave = true;
 
   return (
-    <div className="fixed inset-0 z-[80] flex flex-col justify-end" onClick={handleClose}>
+    <div className="fixed inset-0 z-[80] flex flex-col justify-end sm:items-center sm:justify-center" onClick={handleClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div
-        className="relative z-10 bg-white rounded-t-2xl shadow-2xl flex flex-col max-h-[90vh]"
+        className="relative z-10 bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl flex flex-col max-h-[90vh] w-full sm:max-w-lg sm:max-h-[85vh]"
         style={{ animation: 'slideUp 0.28s cubic-bezier(0.32,0.72,0,1)' }}
         onClick={e => e.stopPropagation()}
       >
@@ -776,10 +776,10 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
         .rating-sheet input[type=range]::-moz-range-thumb { width: 28px; height: 28px; border-radius: 50%; background: white; border: 3px solid #3b82f6; box-shadow: 0 2px 8px rgba(0,0,0,0.15); cursor: pointer; }
       `}</style>}
       {showRatingModal && (
-        <div className="fixed inset-0 z-[90] flex items-end justify-center" onClick={handleRatingSkip}>
+        <div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center" onClick={handleRatingSkip}>
           <div className="absolute inset-0 bg-black/50" />
           <div
-            className="rating-sheet relative z-10 bg-white rounded-t-2xl shadow-2xl w-full p-6"
+            className="rating-sheet relative z-10 bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-sm p-6"
             style={{ animation: 'slideUp 0.25s cubic-bezier(0.32,0.72,0,1)' }}
             onClick={e => e.stopPropagation()}
           >
