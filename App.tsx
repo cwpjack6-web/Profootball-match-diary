@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { MatchData, UserProfile, Team } from './types';
+import { MatchData, UserProfile, Team, migrateMatchType } from './types';
 import { 
   getMatches, 
   addMatchToStorage, 
@@ -112,7 +112,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (activeProfile) {
-        const userMatches = getMatches(activeProfile.id);
+        const userMatches = getMatches(activeProfile.id).map(migrateMatchType);
         setMatches(userMatches);
         setIsSelectionMode(false);
         setSelectedMatchIds(new Set());
@@ -232,7 +232,7 @@ const App: React.FC = () => {
       const profiles = getAllProfiles();
       setAllProfiles(profiles);
       if (activeProfile) {
-          const userMatches = getMatches(activeProfile.id);
+          const userMatches = getMatches(activeProfile.id).map(migrateMatchType);
           setMatches(userMatches);
           const updatedProfile = profiles.find(p => p.id === activeProfile.id);
           if (updatedProfile) setActiveProfile(updatedProfile);
@@ -296,7 +296,7 @@ const App: React.FC = () => {
     return selected.map(m => {
         const team = getTeamById(activeProfile.teams, m.teamId);
         const homeAway = m.isHome ? t.home : t.away;
-        const matchType = m.matchType ? (m.matchType === 'league' ? t.typeLeague : m.matchType === 'cup' ? t.typeCup : t.typeFriendly) : '';
+        const matchType = m.matchType ? (m.matchType === 'league' ? t.typeLeague : (m.matchType === 'cup' || m.matchType === 'tournament') ? (t.typeTournament || t.typeCup || 'Tournament') : t.typeFriendly) : '';
         const locationStr = m.location ? `@ ${m.location}` : '';
         const contextLine = [matchType, homeAway, locationStr].filter(Boolean).join(' | ');
         const isScheduled = m.status === 'scheduled';
@@ -391,7 +391,7 @@ const App: React.FC = () => {
       opponent,
       date: today,
       isHome: true,
-      matchType: 'friendly',
+      matchType: 'friendly', // default for new
       matchFormat: '',
       scoreMyTeam: 0,
       scoreOpponent: 0,
