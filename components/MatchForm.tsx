@@ -308,7 +308,8 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
   };
 
   const handleSubmit = () => {
-    if (!formData.opponent) { showToast(t.alertOpponent, 'error'); return; }
+    if (!formData.opponent && formData.matchType !== 'tournament') { showToast(t.alertOpponent, 'error'); return; }
+    if (formData.matchType === 'tournament' && !formData.tournamentName) { showToast('Please enter a tournament name', 'error'); return; }
     const { id, ...rest } = formData;
     const submitData: Omit<MatchData, 'id'> = {
       ...rest, profileId: profile.id,
@@ -388,6 +389,8 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
       </div>
 
       {/* Opponent + Location */}
+      {/* Opponent — hidden for tournament (opponent set per Game in Quick Log) */}
+      {formData.matchType !== 'tournament' && (
       <div>
         <div className="flex justify-between items-center mb-1">
           <label className="text-xs font-bold text-slate-400 uppercase">{t.opponentName}</label>
@@ -404,6 +407,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
           className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm text-slate-900 outline-none focus:border-blue-300" />
         <datalist id="opp-list">{opponentOptions.map(op => <option key={op} value={op} />)}</datalist>
       </div>
+      )}
 
       <div>
         <label className="text-xs font-bold text-slate-400 uppercase block mb-1">{t.location}</label>
@@ -415,28 +419,43 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
       <div>
         <label className="text-xs font-bold text-slate-400 uppercase block mb-1">{t.matchType}</label>
         <div className="flex bg-white rounded-xl border border-slate-200 p-1">
-          {(['league', 'cup', 'friendly'] as MatchType[]).map(mt => (
-            <button key={mt} type="button" onClick={() => setFormData(p => ({ ...p, matchType: mt }))}
-              className={`flex-1 text-xs py-2 rounded-lg font-bold transition-all ${
-                formData.matchType === mt
-                  ? mt === 'league' ? 'bg-blue-100 text-blue-700' : mt === 'cup' ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'
-                  : 'text-slate-400'}`}>
-              {mt === 'league' ? t.typeLeague : mt === 'cup' ? t.typeCup : t.typeFriendly}
-            </button>
-          ))}
+          {(['league', 'tournament', 'friendly'] as MatchType[]).map(mt => {
+            const isSelected = formData.matchType === mt;
+            const selectedStyle = mt === 'league'
+              ? 'bg-blue-100 text-blue-700 border border-blue-300'
+              : mt === 'tournament'
+              ? 'bg-purple-100 text-purple-700 border border-purple-300'
+              : 'bg-emerald-100 text-emerald-700 border border-emerald-300';
+            const label = mt === 'league' ? t.typeLeague : mt === 'tournament' ? (t.typeTournament || 'Tournament') : t.typeFriendly;
+            return (
+              <button key={mt} type="button" onClick={() => setFormData(p => ({ ...p, matchType: mt }))}
+                className={`flex-1 text-xs py-2 rounded-lg font-bold transition-all border ${
+                  isSelected ? selectedStyle : 'text-slate-400 border-transparent'}`}>
+                {label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* Tournament */}
-      <div className="flex gap-3">
+      <div className={`flex gap-3 ${formData.matchType === 'tournament' ? 'p-3 bg-purple-50 rounded-xl border border-purple-200' : ''}`}>
         <div className="flex-[3]">
-          <label className="text-xs font-bold text-slate-400 uppercase block mb-1">Tournament</label>
-          <input type="text" name="tournamentName" placeholder="e.g. Easter Cup" value={formData.tournamentName || ''} onChange={handleChange}
-            className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm text-slate-900 outline-none" />
+          <label className="text-xs font-bold text-slate-400 uppercase block mb-1">
+            Tournament{formData.matchType === 'tournament' && <span className="text-rose-400 ml-1">*</span>}
+          </label>
+          <input type="text" name="tournamentName"
+            placeholder={formData.matchType === 'tournament' ? 'e.g. Forest Festival' : 'e.g. Easter Cup'}
+            value={formData.tournamentName || ''} onChange={handleChange}
+            className={`w-full bg-white border rounded-xl p-3 text-sm text-slate-900 outline-none ${
+              formData.matchType === 'tournament' ? 'border-purple-300 focus:border-purple-500' : 'border-slate-200'
+            }`} />
         </div>
         <div className="flex-[2]">
           <label className="text-xs font-bold text-slate-400 uppercase block mb-1">Label</label>
-          <input type="text" name="matchLabel" placeholder="e.g. Game 1" value={formData.matchLabel || ''} onChange={handleChange}
+          <input type="text" name="matchLabel"
+            placeholder={formData.matchType === 'tournament' ? 'G1 / QF / Final' : 'e.g. Game 1'}
+            value={formData.matchLabel || ''} onChange={handleChange}
             className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm text-slate-900 outline-none" />
         </div>
       </div>
