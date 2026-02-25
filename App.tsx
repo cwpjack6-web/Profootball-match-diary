@@ -549,7 +549,7 @@ const App: React.FC = () => {
              )}
 
             {!isSelectionMode && activeTab === 'matches' && (
-                <div className="fixed bottom-24 right-6 z-40 flex flex-col gap-3 items-end">
+                <div className="fixed bottom-24 right-6 sm:right-[calc(50%-336px)] z-40 flex flex-col gap-3 items-end">
                     <button onClick={() => setShowQuickLog(true)}
                         className="bg-amber-400 hover:bg-amber-500 text-white font-black px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2 text-xs transition-transform hover:scale-105 active:scale-95">
                         <i className="fas fa-bolt"></i>{language === 'zh' ? '快速記錄' : 'Quick Log'}
@@ -559,7 +559,7 @@ const App: React.FC = () => {
             )}
 
             {isSelectionMode && (
-                <div className="fixed bottom-24 left-4 right-4 bg-white rounded-2xl shadow-2xl border border-slate-200 p-2 z-50 flex items-center justify-between animate-fade-in flex-col gap-3">
+                <div className="fixed bottom-24 left-4 right-4 sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-200 p-2 z-50 flex items-center justify-between animate-fade-in flex-col gap-3">
                     <div className="flex items-center justify-between w-full px-2">
                         <button onClick={toggleSelectionMode} className="w-10 h-10 flex flex-col items-center justify-center text-slate-400 hover:text-slate-600"><i className="fas fa-times text-lg"></i></button>
                         <span className="font-bold text-slate-800">{selectedMatchIds.size} {t.selected}</span>
@@ -582,7 +582,7 @@ const App: React.FC = () => {
       </main>
 
       {/* NAVBAR */}
-      <nav className="fixed bottom-0 w-full bg-white border-t border-slate-200 z-50 safe-area-bottom">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 safe-area-bottom">
         <div className="max-w-2xl mx-auto grid grid-cols-5 h-16">
             <button onClick={() => transitionTab('matches')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'matches' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-list-ul text-lg ${activeTab === 'matches' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.navMatches}</span></button>
             <button onClick={() => transitionTab('stats')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'stats' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-chart-pie text-lg ${activeTab === 'stats' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.navStats}</span></button>
