@@ -439,7 +439,8 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
       </div>
 
       {/* Tournament */}
-      <div className={`flex gap-3 ${formData.matchType === 'tournament' ? 'p-3 bg-purple-50 rounded-xl border border-purple-200' : ''}`}>
+      {/* Tournament name + label — only shown when Tournament is selected */}
+      {formData.matchType === 'tournament' && <div className="flex gap-3 p-3 bg-purple-50 rounded-xl border border-purple-200">
         <div className="flex-[3]">
           <label className="text-xs font-bold text-slate-400 uppercase block mb-1">
             Tournament{formData.matchType === 'tournament' && <span className="text-rose-400 ml-1">*</span>}
@@ -458,7 +459,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
             value={formData.matchLabel || ''} onChange={handleChange}
             className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm text-slate-900 outline-none" />
         </div>
-      </div>
+      </div>}
 
       {/* Format */}
       <div className="pt-2 border-t border-slate-100 space-y-3">
