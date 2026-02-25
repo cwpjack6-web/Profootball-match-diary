@@ -36,7 +36,6 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
   const [periodPositions, setPeriodPositions] = useState<string[]>([]);
   // Tournament / Quarter state
   const [currentQuarterNum, setCurrentQuarterNum] = useState(1);
-  const [useQuarterMode, setUseQuarterMode] = useState(false);
 
   // ── Derived ───────────────────────────────────────────────────────────────
   const today = new Date().toISOString().split('T')[0];
@@ -243,7 +242,15 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
       status: 'completed',
     });
 
-    handleClose();
+    // Reset per-period fields, ready for next period
+    setArthurGoals(0);
+    setArthurAssists(0);
+    setTeammateGoals({});
+    setOwnGoalsFor(0);
+    setOwnGoalsAgainst(0);
+    setNoteText('');
+    setPeriodPositions([]);
+    // Score carries over (cumulative)
   };
 
   // ── Tournament: save quarter and auto-advance ─────────────────────────────
@@ -468,23 +475,12 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
               </div>
             )}
 
-            {/* Non-tournament: optional quarter mode toggle */}
-            {!isTournament && (
-              <div className="mx-4 mt-3 flex items-center justify-between px-3 py-2 bg-slate-50 rounded-lg border border-slate-100">
-                <div>
-                  <p className="text-[10px] font-black text-slate-500 uppercase">
-                    {language === 'zh' ? '分節模式' : 'Quarter Mode'}
-                  </p>
-                  {existingPeriodCount > 0 && (
-                    <p className="text-[10px] text-blue-500 font-bold">
-                      {language === 'zh' ? `已記 ${existingPeriodCount} 節` : `${existingPeriodCount} period(s) logged`}
-                    </p>
-                  )}
-                </div>
-                <button onClick={() => setUseQuarterMode(v => !v)}
-                  className={`relative w-10 h-6 rounded-full transition-colors ${useQuarterMode ? 'bg-blue-500' : 'bg-slate-300'}`}>
-                  <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${useQuarterMode ? 'left-5' : 'left-1'}`} />
-                </button>
+            {/* Period summary for non-tournament */}
+            {!isTournament && existingPeriodCount > 0 && (
+              <div className="mx-4 mt-3 px-3 py-2 bg-slate-50 rounded-lg border border-slate-100">
+                <p className="text-[10px] text-blue-500 font-bold">
+                  {language === 'zh' ? `已記 ${existingPeriodCount} 節` : `${existingPeriodCount} period(s) logged`}
+                </p>
               </div>
             )}
 
@@ -493,7 +489,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
               {/* ① Score */}
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase mb-2">
-                  {isTournament ? (language === 'zh' ? `Q${currentQuarterNum} 比數` : `Q${currentQuarterNum} Score`) : (language === 'zh' ? '累積比數' : 'Cumulative Score')}
+                  {isTournament ? (language === 'zh' ? `Q${currentQuarterNum} 比數` : `Q${currentQuarterNum} Score`) : (language === 'zh' ? `Q${nextPeriodNum} 比數` : `Q${nextPeriodNum} Score`)}
                 </p>
                 <div className="flex items-center justify-center gap-4 bg-slate-50 rounded-xl p-4 border border-slate-100">
                   {/* My team */}
@@ -525,7 +521,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
               {/* ② Goals & Assists */}
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase mb-2">
-                  {isTournament ? (language === 'zh' ? `Q${currentQuarterNum} 入球 / 助攻` : `Q${currentQuarterNum} Goals / Assists`) : (language === 'zh' ? '本節入球 / 助攻' : 'This Period Goals / Assists')}
+                  {isTournament ? (language === 'zh' ? `Q${currentQuarterNum} 入球 / 助攻` : `Q${currentQuarterNum} Goals / Assists`) : (language === 'zh' ? `Q${nextPeriodNum} 入球 / 助攻` : `Q${nextPeriodNum} Goals / Assists`)}
                 </p>
                 <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-3">
 
@@ -730,28 +726,24 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                 </button>
               </div>
             ) : (
-              /* Normal match save */
-              <>
-                {periodLimitReached && (
-                  <p className="text-[10px] text-amber-600 bg-amber-50 rounded-lg px-3 py-2 mb-3 text-center font-bold border border-amber-100">
-                    {language === 'zh'
-                      ? `聯賽節數上限為 ${standardPeriods} 節。如需更多節數，請改選錦標賽或友誼賽。`
-                      : `League matches are capped at ${standardPeriods} periods. Change match type for more.`}
-                  </p>
-                )}
+              /* League/Friendly: same two-button design as Tournament */
+              <div className="space-y-2">
                 <button
                   onClick={handleSave}
-                  disabled={periodLimitReached || !canSave}
-                  className="w-full py-4 bg-blue-600 text-white rounded-xl font-black text-sm flex items-center justify-center gap-2 active:bg-blue-700 disabled:opacity-40 transition-colors shadow-lg"
+                  disabled={!canSave}
+                  className="w-full py-3 bg-blue-600 text-white rounded-xl font-black text-sm flex items-center justify-center gap-2 active:bg-blue-700 disabled:opacity-40 transition-colors shadow-lg"
                 >
                   <i className="fas fa-save" />
-                  {periodLimitReached
-                    ? (language === 'zh' ? `聯賽已達 ${standardPeriods} 節上限` : `League max ${standardPeriods} periods reached`)
-                    : language === 'zh'
-                      ? `儲存第 ${nextPeriodNum} 節`
-                      : `Save Period ${nextPeriodNum}`}
+                  {language === 'zh' ? `儲存 Q${nextPeriodNum} · 繼續 Q${nextPeriodNum + 1}` : `Save Q${nextPeriodNum} · Continue Q${nextPeriodNum + 1}`}
                 </button>
-              </>
+                <button
+                  onClick={handleClose}
+                  className="w-full py-3 bg-slate-100 text-slate-700 rounded-xl font-black text-sm flex items-center justify-center gap-2 active:bg-slate-200 transition-colors"
+                >
+                  <i className="fas fa-check" />
+                  {language === 'zh' ? '完成，儲存並關閉' : 'Done & Save'}
+                </button>
+              </div>
             )}
           </div>
         )}
