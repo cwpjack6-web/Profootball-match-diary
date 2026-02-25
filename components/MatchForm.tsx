@@ -880,7 +880,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
         input[type=range]::-moz-range-thumb { width: 28px; height: 28px; border-radius: 50%; background: white; border: 3px solid #3b82f6; box-shadow: 0 2px 8px rgba(0,0,0,0.15); cursor: pointer; }
       `}</style>
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm sm:p-4 animate-fade-in">
-      <div className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-2xl h-[95vh] sm:h-auto sm:max-h-[90vh] flex flex-col">
+      <div className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-2xl h-[95vh] sm:h-auto sm:max-h-[85vh] flex flex-col">
 
         {/* Header */}
         <div className={`${styles.headerBg} p-4 rounded-t-2xl flex-none`}>
