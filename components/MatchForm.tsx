@@ -697,16 +697,57 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
   // ── Page 3: Report + Media ─────────────────────────────────────────────────────
   const page3 = (
     <div className="space-y-5">
-      {/* Rating */}
+      {/* Rating — enhanced full-width slider */}
       <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
-        <div className="flex justify-between items-center mb-3">
+        <div className="flex justify-between items-center mb-4">
           <label className="text-xs font-bold text-slate-400 uppercase">{t.performanceRating}</label>
-          <span className={`text-4xl font-black ${styles.text}`}>
-            {formData.rating}<span className="text-sm text-slate-300 font-normal ml-1">/ 10</span>
+          <span className={`text-5xl font-black ${styles.text}`}>
+            {formData.rating}<span className="text-base text-slate-300 font-normal ml-1">/ 10</span>
           </span>
         </div>
-        <input type="range" name="rating" min="1" max="10" step="0.5" value={formData.rating} onChange={handleChange}
-          className="w-full h-3 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600 mb-4" />
+
+        {/* Full-width slider with custom track */}
+        <div className="relative mb-2">
+          {/* Coloured fill track behind the input */}
+          <div className="absolute top-1/2 left-0 right-0 h-4 -translate-y-1/2 rounded-full bg-slate-100 overflow-hidden pointer-events-none">
+            <div
+              className="h-full rounded-full transition-all duration-150"
+              style={{
+                width: `${((formData.rating - 1) / 9) * 100}%`,
+                background: formData.rating >= 8
+                  ? 'linear-gradient(90deg, #34d399, #10b981)'
+                  : formData.rating >= 6
+                  ? 'linear-gradient(90deg, #fbbf24, #f59e0b)'
+                  : 'linear-gradient(90deg, #f87171, #ef4444)'
+              }}
+            />
+          </div>
+          <input
+            type="range" name="rating" min="1" max="10" step="0.5"
+            value={formData.rating} onChange={handleChange}
+            className="relative w-full h-4 rounded-full appearance-none cursor-pointer bg-transparent"
+            style={{
+              WebkitAppearance: 'none',
+            }}
+          />
+        </div>
+
+        {/* Tick marks */}
+        <div className="flex justify-between px-1 mb-4">
+          {[1,2,3,4,5,6,7,8,9,10].map(n => (
+            <button key={n} type="button"
+              onClick={() => setFormData(p => ({ ...p, rating: n }))}
+              className={`text-[10px] font-black transition-all ${
+                Math.floor(formData.rating) === n || Math.ceil(formData.rating) === n
+                  ? formData.rating >= 8 ? 'text-emerald-500 scale-125'
+                    : formData.rating >= 6 ? 'text-amber-500 scale-125'
+                    : 'text-rose-400 scale-125'
+                  : 'text-slate-300'
+              }`}>
+              {n}
+            </button>
+          ))}
+        </div>
         {/* MOTM */}
         <div className="flex items-center gap-3 border-t border-slate-100 pt-3">
           <div className="relative w-10 h-6">
@@ -805,6 +846,11 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
+    <>
+      <style>{`
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%; background: white; border: 3px solid #3b82f6; box-shadow: 0 2px 8px rgba(0,0,0,0.15); cursor: pointer; }
+        input[type=range]::-moz-range-thumb { width: 28px; height: 28px; border-radius: 50%; background: white; border: 3px solid #3b82f6; box-shadow: 0 2px 8px rgba(0,0,0,0.15); cursor: pointer; }
+      `}</style>
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm sm:p-4 animate-fade-in">
       <div className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-2xl h-[95vh] sm:h-auto sm:max-h-[90vh] flex flex-col">
 
