@@ -1,4 +1,3 @@
-
 export interface Teammate {
   id: string;
   name: string;
@@ -11,12 +10,12 @@ export interface Team {
   id: string;
   name: string;
   jerseyNumber: string;
-  themeColor: string; // Primary Color
-  secondaryColor?: string; // New: Secondary Color for stripes
-  themePattern?: TeamPattern; // New: solid, vertical, horizontal
-  logo?: string | null; // New: Base64 Logo
-  defaultMatchFormat?: MatchFormat; // New: Default 5v5, 7v7 etc.
-  defaultMatchStructure?: MatchStructure; // New: Default quarters vs halves
+  themeColor: string;
+  secondaryColor?: string;
+  themePattern?: TeamPattern;
+  logo?: string | null;
+  defaultMatchFormat?: MatchFormat;
+  defaultMatchStructure?: MatchStructure;
   roster: Teammate[];
   isArchived?: boolean;
 }
@@ -39,17 +38,27 @@ export interface VideoLink {
   note: string;
 }
 
-export type MatchType = 'league' | 'cup' | 'friendly';
+// 'cup' renamed to 'tournament'
+export type MatchType = 'league' | 'tournament' | 'friendly';
 export type PitchType = 'turf' | 'artificial' | 'hard' | 'indoor' | 'other';
 export type WeatherType = 'sunny' | 'rain' | 'cloudy' | 'night' | 'hot' | 'windy';
 export type MatchFormat = '5v5' | '6v6' | '7v7' | '8v8' | '9v9' | '11v11' | 'other';
 export type MatchStructure = 'halves' | 'quarters';
 
+// New: Quarter data for per-period breakdown
+export interface MatchQuarter {
+  scoreMyTeam: number;
+  scoreOpponent: number;
+  arthurGoals: number;
+  arthurAssists: number;
+  comment: string;
+}
+
 export interface MatchData {
   id: string;
   profileId: string;
   date: string;
-  assemblyTime?: string; 
+  assemblyTime?: string;
   matchTime?: string;
   matchEndTime?: string;
   tournamentStartTime?: string;
@@ -57,14 +66,14 @@ export interface MatchData {
   teamId: string;
   location: string;
   isHome: boolean;
-  matchType: MatchType; 
-  tournamentName?: string; // New: e.g., "Easter Cup"
-  matchLabel?: string; // New: e.g., "Game 1", "Semi-Final"
-  pitchType?: PitchType; 
+  matchType: MatchType;
+  tournamentName?: string;
+  matchLabel?: string;
+  pitchType?: PitchType;
   weather?: WeatherType;
-  matchFormat?: MatchFormat; 
-  matchStructure?: MatchStructure; 
-  periodsPlayed?: number; 
+  matchFormat?: MatchFormat;
+  matchStructure?: MatchStructure;
+  periodsPlayed?: number;
   positionPlayed?: string[];
   opponent: string;
   scoreMyTeam: number;
@@ -73,26 +82,36 @@ export interface MatchData {
   arthurGoals: number;
   arthurAssists: number;
   rating: number;
-  isMotm?: boolean; 
-  dadComment: string; 
-  commenterIdentity?: 'Dad' | 'Coach' | 'Mom' | 'Other'; 
+  isMotm?: boolean;
+  dadComment: string;
+  commenterIdentity?: 'Dad' | 'Coach' | 'Mom' | 'Other';
   kidInterview: string;
   videos: VideoLink[];
-  status?: 'scheduled' | 'completed'; 
-  updatedAt?: number; 
+  status?: 'scheduled' | 'completed';
+  updatedAt?: number;
+  // New: quarter-level breakdown
+  quarters?: MatchQuarter[];
+  useQuarters?: boolean;
 }
 
-// New Interface for Coach Reports
+// Migration helper: call on app load to convert legacy 'cup' → 'tournament'
+export function migrateMatchType(match: MatchData): MatchData {
+  if ((match.matchType as string) === 'cup') {
+    return { ...match, matchType: 'tournament' };
+  }
+  return match;
+}
+
 export type CoachPersona = 'motivator' | 'tactician' | 'wisdom' | 'custom';
 
 export interface CoachReport {
-    id: string;
-    profileId: string;
-    monthKey: string; // YYYY-MM
-    coachPersona: CoachPersona;
-    customCoachName?: string; // New: Store the name of the custom coach
-    content: string; // The markdown content from AI
-    generatedAt: number;
+  id: string;
+  profileId: string;
+  monthKey: string;
+  coachPersona: CoachPersona;
+  customCoachName?: string;
+  content: string;
+  generatedAt: number;
 }
 
 export interface MatchFormProps {
@@ -101,8 +120,8 @@ export interface MatchFormProps {
   onSubmit: (data: Omit<MatchData, 'id'>) => void;
   profile: UserProfile;
   initialData?: MatchData | null;
-  previousMatches: MatchData[]; 
-  onAddTeammate?: (teamId: string, name: string, number?: string) => void; 
+  previousMatches: MatchData[];
+  onAddTeammate?: (teamId: string, name: string, number?: string) => void;
 }
 
 export interface VideoModalProps {
