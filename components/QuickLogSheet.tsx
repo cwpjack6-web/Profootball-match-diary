@@ -170,6 +170,13 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
   const handleSave = () => {
     if (!selectedMatchId || !selectedMatch) return;
 
+    // Define participationLabel here (was missing — caused silent crash)
+    const participationLabel = participation === 'full'
+      ? (language === 'zh' ? '全節' : 'Full')
+      : participation === 'partial'
+      ? (language === 'zh' ? '部分' : 'Partial')
+      : (language === 'zh' ? '未出場' : 'Did Not Play');
+
     // Build period note block
     const periodHeader = language === 'zh'
       ? `【節${nextPeriodNum}】`
@@ -290,7 +297,8 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
 
   // Can save if: any content entered, OR participation explicitly chosen (even 'none')
   const hasContent = noteText.trim().length > 0 || arthurGoals > 0 || arthurAssists > 0 || Object.keys(teammateGoals).length > 0 || ownGoalsFor > 0 || ownGoalsAgainst > 0;
-  const canSave = hasContent || participation !== 'full'; // 'full' is default — if changed, always saveable
+  const scoreChanged = scoreMyTeam !== (selectedMatch?.scoreMyTeam ?? 0) || scoreOpponent !== (selectedMatch?.scoreOpponent ?? 0);
+  const canSave = hasContent || participation !== 'full' || scoreChanged;
 
   return (
     <div className="fixed inset-0 z-[80] flex flex-col justify-end" onClick={handleClose}>
