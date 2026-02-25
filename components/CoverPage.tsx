@@ -33,8 +33,8 @@ const CoverPage: React.FC<CoverPageProps> = ({ profiles, onSelectProfile, onAddP
       <div className="flex-1 flex flex-col items-center justify-center p-6 z-10 animate-fade-in">
         
         {/* Title */}
-        <div className="text-center mb-6">
-            <div className="w-20 h-20 bg-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-[0_0_40px_rgba(37,99,235,0.4)] rotate-3">
+        <div className="text-center mb-6 sm:mb-10">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-4 sm:mb-6 shadow-[0_0_40px_rgba(37,99,235,0.4)] rotate-3">
                 <i className="fas fa-futbol text-4xl text-white"></i>
             </div>
             <h1 className="text-4xl font-black text-white tracking-tight mb-2">ProFootball Match Diary</h1>
@@ -68,7 +68,7 @@ const CoverPage: React.FC<CoverPageProps> = ({ profiles, onSelectProfile, onAddP
         {profiles.length > 0 && (
             <div className="flex flex-col items-center w-full max-w-md">
                 
-                <div className="grid grid-cols-2 gap-4 w-full mb-4">
+                <div className="grid grid-cols-2 gap-4 sm:gap-6 w-full mb-4 sm:mb-8">
                     {profiles.map(profile => (
                         <div key={profile.id} className="relative group">
                             
@@ -86,7 +86,7 @@ const CoverPage: React.FC<CoverPageProps> = ({ profiles, onSelectProfile, onAddP
                                 onClick={() => !isEditing && onSelectProfile(profile)}
                                 className={`w-full flex flex-col items-center ${isEditing ? 'cursor-default' : 'cursor-pointer'}`}
                             >
-                                <div className={`w-20 h-20 rounded-full bg-slate-800 border-4 border-slate-700 shadow-xl overflow-hidden mb-2 transition-all duration-300 ${!isEditing && 'group-hover:border-blue-500 group-hover:scale-105'}`}>
+                                <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-slate-800 border-4 border-slate-700 shadow-xl overflow-hidden mb-2 sm:mb-3 transition-all duration-300 ${!isEditing && 'group-hover:border-blue-500 group-hover:scale-105'}`}>
                                     {profile.avatar ? (
                                         <img src={profile.avatar} alt={profile.name} className="w-full h-full object-cover" />
                                     ) : (
@@ -107,7 +107,7 @@ const CoverPage: React.FC<CoverPageProps> = ({ profiles, onSelectProfile, onAddP
                             onClick={onAddProfile}
                             className="group flex flex-col items-center justify-center"
                         >
-                            <div className="w-20 h-20 rounded-full bg-slate-800/50 border-4 border-dashed border-slate-700 shadow-xl flex items-center justify-center mb-2 group-hover:bg-slate-800 group-hover:border-slate-600 transition-all duration-300">
+                            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-slate-800/50 border-4 border-dashed border-slate-700 shadow-xl flex items-center justify-center mb-2 sm:mb-3 group-hover:bg-slate-800 group-hover:border-slate-600 transition-all duration-300">
                                 <i className="fas fa-plus text-2xl text-slate-500 group-hover:text-white transition-colors"></i>
                             </div>
                             <span className="text-slate-400 font-bold text-sm group-hover:text-white transition-colors">{t.addNewProfile}</span>
