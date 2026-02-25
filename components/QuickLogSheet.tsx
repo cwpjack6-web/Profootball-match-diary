@@ -127,7 +127,8 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     setOwnGoalsAgainst(0);
     setParticipation('full');
     setCurrentQuarterNum(1);
-    setUseQuarterMode(false);
+    setShowRatingModal(false);
+    setPendingRating(8);
     onClose();
   };
 
@@ -770,11 +771,15 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
       </div>
 
       {/* ── Rating Modal ─────────────────────────────────────────────────── */}
+      {showRatingModal && <style>{`
+        .rating-sheet input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%; background: white; border: 3px solid #3b82f6; box-shadow: 0 2px 8px rgba(0,0,0,0.15); cursor: pointer; }
+        .rating-sheet input[type=range]::-moz-range-thumb { width: 28px; height: 28px; border-radius: 50%; background: white; border: 3px solid #3b82f6; box-shadow: 0 2px 8px rgba(0,0,0,0.15); cursor: pointer; }
+      `}</style>}
       {showRatingModal && (
         <div className="fixed inset-0 z-[90] flex items-end justify-center" onClick={handleRatingSkip}>
           <div className="absolute inset-0 bg-black/50" />
           <div
-            className="relative z-10 bg-white rounded-t-2xl shadow-2xl w-full p-6"
+            className="rating-sheet relative z-10 bg-white rounded-t-2xl shadow-2xl w-full p-6"
             style={{ animation: 'slideUp 0.25s cubic-bezier(0.32,0.72,0,1)' }}
             onClick={e => e.stopPropagation()}
           >
@@ -790,25 +795,62 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
 
             {/* Rating number display */}
             <div className="text-center mb-4">
-              <span className="text-5xl font-black text-slate-800">{pendingRating}</span>
+              <span className={`text-5xl font-black ${pendingRating >= 8 ? 'text-emerald-500' : pendingRating >= 6 ? 'text-amber-500' : 'text-rose-400'}`}>
+                {pendingRating}
+              </span>
               <span className="text-slate-400 text-lg font-bold"> / 10</span>
             </div>
 
-            {/* Quick pick buttons 1-10 */}
-            <div className="grid grid-cols-5 gap-2 mb-5">
-              {[1,2,3,4,5,6,7,8,9,10].map(r => (
-                <button key={r} onClick={() => setPendingRating(r)}
-                  className={`py-2.5 rounded-xl font-black text-sm transition-all ${
-                    pendingRating === r
-                      ? r >= 8 ? 'bg-emerald-500 text-white shadow-md scale-105'
-                        : r >= 6 ? 'bg-amber-400 text-white shadow-md scale-105'
-                        : 'bg-rose-400 text-white shadow-md scale-105'
-                      : 'bg-slate-100 text-slate-500'
-                  }`}>
-                  {r}
-                </button>
-              ))}
-            </div>
+            {/* Non-linear slider: 1-5 integers = 30%, 5.5-10 half-steps = 70% */}
+            {(() => {
+              const ratingToPos = (r: number): number => {
+                if (r <= 5) return ((r - 1) / 4) * 30;
+                return 30 + ((r - 5.5) / 4.5) * 70;
+              };
+              const posToRating = (pos: number): number => {
+                if (pos <= 30) return Math.min(5, Math.round(1 + (pos / 30) * 4));
+                return Math.min(10, Math.round((5.5 + ((pos - 30) / 70) * 4.5) * 2) / 2);
+              };
+              const pos = ratingToPos(pendingRating);
+              const ratingColor = pendingRating >= 8 ? '#10b981' : pendingRating >= 6 ? '#f59e0b' : '#ef4444';
+              return (
+                <div className="mb-3">
+                  <div className="relative mb-2">
+                    <div className="absolute top-1/2 left-0 right-0 h-4 -translate-y-1/2 rounded-full bg-slate-100 overflow-hidden pointer-events-none">
+                      <div className="h-full rounded-full transition-all duration-100"
+                        style={{ width: `${pos}%`, backgroundColor: ratingColor, opacity: 0.85 }} />
+                      <div className="absolute top-0 bottom-0 w-0.5 bg-white/60" style={{ left: '30%' }} />
+                    </div>
+                    <input
+                      type="range" min="0" max="100" step="0.5"
+                      value={pos}
+                      onChange={e => setPendingRating(posToRating(Number(e.target.value)))}
+                      className="relative w-full h-4 rounded-full appearance-none cursor-pointer bg-transparent"
+                      style={{ WebkitAppearance: 'none' }}
+                    />
+                  </div>
+                  {/* Tick labels */}
+                  <div className="flex mb-2 text-[10px] font-bold">
+                    <div className="flex justify-between text-slate-300" style={{ width: '30%' }}>
+                      <span>1</span><span>3</span><span>5</span>
+                    </div>
+                    <div className="w-0.5" />
+                    <div className="flex justify-between pl-1" style={{ width: '70%' }}>
+                      {[5.5,6,6.5,7,7.5,8,8.5,9,9.5,10].map(n => (
+                        <button key={n} type="button" onClick={() => setPendingRating(n)}
+                          className={`transition-all ${pendingRating === n
+                            ? n >= 8 ? 'text-emerald-500 scale-125 font-black'
+                              : n >= 6 ? 'text-amber-500 scale-125 font-black'
+                              : 'text-rose-400 scale-125 font-black'
+                            : 'text-slate-300'}`}>
+                          {n % 1 === 0 ? n : '·'}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             <div className="flex gap-3">
               <button onClick={handleRatingSkip}
