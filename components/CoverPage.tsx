@@ -14,9 +14,9 @@ const CoverPage: React.FC<CoverPageProps> = ({ profiles, onSelectProfile, onAddP
   };
 
   return (
-    <div className="h-screen bg-slate-900 flex flex-col relative overflow-hidden">
+    <div className="bg-slate-900 flex flex-col relative" style={{ height: '100svh' }}>
       {/* Background decoration */}
-      <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+      <div className="absolute inset-0 opacity-10 pointer-events-none overflow-hidden">
         <div className="absolute top-[-20%] left-[-20%] w-[140%] h-[140%] bg-[radial-gradient(circle,rgba(59,130,246,0.5)_0%,transparent_70%)]"></div>
       </div>
 
@@ -30,7 +30,7 @@ const CoverPage: React.FC<CoverPageProps> = ({ profiles, onSelectProfile, onAddP
         </button>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center p-6 z-10 animate-fade-in">
+      <div className="flex-1 min-h-0 flex flex-col items-center justify-center p-4 z-10 animate-fade-in">
         
         {/* Title */}
         <div className="text-center mb-6 sm:mb-10">
@@ -136,7 +136,7 @@ const CoverPage: React.FC<CoverPageProps> = ({ profiles, onSelectProfile, onAddP
       </div>
       
       {/* Footer / Import Button for existing users */}
-      <div className="p-6 text-center">
+      <div className="px-6 py-2 text-center flex-none">
          {!isEditing && profiles.length > 0 && (
              <button onClick={onImportData} className="text-slate-600 hover:text-slate-400 text-xs font-medium flex items-center justify-center gap-2 mx-auto mb-2">
                  <i className="fas fa-sync-alt"></i> {t.syncData}
