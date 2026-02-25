@@ -46,7 +46,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
     const firstTeam = profile.teams[0];
     const defaultFormat = firstTeam?.defaultMatchFormat || '7v7';
     const defaultStructure = firstTeam?.defaultMatchStructure || 'quarters';
-    const defaultPeriods = defaultStructure === 'halves' ? 2 : 4;
+    const defaultPeriods = 0; // Always start at 0 — Quick Log accumulates as periods are logged
 
     const defaultState: FormState = {
       date: new Date().toISOString().split('T')[0],
@@ -74,7 +74,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
         tournamentName: initialData.tournamentName || '', matchLabel: initialData.matchLabel || '',
         matchFormat: initialData.matchFormat || '7v7',
         matchStructure: initialData.matchStructure || 'quarters',
-        periodsPlayed: initialData.periodsPlayed !== undefined ? initialData.periodsPlayed : 4,
+        periodsPlayed: initialData.periodsPlayed !== undefined ? initialData.periodsPlayed : 0,
         pitchType: initialData.pitchType || '', weather: initialData.weather || '',
         positionPlayed: loadedPositions, scorers: initialData.scorers || [],
         videos: initialData.videos || [], commenterIdentity: initialData.commenterIdentity || 'Dad',
@@ -151,7 +151,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
           ...prev,
           matchFormat: team.defaultMatchFormat || '7v7',
           matchStructure: newStructure,
-          periodsPlayed: formData.periodsPlayed || (newStructure === 'halves' ? 2 : 4),
+          periodsPlayed: formData.periodsPlayed, // keep current value
         }));
       }
     }
@@ -241,8 +241,8 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
       const isLeague = (prev.matchType || 'league') === 'league';
       const defaultPeriods = structure === 'halves' ? 2 : 4;
       const newPeriods = isLeague
-        ? defaultPeriods  // reset to standard for league
-        : (prev.periodsPlayed || defaultPeriods); // keep existing for cup/friendly
+        ? prev.periodsPlayed  // keep current — Quick Log accumulates
+        : prev.periodsPlayed; // keep existing
       return { ...prev, matchStructure: structure, periodsPlayed: newPeriods };
     });
   };
