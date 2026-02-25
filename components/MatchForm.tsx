@@ -1002,6 +1002,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
         </div>
       </div>
     </div>
+    </>
   );
 };
 
