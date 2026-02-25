@@ -415,6 +415,34 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
           className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm text-slate-900 outline-none" />
       </div>
 
+      <div className="flex gap-3">
+        <div className="flex-1">
+          <label className="text-xs font-bold text-slate-400 uppercase block mb-1">{t.pitchType}</label>
+          <select name="pitchType" value={formData.pitchType} onChange={handleChange}
+            className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm text-slate-900 outline-none">
+            <option value="">-</option>
+            <option value="turf">{t.pitchTurf}</option>
+            <option value="artificial">{t.pitchArtificial}</option>
+            <option value="hard">{t.pitchHard}</option>
+            <option value="indoor">{t.pitchIndoor}</option>
+            <option value="other">{t.pitchOther}</option>
+          </select>
+        </div>
+        <div className="flex-1">
+          <label className="text-xs font-bold text-slate-400 uppercase block mb-1">{t.weather}</label>
+          <select name="weather" value={formData.weather} onChange={handleChange}
+            className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm text-slate-900 outline-none">
+            <option value="">-</option>
+            <option value="sunny">{t.weatherSunny}</option>
+            <option value="rain">{t.weatherRain}</option>
+            <option value="cloudy">{t.weatherCloudy}</option>
+            <option value="night">{t.weatherNight}</option>
+            <option value="hot">{t.weatherHot}</option>
+            <option value="windy">{t.weatherWindy}</option>
+          </select>
+        </div>
+      </div>
+
       {/* Match Type */}
       <div>
         <label className="text-xs font-bold text-slate-400 uppercase block mb-1">{t.matchType}</label>
@@ -475,6 +503,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
             ))}
           </div>
         </div>
+        {formData.matchType !== 'tournament' && (
         <div className="flex gap-3">
           <div className="flex-1">
             <label className="text-xs font-bold text-slate-400 uppercase block mb-1">{t.matchStructure}</label>
@@ -502,49 +531,10 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
             </div>
           </div>
         </div>
+        )}
       </div>
 
-      {/* Position + Conditions */}
-      <div>
-        <label className="text-xs font-bold text-slate-400 uppercase block mb-1">{t.positionPlayed}</label>
-        <div className="flex flex-wrap gap-2">
-          {POSITIONS.map(pos => (
-            <button key={pos} type="button" onClick={() => togglePosition(pos)}
-              className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
-                formData.positionPlayed?.includes(pos) ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-500 border-slate-200'}`}>
-              {pos}
-            </button>
-          ))}
-        </div>
-      </div>
 
-      <div className="flex gap-3">
-        <div className="flex-1">
-          <label className="text-xs font-bold text-slate-400 uppercase block mb-1">{t.pitchType}</label>
-          <select name="pitchType" value={formData.pitchType} onChange={handleChange}
-            className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm text-slate-900 outline-none">
-            <option value="">-</option>
-            <option value="turf">{t.pitchTurf}</option>
-            <option value="artificial">{t.pitchArtificial}</option>
-            <option value="hard">{t.pitchHard}</option>
-            <option value="indoor">{t.pitchIndoor}</option>
-            <option value="other">{t.pitchOther}</option>
-          </select>
-        </div>
-        <div className="flex-1">
-          <label className="text-xs font-bold text-slate-400 uppercase block mb-1">{t.weather}</label>
-          <select name="weather" value={formData.weather} onChange={handleChange}
-            className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm text-slate-900 outline-none">
-            <option value="">-</option>
-            <option value="sunny">{t.weatherSunny}</option>
-            <option value="rain">{t.weatherRain}</option>
-            <option value="cloudy">{t.weatherCloudy}</option>
-            <option value="night">{t.weatherNight}</option>
-            <option value="hot">{t.weatherHot}</option>
-            <option value="windy">{t.weatherWindy}</option>
-          </select>
-        </div>
-      </div>
     </div>
   );
 
@@ -609,6 +599,20 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
           className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-slate-50 border-2 border-slate-200 text-slate-500 active:scale-95 transition-all">
           <span className="font-bold text-xs">OG {language === 'zh' ? '我方' : 'Ours'} +1</span>
         </button>
+      </div>
+
+      {/* Position */}
+      <div>
+        <label className="text-xs font-bold text-slate-400 uppercase block mb-1">{t.positionPlayed}</label>
+        <div className="flex flex-wrap gap-2">
+          {POSITIONS.map(pos => (
+            <button key={pos} type="button" onClick={() => togglePosition(pos)}
+              className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+                formData.positionPlayed?.includes(pos) ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-500 border-slate-200'}`}>
+              {pos}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Player stats counter */}
