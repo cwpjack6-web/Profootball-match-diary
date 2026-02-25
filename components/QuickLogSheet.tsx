@@ -33,7 +33,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
   const [ownGoalsAgainst, setOwnGoalsAgainst] = useState(0); // our own goal (counts for them)
   type ParticipationStatus = 'full' | 'partial' | 'none';
   const [participation, setParticipation] = useState<ParticipationStatus>('full');
-  const [periodPosition, setPeriodPosition] = useState<string>('');
+  const [periodPositions, setPeriodPositions] = useState<string[]>([]);
   // Tournament / Quarter state
   const [currentQuarterNum, setCurrentQuarterNum] = useState(1);
   const [useQuarterMode, setUseQuarterMode] = useState(false);
@@ -107,7 +107,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     setOwnGoalsFor(0);
     setOwnGoalsAgainst(0);
     setParticipation('full');
-    setPeriodPosition('');
+    setPeriodPositions([]);
     setNoteText('');
   };
 
@@ -156,10 +156,12 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
   // ── Teammate goal tap ─────────────────────────────────────────────────────
   const tapTeammateGoal = (id: string) => {
     setTeammateGoals(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
+    setScoreMyTeam(s => s + 1);
   };
   const clearTeammateGoal = (id: string) => {
     setTeammateGoals(prev => {
       const next = { ...prev };
+      if (next[id] > 0) setScoreMyTeam(s => Math.max(0, s - 1));
       if (next[id] > 1) next[id]--;
       else delete next[id];
       return next;
@@ -194,7 +196,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
       ? (language === 'zh' ? `入球：${goalSummary.join('、')}\n` : `Goals: ${goalSummary.join(', ')}\n`)
       : '';
 
-    const posLabel = periodPosition ? ` [${periodPosition}]` : '';
+    const posLabel = periodPositions.length > 0 ? ` [${periodPositions.join('/')}]` : '';
     const periodBlock = `${periodHeader} [${participationLabel}]${posLabel}\n${goalLine}${noteText.trim()}`;
 
     // Append to existing dadComment
@@ -227,9 +229,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     const existingPositions: string[] = Array.isArray(selectedMatch.positionPlayed)
       ? selectedMatch.positionPlayed
       : (selectedMatch.positionPlayed ? [selectedMatch.positionPlayed as string] : []);
-    const updatedPositions = periodPosition && !existingPositions.includes(periodPosition)
-      ? [...existingPositions, periodPosition]
-      : existingPositions;
+    const updatedPositions = [...new Set([...existingPositions, ...periodPositions])];
 
     onSave(selectedMatchId, {
       dadComment: newComment,
@@ -298,7 +298,8 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
   // Can save if: any content entered, OR participation explicitly chosen (even 'none')
   const hasContent = noteText.trim().length > 0 || arthurGoals > 0 || arthurAssists > 0 || Object.keys(teammateGoals).length > 0 || ownGoalsFor > 0 || ownGoalsAgainst > 0;
   const scoreChanged = scoreMyTeam !== (selectedMatch?.scoreMyTeam ?? 0) || scoreOpponent !== (selectedMatch?.scoreOpponent ?? 0);
-  const canSave = hasContent || participation !== 'full' || scoreChanged;
+  // Always saveable once participation is set (all 3 options are explicit choices)
+  const canSave = true;
 
   return (
     <div className="fixed inset-0 z-[80] flex flex-col justify-end" onClick={handleClose}>
@@ -536,10 +537,10 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                     <span className="text-xs font-black text-slate-700 flex-1">{profile.name}</span>
                     {/* Goals */}
                     <div className="flex items-center gap-1.5">
-                      <button onClick={() => setArthurGoals(Math.max(0, arthurGoals - 1))}
+                      <button onClick={() => { if (arthurGoals > 0) { setArthurGoals(arthurGoals - 1); setScoreMyTeam(s => Math.max(0, s - 1)); } }}
                         className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">−</button>
                       <span className="text-sm font-black text-emerald-600 w-5 text-center">⚽{arthurGoals}</span>
-                      <button onClick={() => setArthurGoals(arthurGoals + 1)}
+                      <button onClick={() => { setArthurGoals(arthurGoals + 1); setScoreMyTeam(s => s + 1); }}
                         className="w-6 h-6 rounded-full bg-emerald-500 text-white text-sm font-black flex items-center justify-center active:bg-emerald-600">+</button>
                     </div>
                     {/* Assists */}
@@ -598,11 +599,11 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                     </span>
                     <div className="flex items-center gap-1.5">
                       {ownGoalsFor > 0 && (
-                        <button onClick={() => setOwnGoalsFor(Math.max(0, ownGoalsFor - 1))}
+                        <button onClick={() => { if (ownGoalsFor > 0) { setOwnGoalsFor(ownGoalsFor - 1); setScoreMyTeam(s => Math.max(0, s - 1)); } }}
                           className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">−</button>
                       )}
                       {ownGoalsFor > 0 && <span className="text-sm font-black text-orange-500 w-5 text-center">×{ownGoalsFor}</span>}
-                      <button onClick={() => setOwnGoalsFor(ownGoalsFor + 1)}
+                      <button onClick={() => { setOwnGoalsFor(ownGoalsFor + 1); setScoreMyTeam(s => s + 1); }}
                         className={`w-7 h-7 rounded-full text-white text-xs font-black flex items-center justify-center transition-colors ${ownGoalsFor > 0 ? 'bg-orange-400 active:bg-orange-500' : 'bg-slate-300 active:bg-slate-400'}`}>
                         {ownGoalsFor > 0 ? '+' : 'OG'}
                       </button>
@@ -616,11 +617,11 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                     </span>
                     <div className="flex items-center gap-1.5">
                       {ownGoalsAgainst > 0 && (
-                        <button onClick={() => setOwnGoalsAgainst(Math.max(0, ownGoalsAgainst - 1))}
+                        <button onClick={() => { if (ownGoalsAgainst > 0) { setOwnGoalsAgainst(ownGoalsAgainst - 1); setScoreOpponent(s => Math.max(0, s - 1)); } }}
                           className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">−</button>
                       )}
                       {ownGoalsAgainst > 0 && <span className="text-sm font-black text-rose-500 w-5 text-center">×{ownGoalsAgainst}</span>}
-                      <button onClick={() => setOwnGoalsAgainst(ownGoalsAgainst + 1)}
+                      <button onClick={() => { setOwnGoalsAgainst(ownGoalsAgainst + 1); setScoreOpponent(s => s + 1); }}
                         className={`w-7 h-7 rounded-full text-white text-xs font-black flex items-center justify-center transition-colors ${ownGoalsAgainst > 0 ? 'bg-rose-400 active:bg-rose-500' : 'bg-slate-300 active:bg-slate-400'}`}>
                         {ownGoalsAgainst > 0 ? '+' : 'OG'}
                       </button>
@@ -668,9 +669,11 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {(['FW','LW','RW','MF','DF','GK'] as const).map(pos => (
-                      <button key={pos} onClick={() => setPeriodPosition(periodPosition === pos ? '' : pos)}
+                      <button key={pos} onClick={() => setPeriodPositions(prev =>
+                          prev.includes(pos) ? prev.filter(p => p !== pos) : [...prev, pos]
+                        )}
                         className={`px-3 py-1.5 rounded-full text-xs font-black border-2 transition-all ${
-                          periodPosition === pos
+                          periodPositions.includes(pos)
                             ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
                             : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
                         }`}>
@@ -678,9 +681,9 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                       </button>
                     ))}
                   </div>
-                  {periodPosition && (
+                  {periodPositions.length > 0 && (
                     <p className="text-[10px] text-blue-500 font-bold mt-1.5">
-                      {language === 'zh' ? `✓ 已選：${periodPosition}` : `✓ Selected: ${periodPosition}`}
+                      {language === 'zh' ? `✓ 已選：${periodPositions.join(' / ')}` : `✓ Selected: ${periodPositions.join(' / ')}`}
                     </p>
                   )}
                 </div>
