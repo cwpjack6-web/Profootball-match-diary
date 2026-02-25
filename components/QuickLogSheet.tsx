@@ -34,6 +34,9 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
   type ParticipationStatus = 'full' | 'partial' | 'none';
   const [participation, setParticipation] = useState<ParticipationStatus>('full');
   const [periodPositions, setPeriodPositions] = useState<string[]>([]);
+  // Rating modal state
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [pendingRating, setPendingRating] = useState(8);
   // Tournament / Quarter state
   const [currentQuarterNum, setCurrentQuarterNum] = useState(1);
 
@@ -298,6 +301,23 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     setNoteText('');
     setOwnGoalsFor(0);
     setOwnGoalsAgainst(0);
+  };
+
+  // ── Done: show rating modal before closing ─────────────────────────────────
+  const handleDone = () => {
+    setShowRatingModal(true);
+  };
+
+  const handleRatingConfirm = () => {
+    if (!selectedMatchId || !selectedMatch) { handleClose(); return; }
+    onSave(selectedMatchId, { rating: pendingRating });
+    setShowRatingModal(false);
+    handleClose();
+  };
+
+  const handleRatingSkip = () => {
+    setShowRatingModal(false);
+    handleClose();
   };
 
   if (!isOpen) return null;
@@ -718,7 +738,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                   {language === 'zh' ? `儲存 Q${currentQuarterNum} · 繼續 Q${currentQuarterNum + 1}` : `Save Q${currentQuarterNum} · Continue Q${currentQuarterNum + 1}`}
                 </button>
                 <button
-                  onClick={handleClose}
+                  onClick={handleDone}
                   className="w-full py-3 bg-slate-100 text-slate-700 rounded-xl font-black text-sm flex items-center justify-center gap-2 active:bg-slate-200 transition-colors"
                 >
                   <i className="fas fa-check" />
@@ -737,17 +757,73 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                   {language === 'zh' ? `儲存 Q${nextPeriodNum} · 繼續 Q${nextPeriodNum + 1}` : `Save Q${nextPeriodNum} · Continue Q${nextPeriodNum + 1}`}
                 </button>
                 <button
-                  onClick={handleClose}
+                  onClick={handleDone}
                   className="w-full py-3 bg-slate-100 text-slate-700 rounded-xl font-black text-sm flex items-center justify-center gap-2 active:bg-slate-200 transition-colors"
                 >
                   <i className="fas fa-check" />
-                  {language === 'zh' ? '完成，儲存並關閉' : 'Done & Save'}
+                  {language === 'zh' ? '完成，評分並關閉' : 'Done & Rate'}
                 </button>
               </div>
             )}
           </div>
         )}
       </div>
+
+      {/* ── Rating Modal ─────────────────────────────────────────────────── */}
+      {showRatingModal && (
+        <div className="fixed inset-0 z-[90] flex items-end justify-center" onClick={handleRatingSkip}>
+          <div className="absolute inset-0 bg-black/50" />
+          <div
+            className="relative z-10 bg-white rounded-t-2xl shadow-2xl w-full p-6"
+            style={{ animation: 'slideUp 0.25s cubic-bezier(0.32,0.72,0,1)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex justify-center mb-1">
+              <div className="w-10 h-1 bg-slate-200 rounded-full" />
+            </div>
+            <h3 className="text-base font-black text-slate-800 text-center mt-3 mb-1">
+              {language === 'zh' ? '今場表現如何？' : 'How did it go?'}
+            </h3>
+            <p className="text-[11px] text-slate-400 text-center mb-5">
+              {language === 'zh' ? `vs ${selectedMatch?.opponent}` : `vs ${selectedMatch?.opponent}`}
+            </p>
+
+            {/* Rating number display */}
+            <div className="text-center mb-4">
+              <span className="text-5xl font-black text-slate-800">{pendingRating}</span>
+              <span className="text-slate-400 text-lg font-bold"> / 10</span>
+            </div>
+
+            {/* Quick pick buttons 1-10 */}
+            <div className="grid grid-cols-5 gap-2 mb-5">
+              {[1,2,3,4,5,6,7,8,9,10].map(r => (
+                <button key={r} onClick={() => setPendingRating(r)}
+                  className={`py-2.5 rounded-xl font-black text-sm transition-all ${
+                    pendingRating === r
+                      ? r >= 8 ? 'bg-emerald-500 text-white shadow-md scale-105'
+                        : r >= 6 ? 'bg-amber-400 text-white shadow-md scale-105'
+                        : 'bg-rose-400 text-white shadow-md scale-105'
+                      : 'bg-slate-100 text-slate-500'
+                  }`}>
+                  {r}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex gap-3">
+              <button onClick={handleRatingSkip}
+                className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-xl font-bold text-sm">
+                {language === 'zh' ? '跳過' : 'Skip'}
+              </button>
+              <button onClick={handleRatingConfirm}
+                className="flex-[2] py-3 bg-blue-600 text-white rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg">
+                <i className="fas fa-star text-yellow-300" />
+                {language === 'zh' ? `確認 ⭐${pendingRating}` : `Confirm ⭐${pendingRating}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
