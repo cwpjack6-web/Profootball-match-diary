@@ -697,7 +697,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
   // ── Page 3: Report + Media ─────────────────────────────────────────────────────
   const page3 = (
     <div className="space-y-5">
-      {/* Rating — enhanced full-width slider */}
+      {/* Rating — non-linear slider: 1-5 = 30%, 5.5-10 = 70% */}
       <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
         <div className="flex justify-between items-center mb-4">
           <label className="text-xs font-bold text-slate-400 uppercase">{t.performanceRating}</label>
@@ -706,47 +706,75 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
           </span>
         </div>
 
-        {/* Full-width slider with custom track */}
-        <div className="relative mb-2">
-          {/* Coloured fill track behind the input */}
-          <div className="absolute top-1/2 left-0 right-0 h-4 -translate-y-1/2 rounded-full bg-slate-100 overflow-hidden pointer-events-none">
-            <div
-              className="h-full rounded-full transition-all duration-150"
-              style={{
-                width: `${((formData.rating - 1) / 9) * 100}%`,
-                background: formData.rating >= 8
-                  ? 'linear-gradient(90deg, #34d399, #10b981)'
-                  : formData.rating >= 6
-                  ? 'linear-gradient(90deg, #fbbf24, #f59e0b)'
-                  : 'linear-gradient(90deg, #f87171, #ef4444)'
-              }}
-            />
-          </div>
-          <input
-            type="range" name="rating" min="1" max="10" step="0.5"
-            value={formData.rating} onChange={handleChange}
-            className="relative w-full h-4 rounded-full appearance-none cursor-pointer bg-transparent"
-            style={{
-              WebkitAppearance: 'none',
-            }}
-          />
-        </div>
+        {/* Non-linear custom slider
+            Internal value 0–100:
+              0–30  → maps to rating 1–5   (integers only, step=6)
+              30–100 → maps to rating 5.5–10 (half steps, step=7) */}
+        {(() => {
+          // Convert rating → internal position (0–100)
+          // 1–5 (5 integers) → 0–30%, each step = 7.5%
+          // 5.5–10 (10 half-steps) → 30–100%, each step = 7%
+          const ratingToPos = (r: number): number => {
+            if (r <= 5) return ((r - 1) / 4) * 30;        // 1→0, 2→7.5, 3→15, 4→22.5, 5→30
+            return 30 + ((r - 5.5) / 4.5) * 70;           // 5.5→30, 10→100
+          };
+          const posToRating = (pos: number): number => {
+            if (pos <= 30) {
+              // Snap to nearest integer 1–5
+              const raw = 1 + (pos / 30) * 4;
+              return Math.min(5, Math.round(raw));
+            }
+            // Snap to nearest 0.5 in range 5.5–10
+            const raw = 5.5 + ((pos - 30) / 70) * 4.5;
+            return Math.min(10, Math.round(raw * 2) / 2);
+          };
+          const pos = ratingToPos(formData.rating);
+          const ratingColor = formData.rating >= 8 ? '#10b981' : formData.rating >= 6 ? '#f59e0b' : '#ef4444';
+          return (
+            <div className="relative mb-3">
+              {/* Track background */}
+              <div className="absolute top-1/2 left-0 right-0 h-4 -translate-y-1/2 rounded-full bg-slate-100 overflow-hidden pointer-events-none">
+                {/* Fill */}
+                <div className="h-full rounded-full transition-all duration-100"
+                  style={{ width: `${pos}%`, backgroundColor: ratingColor, opacity: 0.85 }} />
+                {/* Zone divider at 30% */}
+                <div className="absolute top-0 bottom-0 w-0.5 bg-white/60" style={{ left: '30%' }} />
+              </div>
+              <input
+                type="range" min="0" max="100" step="0.5"
+                value={pos}
+                onChange={e => {
+                  const newRating = posToRating(Number(e.target.value));
+                  setFormData(p => ({ ...p, rating: newRating }));
+                }}
+                className="relative w-full h-4 rounded-full appearance-none cursor-pointer bg-transparent"
+                style={{ WebkitAppearance: 'none' }}
+              />
+            </div>
+          );
+        })()}
 
-        {/* Tick marks */}
-        <div className="flex justify-between px-1 mb-4">
-          {[1,2,3,4,5,6,7,8,9,10].map(n => (
-            <button key={n} type="button"
-              onClick={() => setFormData(p => ({ ...p, rating: n }))}
-              className={`text-[10px] font-black transition-all ${
-                Math.floor(formData.rating) === n || Math.ceil(formData.rating) === n
-                  ? formData.rating >= 8 ? 'text-emerald-500 scale-125'
-                    : formData.rating >= 6 ? 'text-amber-500 scale-125'
-                    : 'text-rose-400 scale-125'
-                  : 'text-slate-300'
-              }`}>
-              {n}
-            </button>
-          ))}
+        {/* Zone labels + key tick marks */}
+        <div className="flex mb-4 text-[10px] font-bold">
+          <div className="flex justify-between text-slate-300" style={{ width: '30%' }}>
+            <span>1</span><span>3</span><span>5</span>
+          </div>
+          <div className="w-0.5" />
+          <div className="flex justify-between text-slate-400 pl-1" style={{ width: '70%' }}>
+            {[5.5,6,6.5,7,7.5,8,8.5,9,9.5,10].map(n => (
+              <button key={n} type="button"
+                onClick={() => setFormData(p => ({ ...p, rating: n }))}
+                className={`transition-all ${
+                  formData.rating === n
+                    ? formData.rating >= 8 ? 'text-emerald-500 scale-125 font-black'
+                      : formData.rating >= 6 ? 'text-amber-500 scale-125 font-black'
+                      : 'text-rose-400 scale-125 font-black'
+                    : 'text-slate-300'
+                }`}>
+                {n % 1 === 0 ? n : '·'}
+              </button>
+            ))}
+          </div>
         </div>
         {/* MOTM */}
         <div className="flex items-center gap-3 border-t border-slate-100 pt-3">
