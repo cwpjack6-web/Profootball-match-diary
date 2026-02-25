@@ -200,29 +200,17 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     const totalArthurGoals = (selectedMatch.arthurGoals || 0) + arthurGoals;
     const totalArthurAssists = (selectedMatch.arthurAssists || 0) + arthurAssists;
 
-    // Build scorers array
+    // Build scorers array — using correct {teammateId, count} format from MatchData type
     const existingScorers = selectedMatch.scorers || [];
     const newScorers = [...existingScorers];
-    // Add Arthur goals
-    for (let i = 0; i < arthurGoals; i++) {
-      newScorers.push({ playerId: 'arthur', name: profile.name, type: 'goal' });
-    }
-    // Add teammate goals
     Object.entries(teammateGoals).forEach(([id, count]) => {
-      const player = roster.find(r => r.id === id);
-      if (player) {
-        for (let i = 0; i < count; i++) {
-          newScorers.push({ playerId: id, name: player.name, type: 'goal' });
-        }
+      const existing = newScorers.find(s => s.teammateId === id);
+      if (existing) {
+        existing.count += count;
+      } else if (count > 0) {
+        newScorers.push({ teammateId: id, count });
       }
     });
-    // Add own goals
-    for (let i = 0; i < ownGoalsFor; i++) {
-      newScorers.push({ playerId: 'og_for', name: 'OG', type: 'own_goal_for' });
-    }
-    for (let i = 0; i < ownGoalsAgainst; i++) {
-      newScorers.push({ playerId: 'og_against', name: 'OG', type: 'own_goal_against' });
-    }
 
     // Accumulate periodsPlayed based on participation
     const periodContribution = participation === 'full' ? 1 : participation === 'partial' ? 0.5 : 0;
@@ -300,7 +288,9 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
 
   if (!isOpen) return null;
 
+  // Can save if: any content entered, OR participation explicitly chosen (even 'none')
   const hasContent = noteText.trim().length > 0 || arthurGoals > 0 || arthurAssists > 0 || Object.keys(teammateGoals).length > 0 || ownGoalsFor > 0 || ownGoalsAgainst > 0;
+  const canSave = hasContent || participation !== 'full'; // 'full' is default — if changed, always saveable
 
   return (
     <div className="fixed inset-0 z-[80] flex flex-col justify-end" onClick={handleClose}>
@@ -696,7 +686,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                 <textarea
                   value={noteText}
                   onChange={e => setNoteText(e.target.value)}
-                  placeholder={language === 'zh' ? '講出今節重點…（可用語音輸入）' : 'Key moments this period… (voice input supported)'}
+                  placeholder={language === 'zh' ? '今節重點…' : 'Key moments this period…'}
                   rows={4}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-400 focus:bg-white transition-colors resize-none"
                 />
@@ -714,7 +704,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
               <div className="space-y-2">
                 <button
                   onClick={handleSaveTournamentQuarter}
-                  disabled={!hasContent && scoreMyTeam === (selectedMatch?.scoreMyTeam || 0) && scoreOpponent === (selectedMatch?.scoreOpponent || 0)}
+                  disabled={!canSave}
                   className="w-full py-3 bg-purple-600 text-white rounded-xl font-black text-sm flex items-center justify-center gap-2 active:bg-purple-700 disabled:opacity-40 transition-colors shadow-lg"
                 >
                   <i className="fas fa-save" />
@@ -740,7 +730,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                 )}
                 <button
                   onClick={handleSave}
-                  disabled={periodLimitReached || (!hasContent && scoreMyTeam === (selectedMatch?.scoreMyTeam || 0) && scoreOpponent === (selectedMatch?.scoreOpponent || 0))}
+                  disabled={periodLimitReached || !canSave}
                   className="w-full py-4 bg-blue-600 text-white rounded-xl font-black text-sm flex items-center justify-center gap-2 active:bg-blue-700 disabled:opacity-40 transition-colors shadow-lg"
                 >
                   <i className="fas fa-save" />
