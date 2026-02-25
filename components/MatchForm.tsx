@@ -837,7 +837,9 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
             {([t.formPage1, t.formPage2, t.formPage3] as string[]).map((label, idx) => (
               <button key={idx + 1} type="button" onClick={() => setCurrentPage(idx + 1)}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
-                  currentPage === idx + 1 ? 'bg-white text-slate-800 shadow-sm' : `${styles.headerText} opacity-50 hover:opacity-80`}`}>
+                  currentPage === idx + 1
+                    ? 'bg-white text-slate-800 shadow-sm'
+                    : 'bg-black/10 text-slate-800'}`}>
                 <i className={`fas ${PAGE_ICONS[idx]} text-[9px]`} />
                 {label}
               </button>
