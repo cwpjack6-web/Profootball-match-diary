@@ -34,6 +34,9 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
   type ParticipationStatus = 'full' | 'partial' | 'none';
   const [participation, setParticipation] = useState<ParticipationStatus>('full');
   const [periodPosition, setPeriodPosition] = useState<string>('');
+  // Tournament / Quarter state
+  const [currentQuarterNum, setCurrentQuarterNum] = useState(1);
+  const [useQuarterMode, setUseQuarterMode] = useState(false);
 
   // ── Derived ───────────────────────────────────────────────────────────────
   const today = new Date().toISOString().split('T')[0];
@@ -67,6 +70,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
 
   // For league matches, cap at standard period count
   const isLeague = (selectedMatch?.matchType || 'league') === 'league';
+  const isTournament = selectedMatch?.matchType === 'tournament';
   const standardPeriods = selectedMatch?.matchStructure === 'halves' ? 2 : 4;
   const periodLimitReached = isLeague && existingPeriodCount >= standardPeriods;
 
@@ -120,6 +124,8 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     setOwnGoalsFor(0);
     setOwnGoalsAgainst(0);
     setParticipation('full');
+    setCurrentQuarterNum(1);
+    setUseQuarterMode(false);
     onClose();
   };
 
@@ -245,6 +251,53 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     handleClose();
   };
 
+  // ── Tournament: save quarter and auto-advance ─────────────────────────────
+  const handleSaveTournamentQuarter = () => {
+    if (!selectedMatchId || !selectedMatch) return;
+
+    const qNum = currentQuarterNum;
+    const qHeader = language === 'zh' ? `【Q${qNum}】` : `[Q${qNum}]`;
+    const goalSummary: string[] = [];
+    if (arthurGoals > 0) goalSummary.push(`${profile.name} ⚽×${arthurGoals}`);
+    if (arthurAssists > 0) goalSummary.push(`${profile.name} 👟×${arthurAssists}`);
+    Object.entries(teammateGoals).forEach(([id, count]) => {
+      const player = roster.find(r => r.id === id);
+      if (player) goalSummary.push(`${player.name} ⚽×${count}`);
+    });
+    const goalLine = goalSummary.length > 0
+      ? (language === 'zh' ? `入球：${goalSummary.join('、')}\n` : `Goals: ${goalSummary.join(', ')}\n`)
+      : '';
+    const qBlock = `${qHeader} ${scoreMyTeam}–${scoreOpponent}\n${goalLine}${noteText.trim()}`;
+    const existingComment = selectedMatch.dadComment || '';
+    const newComment = existingComment ? `${existingComment}\n\n${qBlock}` : qBlock;
+
+    const totalArthurGoals = (selectedMatch.arthurGoals || 0) + arthurGoals;
+    const totalArthurAssists = (selectedMatch.arthurAssists || 0) + arthurAssists;
+
+    // Build new quarter entry
+    const existingQuarters = selectedMatch.quarters || [];
+    const newQuarter = { scoreMyTeam, scoreOpponent, arthurGoals, arthurAssists, comment: noteText.trim() };
+
+    onSave(selectedMatchId, {
+      dadComment: newComment,
+      scoreMyTeam,
+      scoreOpponent,
+      arthurGoals: totalArthurGoals,
+      arthurAssists: totalArthurAssists,
+      quarters: [...existingQuarters, newQuarter],
+      status: 'completed',
+    });
+
+    // Advance to next quarter
+    setCurrentQuarterNum(q => q + 1);
+    setArthurGoals(0);
+    setArthurAssists(0);
+    setTeammateGoals({});
+    setNoteText('');
+    setOwnGoalsFor(0);
+    setOwnGoalsAgainst(0);
+  };
+
   if (!isOpen) return null;
 
   const hasContent = noteText.trim().length > 0 || arthurGoals > 0 || arthurAssists > 0 || Object.keys(teammateGoals).length > 0 || ownGoalsFor > 0 || ownGoalsAgainst > 0;
@@ -275,7 +328,9 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
             <span className="text-sm font-black text-slate-800">
               {step === 'select'
                 ? (language === 'zh' ? '⚡ 快速記錄' : '⚡ Quick Log')
-                : `⚡ ${language === 'zh' ? `節${nextPeriodNum}` : `Period ${nextPeriodNum}`} · vs ${selectedMatch?.opponent}`}
+                : isTournament
+                  ? `⚡ ${selectedMatch?.tournamentName || 'Tournament'} · Q${currentQuarterNum}`
+                  : `⚡ ${language === 'zh' ? `節${nextPeriodNum}` : `Period ${nextPeriodNum}`} · vs ${selectedMatch?.opponent}`}
             </span>
           </div>
           <button onClick={handleClose} className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
@@ -389,12 +444,48 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
         {step === 'log' && (
           <div className="overflow-y-auto flex-1">
 
-            {/* Existing periods summary */}
-            {existingPeriodCount > 0 && (
-              <div className="mx-4 mt-3 px-3 py-2 bg-slate-50 rounded-lg border border-slate-100">
-                <p className="text-[10px] font-black text-slate-400 uppercase">
-                  {language === 'zh' ? `已記錄 ${existingPeriodCount} 節` : `${existingPeriodCount} period(s) logged`}
+            {/* Tournament: Quarter tabs */}
+            {isTournament && (
+              <div className="px-4 pt-3">
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                  {Array.from({ length: currentQuarterNum }, (_, i) => i + 1).map(q => (
+                    <button key={q} onClick={() => setCurrentQuarterNum(q)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-black shrink-0 transition-all border-2 ${
+                        q === currentQuarterNum
+                          ? 'bg-purple-600 text-white border-purple-600'
+                          : 'bg-white text-slate-400 border-slate-200'
+                      }`}>
+                      Q{q} {q < currentQuarterNum ? '✓' : ''}
+                    </button>
+                  ))}
+                  <button onClick={() => setCurrentQuarterNum(q => q + 1)}
+                    className="px-3 py-1.5 rounded-full text-xs font-black shrink-0 border-2 border-dashed border-purple-300 text-purple-400">
+                    + Q{currentQuarterNum + 1}
+                  </button>
+                </div>
+                <p className="text-[10px] text-purple-500 font-bold mt-1">
+                  {language === 'zh' ? `正在記錄 Q${currentQuarterNum} 數據` : `Logging Q${currentQuarterNum} data`}
                 </p>
+              </div>
+            )}
+
+            {/* Non-tournament: optional quarter mode toggle */}
+            {!isTournament && (
+              <div className="mx-4 mt-3 flex items-center justify-between px-3 py-2 bg-slate-50 rounded-lg border border-slate-100">
+                <div>
+                  <p className="text-[10px] font-black text-slate-500 uppercase">
+                    {language === 'zh' ? '分節模式' : 'Quarter Mode'}
+                  </p>
+                  {existingPeriodCount > 0 && (
+                    <p className="text-[10px] text-blue-500 font-bold">
+                      {language === 'zh' ? `已記 ${existingPeriodCount} 節` : `${existingPeriodCount} period(s) logged`}
+                    </p>
+                  )}
+                </div>
+                <button onClick={() => setUseQuarterMode(v => !v)}
+                  className={`relative w-10 h-6 rounded-full transition-colors ${useQuarterMode ? 'bg-blue-500' : 'bg-slate-300'}`}>
+                  <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${useQuarterMode ? 'left-5' : 'left-1'}`} />
+                </button>
               </div>
             )}
 
@@ -403,7 +494,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
               {/* ① Score */}
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase mb-2">
-                  {language === 'zh' ? '累積比數' : 'Cumulative Score'}
+                  {isTournament ? (language === 'zh' ? `Q${currentQuarterNum} 比數` : `Q${currentQuarterNum} Score`) : (language === 'zh' ? '累積比數' : 'Cumulative Score')}
                 </p>
                 <div className="flex items-center justify-center gap-4 bg-slate-50 rounded-xl p-4 border border-slate-100">
                   {/* My team */}
@@ -435,7 +526,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
               {/* ② Goals & Assists */}
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase mb-2">
-                  {language === 'zh' ? '本節入球 / 助攻' : 'This Period Goals / Assists'}
+                  {isTournament ? (language === 'zh' ? `Q${currentQuarterNum} 入球 / 助攻` : `Q${currentQuarterNum} Goals / Assists`) : (language === 'zh' ? '本節入球 / 助攻' : 'This Period Goals / Assists')}
                 </p>
                 <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-3">
 
@@ -600,7 +691,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
               {/* ⑥ Note */}
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase mb-2">
-                  {language === 'zh' ? `節${nextPeriodNum} 筆記` : `Period ${nextPeriodNum} Notes`}
+                  {isTournament ? (language === 'zh' ? `Q${currentQuarterNum} 筆記` : `Q${currentQuarterNum} Notes`) : (language === 'zh' ? `節${nextPeriodNum} 筆記` : `Period ${nextPeriodNum} Notes`)}
                 </p>
                 <textarea
                   value={noteText}
@@ -618,25 +709,49 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
         {/* Save button */}
         {step === 'log' && (
           <div className="p-4 border-t border-slate-100 bg-white shrink-0">
-            {periodLimitReached && (
-              <p className="text-[10px] text-amber-600 bg-amber-50 rounded-lg px-3 py-2 mb-3 text-center font-bold border border-amber-100">
-                {language === 'zh'
-                  ? `聯賽節數上限為 ${standardPeriods} 節。如需更多節數，請改選杯賽或友誼賽。`
-                  : `League matches are capped at ${standardPeriods} periods. Change match type for more.`}
-              </p>
+            {isTournament ? (
+              /* Tournament: two buttons — save quarter + done */
+              <div className="space-y-2">
+                <button
+                  onClick={handleSaveTournamentQuarter}
+                  disabled={!hasContent && scoreMyTeam === (selectedMatch?.scoreMyTeam || 0) && scoreOpponent === (selectedMatch?.scoreOpponent || 0)}
+                  className="w-full py-3 bg-purple-600 text-white rounded-xl font-black text-sm flex items-center justify-center gap-2 active:bg-purple-700 disabled:opacity-40 transition-colors shadow-lg"
+                >
+                  <i className="fas fa-save" />
+                  {language === 'zh' ? `儲存 Q${currentQuarterNum} · 繼續 Q${currentQuarterNum + 1}` : `Save Q${currentQuarterNum} · Continue Q${currentQuarterNum + 1}`}
+                </button>
+                <button
+                  onClick={handleClose}
+                  className="w-full py-3 bg-slate-100 text-slate-700 rounded-xl font-black text-sm flex items-center justify-center gap-2 active:bg-slate-200 transition-colors"
+                >
+                  <i className="fas fa-check" />
+                  {language === 'zh' ? '完成今場 Game' : 'Done with this Game'}
+                </button>
+              </div>
+            ) : (
+              /* Normal match save */
+              <>
+                {periodLimitReached && (
+                  <p className="text-[10px] text-amber-600 bg-amber-50 rounded-lg px-3 py-2 mb-3 text-center font-bold border border-amber-100">
+                    {language === 'zh'
+                      ? `聯賽節數上限為 ${standardPeriods} 節。如需更多節數，請改選錦標賽或友誼賽。`
+                      : `League matches are capped at ${standardPeriods} periods. Change match type for more.`}
+                  </p>
+                )}
+                <button
+                  onClick={handleSave}
+                  disabled={periodLimitReached || (!hasContent && scoreMyTeam === (selectedMatch?.scoreMyTeam || 0) && scoreOpponent === (selectedMatch?.scoreOpponent || 0))}
+                  className="w-full py-4 bg-blue-600 text-white rounded-xl font-black text-sm flex items-center justify-center gap-2 active:bg-blue-700 disabled:opacity-40 transition-colors shadow-lg"
+                >
+                  <i className="fas fa-save" />
+                  {periodLimitReached
+                    ? (language === 'zh' ? `聯賽已達 ${standardPeriods} 節上限` : `League max ${standardPeriods} periods reached`)
+                    : language === 'zh'
+                      ? `儲存第 ${nextPeriodNum} 節`
+                      : `Save Period ${nextPeriodNum}`}
+                </button>
+              </>
             )}
-            <button
-              onClick={handleSave}
-              disabled={periodLimitReached || (!hasContent && scoreMyTeam === (selectedMatch?.scoreMyTeam || 0) && scoreOpponent === (selectedMatch?.scoreOpponent || 0))}
-              className="w-full py-4 bg-blue-600 text-white rounded-xl font-black text-sm flex items-center justify-center gap-2 active:bg-blue-700 disabled:opacity-40 transition-colors shadow-lg"
-            >
-              <i className="fas fa-save" />
-              {periodLimitReached
-                ? (language === 'zh' ? `聯賽已達 ${standardPeriods} 節上限` : `League max ${standardPeriods} periods reached`)
-                : language === 'zh'
-                  ? `儲存第 ${nextPeriodNum} 節`
-                  : `Save Period ${nextPeriodNum}`}
-            </button>
           </div>
         )}
       </div>
