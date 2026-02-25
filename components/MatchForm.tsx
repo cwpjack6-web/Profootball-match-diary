@@ -340,7 +340,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
         </div>
         <div className="relative inline-block w-12 h-6 select-none">
           <input type="checkbox" id="fixture-toggle" checked={isFixtureMode}
-            onChange={e => setFormData(prev => ({ ...prev, status: e.target.checked ? 'scheduled' : 'completed' }))}
+            onChange={e => { setFormData(prev => ({ ...prev, status: e.target.checked ? 'scheduled' : 'completed' })); if (e.target.checked) setCurrentPage(1); }}
             className="hidden" />
           <label htmlFor="fixture-toggle"
             className={`block h-6 rounded-full cursor-pointer transition-colors ${isFixtureMode ? 'bg-blue-500' : 'bg-slate-300'}`}>
@@ -837,7 +837,8 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
             </div>
           </div>
 
-          {/* Page tabs */}
+          {/* Page tabs — hidden in fixture mode */}
+          {!isFixtureMode && (
           <div className="flex gap-1">
             {([t.formPage1, t.formPage2, t.formPage3] as string[]).map((label, idx) => (
               <button key={idx + 1} type="button" onClick={() => setCurrentPage(idx + 1)}
@@ -850,6 +851,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
               </button>
             ))}
           </div>
+          )}
         </div>
 
         {/* Draft restore banner */}
@@ -887,34 +889,42 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
 
         {/* Footer navigation */}
         <div className="p-4 border-t border-slate-100 bg-white rounded-b-2xl flex-none">
-          <div className="flex gap-3">
-            {currentPage > 1 && (
-              <button type="button" onClick={() => setCurrentPage(p => p - 1)}
-                className="flex-none px-5 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-slate-200 transition-colors">
-                <i className="fas fa-chevron-left text-xs" /> {t.prevPage}
-              </button>
-            )}
-
-            {currentPage < PAGE_ICONS.length ? (
-              <button type="button" onClick={() => setCurrentPage(p => p + 1)}
-                className={`flex-1 ${styles.button} font-bold py-3 rounded-xl shadow-md flex items-center justify-center gap-2 transition-all`}>
-                {t.nextPage} <i className="fas fa-chevron-right text-xs" />
-              </button>
-            ) : (
-              <button type="button" onClick={handleSubmit}
-                className={`flex-1 ${styles.button} font-bold py-3 rounded-xl shadow-md flex items-center justify-center gap-2`}>
-                <i className={`fas ${isFixtureMode ? 'fa-calendar-plus' : 'fa-save'}`} /> {t.save}
-              </button>
-            )}
-          </div>
-
-          {/* Page dots */}
-          <div className="flex justify-center gap-2 mt-3">
-            {[1, 2, 3].map(p => (
-              <div key={p}
-                className={`rounded-full transition-all ${currentPage === p ? 'w-4 h-2 bg-blue-500' : 'w-2 h-2 bg-slate-200'}`} />
-            ))}
-          </div>
+          {isFixtureMode ? (
+            /* Fixture mode: single save button on page 1 */
+            <button type="button" onClick={handleSubmit}
+              className={`w-full ${styles.button} font-bold py-3 rounded-xl shadow-md flex items-center justify-center gap-2`}>
+              <i className="fas fa-calendar-plus" /> {t.save}
+            </button>
+          ) : (
+            <>
+              <div className="flex gap-3">
+                {currentPage > 1 && (
+                  <button type="button" onClick={() => setCurrentPage(p => p - 1)}
+                    className="flex-none px-5 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-slate-200 transition-colors">
+                    <i className="fas fa-chevron-left text-xs" /> {t.prevPage}
+                  </button>
+                )}
+                {currentPage < PAGE_ICONS.length ? (
+                  <button type="button" onClick={() => setCurrentPage(p => p + 1)}
+                    className={`flex-1 ${styles.button} font-bold py-3 rounded-xl shadow-md flex items-center justify-center gap-2 transition-all`}>
+                    {t.nextPage} <i className="fas fa-chevron-right text-xs" />
+                  </button>
+                ) : (
+                  <button type="button" onClick={handleSubmit}
+                    className={`flex-1 ${styles.button} font-bold py-3 rounded-xl shadow-md flex items-center justify-center gap-2`}>
+                    <i className="fas fa-save" /> {t.save}
+                  </button>
+                )}
+              </div>
+              {/* Page dots */}
+              <div className="flex justify-center gap-2 mt-3">
+                {[1, 2, 3].map(p => (
+                  <div key={p}
+                    className={`rounded-full transition-all ${currentPage === p ? 'w-4 h-2 bg-blue-500' : 'w-2 h-2 bg-slate-200'}`} />
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
