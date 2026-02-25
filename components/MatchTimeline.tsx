@@ -411,7 +411,7 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                   const tournamentMap: Record<string, MatchData[]> = {};
                   const standalone: MatchData[] = [];
                   groupMatches.forEach(m => {
-                    if (m.matchType === 'cup' && m.tournamentName) {
+                    if ((m.matchType === 'tournament' || m.matchType === 'cup') && m.tournamentName) {
                       const key = m.tournamentName;
                       if (!tournamentMap[key]) tournamentMap[key] = [];
                       tournamentMap[key].push(m);
@@ -420,12 +420,16 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                     }
                   });
 
-                  // Build ordered items: tournaments first (by earliest date), then standalone
-                  const items: Array<{ type: 'tournament'; key: string; matches: MatchData[] } | { type: 'match'; match: MatchData }> = [];
+                  // Build ordered items: ALL sorted by date (newest first within month)
+                  const items: Array<{ type: 'tournament'; key: string; matches: MatchData[]; sortDate: string } | { type: 'match'; match: MatchData; sortDate: string }> = [];
                   Object.entries(tournamentMap).forEach(([key, tMatches]) => {
-                    items.push({ type: 'tournament', key, matches: tMatches });
+                    // Use the latest date of the tournament's games as sort key
+                    const latestDate = tMatches.reduce((best, m) => m.date > best ? m.date : best, tMatches[0].date);
+                    items.push({ type: 'tournament', key, matches: tMatches, sortDate: latestDate });
                   });
-                  standalone.forEach(m => items.push({ type: 'match', match: m }));
+                  standalone.forEach(m => items.push({ type: 'match', match: m, sortDate: m.date }));
+                  // Sort all items by date descending (same as rest of timeline)
+                  items.sort((a, b) => b.sortDate.localeCompare(a.sortDate));
 
                   return items.map((item, itemIdx) => {
                     if (item.type === 'tournament') {
