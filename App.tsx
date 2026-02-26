@@ -11,7 +11,7 @@ import {
   deleteUserProfile,
   isBackupNeeded
 } from './services/storage';
-import { getTeamById, getTeamColorStyles } from './utils/colors';
+import { getTeamById, getTeamColorStyles, COLORS } from './utils/colors';
 import { extractYoutubeId } from './utils/youtube';
 import { useLanguage } from './context/LanguageContext';
 import { useToast } from './context/ToastContext';
@@ -415,6 +415,7 @@ const App: React.FC = () => {
       : activeProfile?.teams?.[0];
 
   const mainTheme = activeTeam ? getTeamColorStyles(activeTeam.themeColor) : getTeamColorStyles('blue');
+  const teamHex = activeTeam ? (COLORS.find((c: {value: string; hex: string}) => c.value === activeTeam.themeColor)?.hex ?? '#3b82f6') : '#3b82f6';
 
   // ── 賽季分享 title ─────────────────────────────────────────────────────────
   const seasonShareTitle = useMemo(() => {
@@ -431,7 +432,7 @@ const App: React.FC = () => {
   if (currentView === 'cover' || !activeProfile) return <><CoverPage profiles={allProfiles} onSelectProfile={handleSelectProfile} onAddProfile={handleAddNewProfile} onImportData={() => { setSyncSubset(null); setIsSyncOpen(true); }} onDeleteProfile={handleDeleteProfile} /><SyncModal isOpen={isSyncOpen} onClose={() => setIsSyncOpen(false)} matches={[]} profile={null} onSyncComplete={handleSyncComplete} syncOnlyMatches={null} /></>;
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-slate-100 overflow-hidden">
+    <div className="flex flex-col h-[100dvh] overflow-hidden" style={{ background: `linear-gradient(180deg, ${teamHex}12 0%, ${teamHex}06 120px, #f1f5f9 300px)` }}>
       {/* HEADER */}
       <header className={`${mainTheme.headerBg} flex-none z-30 shadow-md transition-colors duration-300 safe-area-top`}>
         <div className="max-w-2xl mx-auto px-4 py-3">
@@ -468,7 +469,7 @@ const App: React.FC = () => {
       </header>
 
       {/* CONTENT */}
-      <main className="flex-1 overflow-y-auto pb-40 relative bg-slate-100 w-full min-h-0">
+      <main className="flex-1 overflow-y-auto pb-40 relative w-full min-h-0">
         <div className="max-w-2xl mx-auto min-h-full">
             {activeTab === 'stats' && <AnalyticsDashboard matches={matches} profile={activeProfile} onNavigateToMatch={handleNavigateToMatch} />}
             {activeTab === 'teams' && <TeamManager profile={activeProfile} onUpdateProfile={handleUpdateProfileFromManager} />}
@@ -477,7 +478,7 @@ const App: React.FC = () => {
             {activeTab === 'matches' && (
             <div className="animate-fade-in relative">
                 {activeProfile.teams.length > 0 && matches.length > 0 && (
-                  <div className="sticky top-0 z-20 bg-slate-100/95 backdrop-blur-sm border-b border-slate-200/50 shadow-sm">
+                  <div className="sticky top-0 z-20 backdrop-blur-md border-b border-slate-200/50 shadow-sm" style={{ backgroundColor: `${teamHex}15` }}>
                       <div className="px-4 py-3 flex gap-2 overflow-x-auto no-scrollbar items-center">
                           <button onClick={() => setQuickTeamFilter('all')} className={`flex-none px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${quickTeamFilter === 'all' ? 'bg-slate-800 text-white border-slate-800 shadow-md' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>{t.allTeams}</button>
                           {activeProfile.teams.filter(t => showArchived || !t.isArchived).map(team => {
