@@ -66,10 +66,15 @@ const JournalSheet: React.FC<JournalSheetProps> = ({ entries, matches, onSave, o
     setShowForm(true);
   };
 
-  const handleLinkChange = (matchId: string) => {
-    setFormLinkedId(matchId);
-    if (!matchId) { setFormLinkedName(''); return; }
-    const m = matches.find(x => x.id === matchId);
+  const handleLinkChange = (value: string) => {
+    setFormLinkedId(value);
+    if (!value) { setFormLinkedName(''); return; }
+    if (value.startsWith('tournament:')) {
+      const tName = value.replace('tournament:', '');
+      setFormLinkedName(tName);
+      return;
+    }
+    const m = matches.find(x => x.id === value);
     if (!m) return;
     setFormLinkedName(m.tournamentName || m.opponent);
   };
@@ -309,13 +314,40 @@ const JournalSheet: React.FC<JournalSheetProps> = ({ entries, matches, onSave, o
                 <select value={formLinkedId} onChange={e => handleLinkChange(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:border-blue-400">
                   <option value="">{zh ? '-- 唔關聯 --' : '-- None --'}</option>
-                  {matches
-                    .sort((a, b) => b.date.localeCompare(a.date))
-                    .map(m => (
-                      <option key={m.id} value={m.id}>
-                        {m.date} · {m.tournamentName || m.opponent}
-                      </option>
-                    ))}
+                  {(() => {
+                    // Group: tournaments first (deduplicated), then standalone matches
+                    const seen = new Set<string>();
+                    const tournaments: { id: string; name: string; date: string }[] = [];
+                    const standalone: typeof matches = [];
+                    [...matches].sort((a, b) => b.date.localeCompare(a.date)).forEach(m => {
+                      if (m.tournamentName) {
+                        if (!seen.has(m.tournamentName)) {
+                          seen.add(m.tournamentName);
+                          tournaments.push({ id: `tournament:${m.tournamentName}`, name: m.tournamentName, date: m.date });
+                        }
+                      } else {
+                        standalone.push(m);
+                      }
+                    });
+                    return (
+                      <>
+                        {tournaments.length > 0 && (
+                          <optgroup label={zh ? '錦標賽' : 'Tournaments'}>
+                            {tournaments.map(t => (
+                              <option key={t.id} value={t.id}>{t.date.slice(0,7)} · 🏆 {t.name}</option>
+                            ))}
+                          </optgroup>
+                        )}
+                        {standalone.length > 0 && (
+                          <optgroup label={zh ? '比賽' : 'Matches'}>
+                            {standalone.map(m => (
+                              <option key={m.id} value={m.id}>{m.date} · {m.opponent}</option>
+                            ))}
+                          </optgroup>
+                        )}
+                      </>
+                    );
+                  })()}
                 </select>
               </div>
 
