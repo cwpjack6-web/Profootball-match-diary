@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { MatchData, UserProfile } from '../types';
+import { JournalEntry } from './JournalSheet';
 import { getTeamById, getTeamColorStyles } from '../utils/colors';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -24,14 +25,16 @@ interface MatchTimelineProps {
   scrollToMatchId?: string | null;
   onScrollToMatchDone?: () => void;
   isFiltered?: boolean;
+  journals?: JournalEntry[];
+  onAddJournal?: (linkedMatchId: string, linkedMatchName: string) => void;
 }
 
 const MatchTimeline: React.FC<MatchTimelineProps> = ({
   matches, profile, isSelectionMode, selectedMatchIds, deleteConfirmId, expandedMatchIds,
   onSelectMatch, onShare, onShareTournament, onEditTournament, onEdit, onTrashClick, onConfirmDelete, onCancelDelete, onToggleExpansion, onOpenVideo, onOpponentClick,
-  scrollToMatchId, onScrollToMatchDone, isFiltered
+  scrollToMatchId, onScrollToMatchDone, isFiltered, journals = [], onAddJournal
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   
   const [expandedMonthGroups, setExpandedMonthGroups] = useState<Set<string>>(new Set());
   const [swipedMatchId, setSwipedMatchId] = useState<string | null>(null);
@@ -703,6 +706,38 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                               })}
                             </div>
                           )}
+                        {/* ── Linked journal entries ── */}
+                        {(() => {
+                          const linked = journals.filter(j => 
+                            tMatches.some(m => m.id === j.linkedMatchId) ||
+                            j.linkedMatchName === tKey
+                          );
+                          return linked.length > 0 || onAddJournal ? (
+                            <div className="border-t border-amber-100 bg-white/60 px-4 py-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-1">
+                                  <i className="fas fa-book-open text-amber-400" /> 日誌
+                                </span>
+                                {onAddJournal && (
+                                  <button
+                                    onClick={e => { e.stopPropagation(); onAddJournal(tMatches[0].id, tKey); }}
+                                    className="text-[10px] font-bold text-amber-600 flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-100">
+                                    <i className="fas fa-plus text-[8px]" /> 新增
+                                  </button>
+                                )}
+                              </div>
+                              {linked.map(j => (
+                                <div key={j.id} className="text-xs text-slate-600 bg-white rounded-lg px-3 py-2 mb-1.5 border border-slate-100 leading-relaxed">
+                                  <span className="text-[10px] text-slate-400 font-bold mr-2">{j.date}</span>
+                                  {j.content.length > 60 ? j.content.slice(0, 60) + '…' : j.content}
+                                </div>
+                              ))}
+                              {linked.length === 0 && (
+                                <p className="text-[11px] text-slate-400 italic">{`未有關聯日誌`}</p>
+                              )}
+                            </div>
+                          ) : null;
+                        })()}
                         </div>
                       );
                     }
@@ -944,6 +979,26 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                                   <p className="text-slate-700 text-sm">{match.kidInterview}</p>
                                 </div>
                               )}
+
+                              {/* ── Linked journal entries for standalone match ── */}
+                              {(() => {
+                                const linked = journals.filter(j => j.linkedMatchId === match.id);
+                                if (linked.length === 0) return null;
+                                return (
+                                  <div className="pt-2 border-t border-dashed border-slate-100">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-1 mb-2">
+                                      <i className="fas fa-book-open text-blue-400" /> {language === 'zh' ? '日誌' : 'Journal'}
+                                    </p>
+                                    {linked.map(j => (
+                                      <div key={j.id} className="text-xs text-slate-600 bg-slate-50 rounded-lg px-3 py-2 mb-1.5 border border-slate-100 leading-relaxed">
+                                        <span className="text-[10px] text-slate-400 font-bold mr-2">{j.date}</span>
+                                        {j.content.length > 80 ? j.content.slice(0, 80) + '…' : j.content}
+                                      </div>
+                                    ))}
+                                  </div>
+                                );
+                              })()}
+
                               {match.videos.length > 0 && (
                                 <div className="pt-1 flex flex-wrap gap-2">
                                   {match.videos.map(v => (
