@@ -926,6 +926,25 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                             </div>
                           </div>
 
+                          {/* ── Journal preview (always visible) ── */}
+                          {(() => {
+                            const linked = journals.filter(j => j.linkedMatchId === match.id);
+                            if (linked.length === 0) return null;
+                            return (
+                              <div className="mt-2 pt-2 border-t border-dashed border-slate-200">
+                                <p className="text-[10px] font-black text-slate-400 uppercase flex items-center gap-1 mb-1.5">
+                                  <i className="fas fa-book-open text-blue-400" /> {language === 'zh' ? '日誌' : 'Journal'}
+                                </p>
+                                {linked.map(j => (
+                                  <div key={j.id} className="text-xs text-slate-600 bg-slate-50 rounded-lg px-3 py-2 mb-1 border border-slate-100 leading-relaxed">
+                                    <span className="text-[10px] text-slate-400 font-bold mr-2">{j.date}</span>
+                                    {j.content.length > 60 ? j.content.slice(0, 60) + '…' : j.content}
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          })()}
+
                           {/* Expanded details */}
                           {isExpanded && (
                             <div className="mt-3 space-y-3 pt-2 animate-fade-in border-t border-black/5 border-dashed">
