@@ -1,6 +1,6 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { MatchData, UserProfile, Team, migrateMatchType } from './types';
+import JournalSheet, { JournalEntry } from './components/JournalSheet';
 import { 
   getMatches, 
   addMatchToStorage, 
@@ -32,7 +32,7 @@ import QuickLogSheet from './components/QuickLogSheet';
 import OnboardingModal from './components/OnboardingModal';
 
 type AppView = 'cover' | 'setup' | 'dashboard';
-type Tab = 'matches' | 'stats' | 'teams' | 'profile' | 'coach';
+type Tab = 'matches' | 'stats' | 'teams' | 'coach' | 'journal';
 
 const APP_VERSION = '1.2.0';
 
@@ -50,6 +50,11 @@ const App: React.FC = () => {
   const [matches, setMatches] = useState<MatchData[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSyncOpen, setIsSyncOpen] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [journals, setJournals] = useState<JournalEntry[]>(() => {
+    try { const r = localStorage.getItem('journal_entries'); return r ? JSON.parse(r) : []; }
+    catch { return []; }
+  });
   const [editingMatch, setEditingMatch] = useState<MatchData | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('matches');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -428,6 +433,22 @@ const App: React.FC = () => {
   }, [activeProfile, quickTeamFilter]);
 
   if (loading) return null;
+  // ── Journal handlers ──────────────────────────────────────────────────────
+  const handleSaveJournal = (data: Omit<JournalEntry, 'id' | 'createdAt'>) => {
+    setJournals(prev => {
+      const next = [...prev, { ...data, id: `j_${Date.now()}`, createdAt: Date.now() }];
+      localStorage.setItem('journal_entries', JSON.stringify(next));
+      return next;
+    });
+  };
+  const handleDeleteJournal = (id: string) => {
+    setJournals(prev => {
+      const next = prev.filter(e => e.id !== id);
+      localStorage.setItem('journal_entries', JSON.stringify(next));
+      return next;
+    });
+  };
+
   if (currentView === 'setup') return <ProfileSetup initialProfile={activeProfile} onSave={handleSaveProfile} onCancel={() => setCurrentView('cover')} />;
   if (currentView === 'cover' || !activeProfile) return <><CoverPage profiles={allProfiles} onSelectProfile={handleSelectProfile} onAddProfile={handleAddNewProfile} onImportData={() => { setSyncSubset(null); setIsSyncOpen(true); }} onDeleteProfile={handleDeleteProfile} /><SyncModal isOpen={isSyncOpen} onClose={() => setIsSyncOpen(false)} matches={[]} profile={null} onSyncComplete={handleSyncComplete} syncOnlyMatches={null} /></>;
 
@@ -458,8 +479,8 @@ const App: React.FC = () => {
 
                 {activeTab === 'matches' && <button onClick={toggleSelectionMode} className={`${isSelectionMode ? 'bg-white text-slate-800' : 'bg-black/20 text-white hover:bg-black/30'} w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors`}><i className={`fas ${isSelectionMode ? 'fa-check-square' : 'fa-list-ul'} text-sm`}></i></button>}
                 {!isSelectionMode && (
-                    <button onClick={() => { setSyncSubset(null); setIsSyncOpen(true); }} className="relative bg-black/20 hover:bg-black/30 text-white w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors">
-                        <i className="fas fa-qrcode text-sm"></i>
+                    <button onClick={() => setShowSettings(true)} className="relative bg-black/20 hover:bg-black/30 text-white w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors">
+                        <i className="fas fa-cog text-sm"></i>
                         {showBackupAlert && <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>}
                     </button>
                 )}
@@ -522,32 +543,15 @@ const App: React.FC = () => {
             </div>
             )}
             
-             {activeTab === 'profile' && (
-                 <div className="p-4 flex flex-col items-center justify-center min-h-[50vh] space-y-4 animate-fade-in">
-                     <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 w-full text-center">
-                         <div className="w-20 h-20 rounded-full bg-slate-100 mx-auto mb-4 overflow-hidden border-4 border-white shadow-md relative">
-                             {activeProfile.avatar ? <img src={activeProfile.avatar} className="w-full h-full object-cover"/> : <i className="fas fa-user text-3xl text-slate-300 mt-5"></i>}
-                         </div>
-                         <h2 className="text-xl font-bold text-slate-800">{activeProfile.name}</h2>
-                         <button onClick={handleEditProfile} className="w-full py-3 bg-blue-50 text-blue-600 rounded-xl font-bold mb-3 hover:bg-blue-100 mt-6">{t.edit} {t.navProfile}</button>
-                         <button onClick={handleSwitchUser} className="w-full py-3 bg-slate-50 text-slate-600 rounded-xl font-bold hover:bg-slate-100">{t.switchUser}</button>
-                     </div>
-
-                     <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-2xl shadow-sm border border-orange-100 w-full text-center relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-orange-100/50 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
-                        <h3 className="text-lg font-bold text-slate-800 mb-2">{t.supportDevTitle}</h3>
-                        <p className="text-xs text-slate-600 mb-4 leading-relaxed opacity-90">{t.supportDevDesc}</p>
-                        <a 
-                            href="https://buymeacoffee.com/jcfromhk" 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 bg-[#FFDD00] text-black font-black px-6 py-3 rounded-full shadow-md hover:shadow-lg hover:scale-105 transition-all text-xs"
-                        >
-                            <span className="text-base">☕</span> {t.buyCoffeeBtn}
-                        </a>
-                    </div>
-                 </div>
-             )}
+            {activeTab === 'journal' && (
+              <JournalSheet
+                entries={journals}
+                matches={matches.map(m => ({ id: m.id, opponent: m.opponent, date: m.date, tournamentName: m.tournamentName, matchType: m.matchType }))}
+                onSave={handleSaveJournal}
+                onDelete={handleDeleteJournal}
+                teamHex={teamHex}
+              />
+            )}
 
             {!isSelectionMode && activeTab === 'matches' && (
                 <div className="fixed bottom-24 right-6 sm:right-[calc(50%-336px)] z-40 flex flex-col gap-3 items-end">
@@ -587,11 +591,113 @@ const App: React.FC = () => {
         <div className="max-w-2xl mx-auto grid grid-cols-5 h-16">
             <button onClick={() => transitionTab('matches')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'matches' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-list-ul text-lg ${activeTab === 'matches' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.navMatches}</span></button>
             <button onClick={() => transitionTab('stats')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'stats' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-chart-pie text-lg ${activeTab === 'stats' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.navStats}</span></button>
+            <button onClick={() => transitionTab('journal')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'journal' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-book-open text-lg ${activeTab === 'journal' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{language === 'zh' ? '日誌' : 'Journal'}</span></button>
             <button onClick={() => transitionTab('coach')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'coach' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-magic text-lg ${activeTab === 'coach' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.navCoach}</span></button>
             <button onClick={() => transitionTab('teams')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'teams' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-users-cog text-lg ${activeTab === 'teams' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.manageTeams}</span></button>
-            <button onClick={() => transitionTab('profile')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'profile' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-user-circle text-lg ${activeTab === 'profile' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.navProfile}</span></button>
         </div>
       </nav>
+
+      {/* ── Settings Drawer ── */}
+      {showSettings && (
+        <div className="fixed inset-0 z-[80] flex justify-end" onClick={() => setShowSettings(false)}>
+          <div className="absolute inset-0 bg-black/50" />
+          <div
+            className="relative z-10 bg-white w-80 h-full shadow-2xl flex flex-col"
+            style={{ animation: 'slideInRight 0.25s cubic-bezier(0.32,0.72,0,1)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <style>{`@keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }`}</style>
+
+            {/* Header */}
+            <div className={`${mainTheme.headerBg} p-4 flex items-center justify-between flex-none`}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-white/20 overflow-hidden flex items-center justify-center">
+                  {activeProfile.avatar
+                    ? <img src={activeProfile.avatar} className="w-full h-full object-cover" />
+                    : <i className="fas fa-user text-white" />}
+                </div>
+                <div>
+                  <p className={`font-black text-sm ${mainTheme.headerText}`}>{activeProfile.name}</p>
+                  <p className="text-white/60 text-[10px]">{activeProfile.teams?.length ?? 0} {language === 'zh' ? '支球隊' : 'teams'}</p>
+                </div>
+              </div>
+              <button onClick={() => setShowSettings(false)}
+                className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white">
+                <i className="fas fa-times text-sm" />
+              </button>
+            </div>
+
+            {/* Menu items */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+
+              <p className="text-[10px] font-black text-slate-400 uppercase px-2 mb-1">{language === 'zh' ? '帳戶' : 'Account'}</p>
+
+              <button onClick={() => { setShowSettings(false); handleEditProfile(); }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors text-left">
+                <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center">
+                  <i className="fas fa-user-edit text-blue-600 text-sm" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-slate-700">{language === 'zh' ? '編輯檔案' : 'Edit Profile'}</p>
+                  <p className="text-[11px] text-slate-400">{language === 'zh' ? '修改名稱、頭像' : 'Name, avatar'}</p>
+                </div>
+                <i className="fas fa-chevron-right text-slate-300 text-xs ml-auto" />
+              </button>
+
+              <button onClick={() => { setShowSettings(false); handleSwitchUser(); }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors text-left">
+                <div className="w-9 h-9 rounded-xl bg-purple-100 flex items-center justify-center">
+                  <i className="fas fa-exchange-alt text-purple-600 text-sm" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-slate-700">{language === 'zh' ? '切換用戶' : 'Switch User'}</p>
+                  <p className="text-[11px] text-slate-400">{language === 'zh' ? '返回選擇頁面' : 'Go to profile select'}</p>
+                </div>
+                <i className="fas fa-chevron-right text-slate-300 text-xs ml-auto" />
+              </button>
+
+              <div className="pt-2">
+                <p className="text-[10px] font-black text-slate-400 uppercase px-2 mb-1">{language === 'zh' ? '數據' : 'Data'}</p>
+              </div>
+
+              <button onClick={() => { setShowSettings(false); setSyncSubset(null); setIsSyncOpen(true); }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors text-left relative">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center">
+                  <i className="fas fa-sync-alt text-emerald-600 text-sm" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-slate-700">{language === 'zh' ? '備份 / 匯出 / 匯入' : 'Backup / Export / Import'}</p>
+                  <p className="text-[11px] text-slate-400">{language === 'zh' ? '保護你嘅數據' : 'Protect your data'}</p>
+                </div>
+                {showBackupAlert && <span className="absolute right-4 top-1/2 -translate-y-1/2 w-2 h-2 bg-red-500 rounded-full" />}
+                <i className="fas fa-chevron-right text-slate-300 text-xs ml-auto" />
+              </button>
+
+              <div className="pt-2">
+                <p className="text-[10px] font-black text-slate-400 uppercase px-2 mb-1">{language === 'zh' ? '支持開發' : 'Support'}</p>
+              </div>
+
+              <a href="https://buymeacoffee.com/jcfromhk" target="_blank" rel="noopener noreferrer"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 hover:bg-amber-100 transition-colors">
+                <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center">
+                  <span className="text-lg">☕</span>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-slate-700">{t.buyCoffeeBtn}</p>
+                  <p className="text-[11px] text-slate-400">{t.supportDevDesc}</p>
+                </div>
+                <i className="fas fa-external-link-alt text-slate-300 text-xs ml-auto" />
+              </a>
+
+            </div>
+
+            {/* Version */}
+            <div className="p-4 border-t border-slate-100 flex-none">
+              <p className="text-[10px] text-slate-400 text-center">ProFootball Match Diary</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Modals ── */}
       <MatchForm isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} onSubmit={handleFormSubmit} profile={activeProfile} initialData={editingMatch} previousMatches={matches} onAddTeammate={handleAddTeammate} />
