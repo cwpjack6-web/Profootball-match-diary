@@ -114,6 +114,11 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     setParticipation('full');
     setPeriodPositions([]);
     setNoteText('');
+    // Seed localPeriodOffset from already-saved periods in dadComment
+    const comment = m.dadComment || '';
+    const zh = (comment.match(/【節\d+】/g) || []).length;
+    const en = (comment.match(/\[Period \d+\]/g) || []).length;
+    setLocalPeriodOffset(Math.max(zh, en));
   };
 
   // ── Reset on close ────────────────────────────────────────────────────────
