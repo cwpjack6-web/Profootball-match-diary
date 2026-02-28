@@ -304,8 +304,20 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     setOwnGoalsAgainst(0);
   };
 
-  // ── Done: show rating modal before closing ─────────────────────────────────
+  // ── Done: save current period first, then show rating modal ────────────────
   const handleDone = () => {
+    // Save the current (final) period's data before showing rating modal
+    // Only auto-save if there's actual content to save
+    const hasContentToSave = noteText.trim().length > 0
+      || arthurGoals > 0
+      || arthurAssists > 0
+      || Object.keys(teammateGoals).length > 0
+      || ownGoalsFor > 0
+      || ownGoalsAgainst > 0;
+
+    if (hasContentToSave && selectedMatchId && selectedMatch) {
+      handleSave();
+    }
     setShowRatingModal(true);
   };
 
