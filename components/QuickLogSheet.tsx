@@ -314,10 +314,78 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     setOwnGoalsAgainst(0);
   };
 
-  // ── Done: save current period first, then show rating modal ────────────────
+  // ── Done: build final period update, show rating modal ──────────────────────
+  // We capture the period data NOW (before state clears) and store it
+  // Then on rating confirm, we merge period + rating into ONE onSave call
+  const [pendingFinalUpdate, setPendingFinalUpdate] = useState<Record<string, any> | null>(null);
+
+  const buildFinalPeriodUpdate = () => {
+    if (!selectedMatchId || !selectedMatch) return null;
+
+    const participationLabel = participation === 'full'
+      ? (language === 'zh' ? '全節' : 'Full')
+      : participation === 'partial'
+      ? (language === 'zh' ? '部分' : 'Partial')
+      : (language === 'zh' ? '未出場' : 'Did Not Play');
+
+    const periodHeader = language === 'zh'
+      ? `【節${nextPeriodNum}】`
+      : `[Period ${nextPeriodNum}]`;
+
+    const goalSummary: string[] = [];
+    if (arthurGoals > 0) goalSummary.push(`${profile.name} ⚽×${arthurGoals}`);
+    if (arthurAssists > 0) goalSummary.push(`${profile.name} 👟×${arthurAssists}`);
+    Object.entries(teammateGoals).forEach(([id, count]) => {
+      const player = roster.find(r => r.id === id);
+      if (player) goalSummary.push(`${player.name} ⚽×${count}`);
+    });
+    const goalLine = goalSummary.length > 0
+      ? (language === 'zh' ? `入球：${goalSummary.join('、')}\n` : `Goals: ${goalSummary.join(', ')}\n`)
+      : '';
+    const posLabel = periodPositions.length > 0 ? ` [${periodPositions.join('/')}]` : '';
+    const periodBlock = `${periodHeader} [${participationLabel}]${posLabel}\n${goalLine}${noteText.trim()}`;
+
+    const existingComment = selectedMatch.dadComment || '';
+    const newComment = existingComment ? `${existingComment}\n\n${periodBlock}` : periodBlock;
+
+    const totalArthurGoals = (selectedMatch.arthurGoals || 0) + arthurGoals;
+    const totalArthurAssists = (selectedMatch.arthurAssists || 0) + arthurAssists;
+
+    const existingScorers = selectedMatch.scorers || [];
+    const newScorers = [...existingScorers];
+    Object.entries(teammateGoals).forEach(([id, count]) => {
+      const existing = newScorers.find((s: any) => s.teammateId === id);
+      if (existing) { existing.count += count; }
+      else if (count > 0) { newScorers.push({ teammateId: id, count }); }
+    });
+    if (ownGoalsFor > 0) {
+      for (let i = 0; i < ownGoalsFor; i++) newScorers.push({ playerId: 'og_for', name: 'OG', type: 'own_goal_for' });
+    }
+    if (ownGoalsAgainst > 0) {
+      for (let i = 0; i < ownGoalsAgainst; i++) newScorers.push({ playerId: 'og_against', name: 'OG', type: 'own_goal_against' });
+    }
+
+    const periodContribution = participation === 'full' ? 1 : participation === 'partial' ? 0.5 : 0;
+    const totalPeriodsPlayed = (selectedMatch.periodsPlayed || 0) + periodContribution;
+    const existingPositions: string[] = Array.isArray(selectedMatch.positionPlayed)
+      ? selectedMatch.positionPlayed
+      : (selectedMatch.positionPlayed ? [selectedMatch.positionPlayed as string] : []);
+    const updatedPositions = [...new Set([...existingPositions, ...periodPositions])];
+
+    return {
+      dadComment: newComment,
+      scoreMyTeam,
+      scoreOpponent,
+      arthurGoals: totalArthurGoals,
+      arthurAssists: totalArthurAssists,
+      scorers: newScorers,
+      periodsPlayed: totalPeriodsPlayed,
+      positionPlayed: updatedPositions,
+      status: 'completed' as const,
+    };
+  };
+
   const handleDone = () => {
-    // Save the current (final) period's data before showing rating modal
-    // Only auto-save if there's actual content to save
     const hasContentToSave = noteText.trim().length > 0
       || arthurGoals > 0
       || arthurAssists > 0
@@ -326,14 +394,23 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
       || ownGoalsAgainst > 0;
 
     if (hasContentToSave && selectedMatchId && selectedMatch) {
-      handleSave();
+      // Capture final period data now, save together with rating in one call
+      const update = buildFinalPeriodUpdate();
+      setPendingFinalUpdate(update);
+    } else {
+      setPendingFinalUpdate(null);
     }
     setShowRatingModal(true);
   };
 
   const handleRatingConfirm = () => {
-    if (!selectedMatchId || !selectedMatch) { handleClose(); return; }
-    onSave(selectedMatchId, { rating: pendingRating });
+    if (!selectedMatchId) { handleClose(); return; }
+    // Merge final period update + rating into ONE call to avoid race condition
+    const update = pendingFinalUpdate
+      ? { ...pendingFinalUpdate, rating: pendingRating }
+      : { rating: pendingRating };
+    onSave(selectedMatchId, update);
+    setPendingFinalUpdate(null);
     setShowRatingModal(false);
     handleClose();
   };
