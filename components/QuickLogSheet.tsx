@@ -34,6 +34,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
   type ParticipationStatus = 'full' | 'partial' | 'none';
   const [participation, setParticipation] = useState<ParticipationStatus>('full');
   const [periodPositions, setPeriodPositions] = useState<string[]>([]);
+  const [localPeriodOffset, setLocalPeriodOffset] = useState(0); // tracks periods saved this session
   // Rating modal state
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [pendingRating, setPendingRating] = useState(8);
@@ -70,13 +71,13 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     return Math.max(zh, en);
   }, [selectedMatch]);
 
-  const nextPeriodNum = existingPeriodCount + 1;
+  const nextPeriodNum = existingPeriodCount + localPeriodOffset + 1;
 
   // For league matches, cap at standard period count
   const isLeague = (selectedMatch?.matchType || 'league') === 'league';
   const isTournament = selectedMatch?.matchType === 'tournament';
   const standardPeriods = selectedMatch?.matchStructure === 'halves' ? 2 : 4;
-  const periodLimitReached = isLeague && existingPeriodCount >= standardPeriods;
+  const periodLimitReached = isLeague && (existingPeriodCount + localPeriodOffset) >= standardPeriods;
 
   // Roster for tapping
   const roster = useMemo(() => {
@@ -129,6 +130,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     setOwnGoalsAgainst(0);
     setParticipation('full');
     setCurrentQuarterNum(1);
+    setLocalPeriodOffset(0);
     setShowRatingModal(false);
     setPendingRating(8);
     onClose();
@@ -249,6 +251,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     });
 
     // Reset per-period fields, ready for next period
+    setLocalPeriodOffset(n => n + 1); // immediately advance period num without waiting for prop update
     setArthurGoals(0);
     setArthurAssists(0);
     setTeammateGoals({});
