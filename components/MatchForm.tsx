@@ -112,7 +112,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
       try {
         const parsed = JSON.parse(raw);
         setHasDraft(true);
-        setFormData(parsed);
+        setFormData({ ...parsed, periodsPlayed: 0 });
       } catch {
         localStorage.removeItem(DRAFT_KEY);
       }
