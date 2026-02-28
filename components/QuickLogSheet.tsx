@@ -62,10 +62,12 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     matches.find(m => m.id === selectedMatchId) || null,
   [matches, selectedMatchId]);
 
-  // Period count from existing dadComment (count "【節" occurrences)
+  // Period count from existing dadComment — match both 【節X】 (zh) and [Period X] (en)
   const existingPeriodCount = useMemo(() => {
     if (!selectedMatch?.dadComment) return 0;
-    return (selectedMatch.dadComment.match(/【節\d+】/g) || []).length;
+    const zh = (selectedMatch.dadComment.match(/【節\d+】/g) || []).length;
+    const en = (selectedMatch.dadComment.match(/\[Period \d+\]/g) || []).length;
+    return Math.max(zh, en);
   }, [selectedMatch]);
 
   const nextPeriodNum = existingPeriodCount + 1;
