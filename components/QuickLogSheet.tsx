@@ -71,13 +71,13 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     return Math.max(zh, en);
   }, [selectedMatch]);
 
-  const nextPeriodNum = existingPeriodCount + localPeriodOffset + 1;
+  const nextPeriodNum = localPeriodOffset + 1;
 
   // For league matches, cap at standard period count
   const isLeague = (selectedMatch?.matchType || 'league') === 'league';
   const isTournament = selectedMatch?.matchType === 'tournament';
   const standardPeriods = selectedMatch?.matchStructure === 'halves' ? 2 : 4;
-  const periodLimitReached = isLeague && (existingPeriodCount + localPeriodOffset) >= standardPeriods;
+  const periodLimitReached = isLeague && localPeriodOffset >= standardPeriods;
 
   // Roster for tapping
   const roster = useMemo(() => {
@@ -519,10 +519,10 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
             )}
 
             {/* Period summary for non-tournament */}
-            {!isTournament && existingPeriodCount > 0 && (
+            {!isTournament && localPeriodOffset > 0 && (
               <div className="mx-4 mt-3 px-3 py-2 bg-slate-50 rounded-lg border border-slate-100">
                 <p className="text-[10px] text-blue-500 font-bold">
-                  {language === 'zh' ? `已記 ${existingPeriodCount} 節` : `${existingPeriodCount} period(s) logged`}
+                  {language === 'zh' ? `已記 ${localPeriodOffset} 節` : `${localPeriodOffset} period(s) logged`}
                 </p>
               </div>
             )}
