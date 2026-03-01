@@ -486,8 +486,8 @@ const ShareCard: React.FC<ShareCardProps> = ({
     const contentPos = textPosition === 'top'
       ? 'justify-start'
       : textPosition === 'center'
-        ? 'h-full'
-        : 'justify-end mt-auto';
+        ? 'justify-center'
+        : 'justify-end';
 
     const cardStyle = cardTheme === 'broadcast'
       ? `${isDarkText ? 'bg-amber-100/80 border-amber-200' : 'bg-black/55 border-white/10'} border-t-2 w-full px-5 py-6`
@@ -514,7 +514,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
         )}
 
         <div className={`relative z-10 w-full h-full flex flex-col pointer-events-none ${contentPos}`}>
-          <div data-match-panel="true" className={`w-full ${cardStyle} ${textCls}`} style={{ marginTop: 'auto', marginBottom: 'auto' }}>
+          <div data-match-panel="true" className={`w-full ${cardStyle} ${textCls}`}>
 
             {/* Team name + badges */}
             <div className="flex justify-between items-start mb-2">
@@ -961,11 +961,11 @@ const ShareCard: React.FC<ShareCardProps> = ({
         {/* ── Personal / Team toggle ── */}
         {(mode === 'match' || mode === 'tournament') && (
           <div className="flex bg-white/10 rounded-xl p-1 gap-1">
-            <button onClick={() => setShareView('personal')}
+            <button onClick={() => { setShareView('personal'); setVis(v => ({ ...v, showPersonalStats: true })); }}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-black transition-all ${shareView === 'personal' ? 'bg-white text-slate-900 shadow' : 'text-white/60 hover:text-white'}`}>
               <i className="fas fa-user text-[10px]" />{language === 'zh' ? '個人版' : 'Personal'}
             </button>
-            <button onClick={() => setShareView('team')}
+            <button onClick={() => { setShareView('team'); setVis(v => ({ ...v, showPersonalStats: false })); }}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-black transition-all ${shareView === 'team' ? 'bg-white text-slate-900 shadow' : 'text-white/60 hover:text-white'}`}>
               <i className="fas fa-users text-[10px]" />{language === 'zh' ? '球隊版' : 'Team'}
             </button>
