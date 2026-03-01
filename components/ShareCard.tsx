@@ -36,12 +36,15 @@ interface ShareCardProps {
 // ─── Background Presets ───────────────────────────────────────────────────────
 
 const BG_PRESETS = [
-  { id: 'pitch',   name: 'Pitch',     css: 'bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-green-700 via-green-800 to-green-950', icon: 'fa-futbol',     textDark: false },
-  { id: 'ucl',     name: 'Champions', css: 'bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-blue-900 via-indigo-950 to-slate-900', icon: 'fa-star',       textDark: false },
-  { id: 'modern',  name: 'Modern',    css: 'bg-gradient-to-br from-slate-800 via-gray-900 to-black',                                                        icon: 'fa-layer-group', textDark: false },
-  { id: 'fire',    name: 'Heat',      css: 'bg-gradient-to-tr from-orange-600 via-red-800 to-slate-900',                                                    icon: 'fa-fire',       textDark: false },
-  { id: 'neon',    name: 'Neon',      css: 'bg-black',                                                                                                      icon: 'fa-bolt',       textDark: false },
-  { id: 'retro',   name: 'Retro',     css: 'bg-amber-50',                                                                                                   icon: 'fa-newspaper',  textDark: true  },
+  { id: 'pitch',    name: 'Pitch',     css: 'bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-green-700 via-green-800 to-green-950', icon: 'fa-futbol',      textDark: false },
+  { id: 'ucl',      name: 'Champions', css: 'bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-blue-900 via-indigo-950 to-slate-900', icon: 'fa-star',      textDark: false },
+  { id: 'modern',   name: 'Modern',    css: 'bg-gradient-to-br from-slate-800 via-gray-900 to-black',                                                        icon: 'fa-layer-group',textDark: false },
+  { id: 'fire',     name: 'Heat',      css: 'bg-gradient-to-tr from-orange-600 via-red-800 to-slate-900',                                                    icon: 'fa-fire',       textDark: false },
+  { id: 'neon',     name: 'Neon',      css: 'bg-black',                                                                                                      icon: 'fa-bolt',       textDark: false },
+  { id: 'retro',    name: 'Retro',     css: 'bg-amber-50',                                                                                                   icon: 'fa-newspaper',  textDark: true  },
+  { id: 'magazine', name: 'Magazine',  css: 'bg-white',                                                                                                      icon: 'fa-bookmark',   textDark: true  },
+  { id: 'ultra',    name: 'Ultra',     css: 'bg-[conic-gradient(from_225deg_at_60%_40%,_#0f0f1a,_#1a0a2e,_#0a1628,_#0f0f1a)]',                             icon: 'fa-gem',        textDark: false },
+  { id: 'dawn',     name: 'Dawn',      css: 'bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-100 via-orange-50 to-rose-100',       icon: 'fa-sun',        textDark: true  },
 ];
 
 // ─── Visibility toggle config ─────────────────────────────────────────────────
@@ -197,7 +200,10 @@ const ShareCard: React.FC<ShareCardProps> = ({
   const currentPreset = selectedPreset !== null ? BG_PRESETS[selectedPreset] : null;
   const isRetro       = currentPreset?.id === 'retro';
   const isNeon        = currentPreset?.id === 'neon';
-  const isDarkText    = isRetro && !bgImage;
+  const isMagazine    = currentPreset?.id === 'magazine';
+  const isUltra       = currentPreset?.id === 'ultra';
+  const isDawn        = currentPreset?.id === 'dawn';
+  const isDarkText    = (isRetro || isMagazine || isDawn) && !bgImage;
   const textCls       = isDarkText ? 'text-slate-800' : 'text-white';
 
   const textShadow = isDarkText
@@ -436,6 +442,56 @@ const ShareCard: React.FC<ShareCardProps> = ({
           <div className="absolute inset-0 pointer-events-none opacity-30"
             style={{ backgroundImage: 'repeating-linear-gradient(0deg,transparent,transparent 24px,rgba(0,0,0,0.06) 24px,rgba(0,0,0,0.06) 25px)' }} />
         );
+      case 'magazine':
+        return (
+          <>
+            {/* Bold diagonal stripe top-left */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+              <div className="absolute -top-8 -left-8 w-72 h-72 rotate-45 opacity-5"
+                style={{ background: 'repeating-linear-gradient(0deg,#000 0px,#000 3px,transparent 3px,transparent 18px)' }} />
+              {/* Thick accent bar top */}
+              <div className="absolute top-0 left-0 right-0 h-2" style={{ background: 'linear-gradient(90deg,#ef4444,#f97316,#eab308)' }} />
+              {/* Thin rule bottom */}
+              <div className="absolute bottom-12 left-6 right-6 h-px bg-black opacity-10" />
+              {/* Large faded number watermark */}
+              <div className="absolute -right-4 top-1/2 -translate-y-1/2 text-[220px] font-black leading-none select-none pointer-events-none opacity-[0.04] text-black tracking-tighter">1</div>
+            </div>
+          </>
+        );
+      case 'ultra':
+        return (
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            {/* Purple aurora blobs */}
+            <div className="absolute top-0 left-1/4 w-80 h-80 rounded-full blur-3xl opacity-30"
+              style={{ background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)' }} />
+            <div className="absolute bottom-0 right-1/4 w-64 h-64 rounded-full blur-3xl opacity-20"
+              style={{ background: 'radial-gradient(circle, #2563eb 0%, transparent 70%)' }} />
+            <div className="absolute top-1/2 left-1/2 w-48 h-48 rounded-full blur-2xl opacity-15 -translate-x-1/2 -translate-y-1/2"
+              style={{ background: 'radial-gradient(circle, #ec4899 0%, transparent 70%)' }} />
+            {/* Fine grid overlay */}
+            <div className="absolute inset-0 opacity-[0.06]"
+              style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.5) 1px,transparent 1px)', backgroundSize: '32px 32px' }} />
+            {/* Glowing accent line */}
+            <div className="absolute top-0 left-0 right-0 h-0.5 opacity-60"
+              style={{ background: 'linear-gradient(90deg,transparent,#7c3aed,#ec4899,transparent)', boxShadow: '0 0 20px 2px rgba(124,58,237,0.5)' }} />
+          </div>
+        );
+      case 'dawn':
+        return (
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            {/* Soft sunrise rays */}
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] opacity-20"
+              style={{ background: 'conic-gradient(from 260deg at 50% 100%, transparent 0deg, rgba(251,146,60,0.6) 10deg, transparent 20deg, transparent 30deg, rgba(234,179,8,0.4) 40deg, transparent 50deg, transparent 340deg, rgba(251,146,60,0.6) 350deg, transparent 360deg)' }} />
+            {/* Warm glow bottom */}
+            <div className="absolute bottom-0 left-0 right-0 h-48 opacity-30"
+              style={{ background: 'linear-gradient(to top, rgba(251,146,60,0.3), transparent)' }} />
+            {/* Subtle horizontal lines */}
+            <div className="absolute inset-0 opacity-[0.04]"
+              style={{ backgroundImage: 'repeating-linear-gradient(0deg,transparent,transparent 40px,rgba(180,80,0,0.8) 40px,rgba(180,80,0,0.8) 41px)' }} />
+            {/* Golden arc */}
+            <div className="absolute -bottom-32 left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full border-2 opacity-10" style={{ borderColor: '#f97316' }} />
+          </div>
+        );
       default: return null;
     }
   };
@@ -463,6 +519,11 @@ const ShareCard: React.FC<ShareCardProps> = ({
       {isNeon && !bgImage && (
         <div className="absolute inset-0 pointer-events-none z-10 rounded-xl"
           style={{ boxShadow: 'inset 0 0 30px rgba(0,255,200,0.12),inset 0 0 2px rgba(0,255,200,0.5)', border: '1px solid rgba(0,255,200,0.3)' }} />
+      )}
+      {/* Ultra glow border */}
+      {isUltra && !bgImage && (
+        <div className="absolute inset-0 pointer-events-none z-10 rounded-xl"
+          style={{ boxShadow: 'inset 0 0 40px rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.25)' }} />
       )}
 
       {/* Subtle overlay for photos */}
