@@ -961,11 +961,11 @@ const ShareCard: React.FC<ShareCardProps> = ({
         {/* ── Personal / Team toggle ── */}
         {(mode === 'match' || mode === 'tournament') && (
           <div className="flex bg-white/10 rounded-xl p-1 gap-1">
-            <button onClick={() => { setShareView('personal'); setVis(v => ({ ...v, showPersonalStats: true })); }}
+            <button onClick={() => { setShareView('personal'); setVis(v => ({ ...v, showPersonalStats: true, showMotm: true, showRating: true })); }}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-black transition-all ${shareView === 'personal' ? 'bg-white text-slate-900 shadow' : 'text-white/60 hover:text-white'}`}>
               <i className="fas fa-user text-[10px]" />{language === 'zh' ? '個人版' : 'Personal'}
             </button>
-            <button onClick={() => { setShareView('team'); setVis(v => ({ ...v, showPersonalStats: false })); }}
+            <button onClick={() => { setShareView('team'); setVis(v => ({ ...v, showPersonalStats: false, showMotm: false, showRating: false })); }}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-black transition-all ${shareView === 'team' ? 'bg-white text-slate-900 shadow' : 'text-white/60 hover:text-white'}`}>
               <i className="fas fa-users text-[10px]" />{language === 'zh' ? '球隊版' : 'Team'}
             </button>
