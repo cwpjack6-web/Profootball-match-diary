@@ -29,6 +29,87 @@ interface MatchTimelineProps {
   onAddJournal?: (linkedMatchId: string, linkedMatchName: string) => void;
 }
 
+// ── Format Quick Log dadComment into period sections ──────────────────────────
+function formatDadComment(comment: string, language: string): React.ReactNode {
+  if (!comment) return null;
+
+  // Detect if comment has period markers
+  const hasPeriods = /【節\d+】|\[Period \d+\]/.test(comment);
+  if (!hasPeriods) {
+    // Plain comment — render as-is with line breaks
+    return (
+      <p className="text-slate-700 italic text-sm whitespace-pre-line leading-relaxed">
+        {comment}
+      </p>
+    );
+  }
+
+  // Split into period blocks (split on blank line before a period header)
+  const blocks = comment.split(/\n{2,}(?=【節\d+】|\[Period \d+\])/);
+
+  return (
+    <div className="space-y-3">
+      {blocks.map((block, idx) => {
+        const lines = block.split('\n').filter(l => l.trim());
+        if (lines.length === 0) return null;
+
+        const headerLine = lines[0];
+        const isZh = headerLine.startsWith('【');
+        const headerMatch = headerLine.match(/【節(\d+)】|\[Period (\d+)\]/);
+        const periodNum = headerMatch ? (headerMatch[1] || headerMatch[2]) : String(idx + 1);
+
+        // Meta info on same line as header (participation, position)
+        const metaText = headerLine
+          .replace(/【節\d+】|\[Period \d+\]/, '')
+          .trim();
+
+        // Goal line — line starting with 入球 or Goals
+        const goalLine = lines.find(l => l.startsWith('入球：') || l.startsWith('Goals:'));
+
+        // Comment lines — everything else after header
+        const commentLines = lines
+          .slice(1)
+          .filter(l => l !== goalLine && l.trim())
+          .join('\n');
+
+        const periodLabel = isZh ? `第 ${periodNum} 節` : `Period ${periodNum}`;
+
+        return (
+          <div key={idx} className="border-l-2 border-blue-200 pl-3">
+            {/* Period header */}
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[10px] font-black text-blue-500 uppercase tracking-wide">
+                {periodLabel}
+              </span>
+              {metaText && (
+                <span className="text-[9px] text-slate-400 font-medium">{metaText}</span>
+              )}
+            </div>
+
+            {/* Goal line */}
+            {goalLine && (
+              <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+                {goalLine.replace(/^入球：|^Goals:/, '').split(/[、,]/).map((g, i) => (
+                  <span key={i} className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5">
+                    {g.trim()}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Dad comment text */}
+            {commentLines && (
+              <p className="text-slate-600 text-xs italic leading-relaxed whitespace-pre-line">
+                {commentLines}
+              </p>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 const MatchTimeline: React.FC<MatchTimelineProps> = ({
   matches, profile, isSelectionMode, selectedMatchIds, deleteConfirmId, expandedMatchIds,
   onSelectMatch, onShare, onShareTournament, onEditTournament, onEdit, onTrashClick, onConfirmDelete, onCancelDelete, onToggleExpansion, onOpenVideo, onOpponentClick,
@@ -686,9 +767,11 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                                               </div>
                                             )}
                                             {match.dadComment && (
-                                              <div className="flex gap-2">
-                                                <span className="text-[10px] font-bold text-slate-400 shrink-0">{match.commenterIdentity || 'Dad'}:</span>
-                                                <p className="text-slate-700 text-xs italic">{match.dadComment}</p>
+                                              <div className="space-y-1.5">
+                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wide block">
+                                                  {match.commenterIdentity || 'Dad'}
+                                                </span>
+                                                {formatDadComment(match.dadComment, language)}
                                               </div>
                                             )}
                                             {match.kidInterview && (
@@ -987,9 +1070,11 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                               )}
 
                               {match.dadComment && (
-                                <div className="flex gap-2">
-                                  <span className="text-xs font-bold text-slate-400 shrink-0 mt-0.5">{match.commenterIdentity || 'Dad'}:</span>
-                                  <p className="text-slate-700 italic text-sm">{match.dadComment}</p>
+                                <div className="space-y-1.5">
+                                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wide block">
+                                    {match.commenterIdentity || 'Dad'}
+                                  </span>
+                                  {formatDadComment(match.dadComment, language)}
                                 </div>
                               )}
                               {match.kidInterview && (
@@ -1028,6 +1113,16 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                                   ))}
                                 </div>
                               )}
+                              {/* ── Bottom collapse button ── */}
+                              <div className="pt-2 flex justify-center">
+                                <button
+                                  onClick={e => { e.stopPropagation(); onToggleExpand(match.id); }}
+                                  className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[10px] font-black text-slate-400 bg-slate-100 hover:bg-slate-200 active:scale-95 transition-all border border-slate-200"
+                                >
+                                  <i className="fas fa-chevron-up text-[8px]" />
+                                  {language === 'zh' ? '收起' : 'Collapse'}
+                                </button>
+                              </div>
                             </div>
                           )}
                         </div>
