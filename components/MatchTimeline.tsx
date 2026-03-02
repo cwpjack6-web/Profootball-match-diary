@@ -1116,7 +1116,7 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                               {/* ── Bottom collapse button ── */}
                               <div className="pt-2 flex justify-center">
                                 <button
-                                  onClick={e => { e.stopPropagation(); onToggleExpand(match.id); }}
+                                  onClick={e => onToggleExpansion(e, match.id)}
                                   className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[10px] font-black text-slate-400 bg-slate-100 hover:bg-slate-200 active:scale-95 transition-all border border-slate-200"
                                 >
                                   <i className="fas fa-chevron-up text-[8px]" />
