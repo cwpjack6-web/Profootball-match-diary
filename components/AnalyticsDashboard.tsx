@@ -107,7 +107,7 @@ const DrillDownSheet: React.FC<DrillDownSheetProps> = ({ data, onClose, t, onNav
 const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (matchId: string) => void }> = ({ matches, profile, onNavigateToMatch }) => {
   const { t } = useLanguage();
   const [teamFilter, setTeamFilter] = useState<string>('all');
-  const [matchTypeFilter, setMatchTypeFilter] = useState<string>('all');
+  const [matchTypeFilter, setMatchTypeFilter] = useState<Set<string>>(new Set());
   const [timeFilterType, setTimeFilterType] = useState<TimeFilterType>('all');
   const [timeFilterValue, setTimeFilterValue] = useState<string>('');
   const [showShareModal, setShowShareModal] = useState(false);
@@ -163,7 +163,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
   const filteredMatches = useMemo(() => {
     let result = completedMatches;
     if (teamFilter !== 'all') result = result.filter(m => m.teamId === teamFilter);
-    if (matchTypeFilter !== 'all') result = result.filter(m => (m.matchType || 'league') === matchTypeFilter);
+    if (matchTypeFilter.size > 0) result = result.filter(m => matchTypeFilter.has(m.matchType || 'league'));
     if (timeFilterType !== 'all' && timeFilterValue) {
       if (timeFilterType === 'year') result = result.filter(m => m.date.startsWith(timeFilterValue));
       else if (timeFilterType === 'month') result = result.filter(m => m.date.startsWith(timeFilterValue));
@@ -187,6 +187,12 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
     const contributions = totalGoals + totalAssists;
     const attackShare  = teamGoals > 0 ? Math.round((contributions / teamGoals) * 100) : 0;
 
+    const scoringMatches   = filteredMatches.filter(m => m.arthurGoals > 0).length;
+    const blankMatches     = filteredMatches.filter(m => m.arthurGoals === 0).length;
+    const scoringRate      = filteredMatches.length > 0
+      ? Math.round((scoringMatches / filteredMatches.length) * 100)
+      : 0;
+
     return {
       totalGoals,
       totalAssists,
@@ -197,6 +203,9 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
       teamGoals,
       contributions,
       attackShare,
+      scoringMatches,
+      blankMatches,
+      scoringRate,
     };
   }, [filteredMatches]);
 
@@ -663,13 +672,41 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
               <option value="all">{t.allTeams}</option>
               {profile.teams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}
             </select>
-            <select value={matchTypeFilter} onChange={(e) => setMatchTypeFilter(e.target.value)}
-              className="flex-1 bg-slate-100 text-sm rounded-lg px-3 py-2 outline-none border border-slate-200 font-bold text-slate-700">
-              <option value="all">{t.allTypes}</option>
-              <option value="league">{t.typeLeague}</option>
-              <option value="cup">{t.typeCup}</option>
-              <option value="friendly">{t.typeFriendly}</option>
-            </select>
+            <div className="flex gap-1.5 flex-wrap">
+              {([
+                { key: 'league',      label: t.typeLeague,   color: 'blue'   },
+                { key: 'cup',         label: t.typeCup,      color: 'purple' },
+                { key: 'tournament',  label: t.typeTournament || (language === 'zh' ? '錦標賽' : 'Tournament'), color: 'amber' },
+                { key: 'friendly',    label: t.typeFriendly, color: 'emerald'},
+              ] as const).map(({ key, label, color }) => {
+                const active = matchTypeFilter.has(key);
+                return (
+                  <button key={key}
+                    onClick={() => setMatchTypeFilter(prev => {
+                      const next = new Set(prev);
+                      if (next.has(key)) next.delete(key); else next.add(key);
+                      return next;
+                    })}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                      active
+                        ? color === 'blue'    ? 'bg-blue-500 text-white border-blue-500 shadow-sm'
+                        : color === 'purple'  ? 'bg-purple-500 text-white border-purple-500 shadow-sm'
+                        : color === 'amber'   ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+                        : 'bg-emerald-500 text-white border-emerald-500 shadow-sm'
+                        : 'bg-slate-100 text-slate-500 border-slate-200 hover:border-slate-300'
+                    }`}>
+                    {active && <i className="fas fa-check text-[9px]" />}
+                    {label}
+                  </button>
+                );
+              })}
+              {matchTypeFilter.size > 0 && (
+                <button onClick={() => setMatchTypeFilter(new Set())}
+                  className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-slate-400 border border-slate-200 bg-white hover:bg-slate-50">
+                  <i className="fas fa-times" />
+                </button>
+              )}
+            </div>
           </div>
           <select value={timeFilterType} onChange={(e) => handleTypeChange(e.target.value as TimeFilterType)}
             className="w-full bg-slate-100 text-sm rounded-lg px-3 py-2 outline-none border border-slate-200 font-bold text-slate-700">
@@ -741,6 +778,57 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
               <div className="text-xs opacity-80 font-bold uppercase">{t.totalAssists}</div>
             </div>
           </div>
+
+          {/* Scoring match rate */}
+          {stats.matchesPlayed > 0 && (
+            <div className="bg-white rounded-xl p-4 shadow border border-slate-100">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <div className="text-xs font-black text-slate-500 uppercase tracking-wide mb-0.5">
+                    {language === 'zh' ? '入球場次' : 'Scoring Games'}
+                  </div>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-2xl font-black text-emerald-600">{stats.scoringMatches}</span>
+                    <span className="text-sm text-slate-400 font-bold">/ {stats.matchesPlayed}</span>
+                    <span className="text-sm font-black text-emerald-500 ml-1">{stats.scoringRate}%</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs font-black text-slate-400 uppercase tracking-wide mb-0.5">
+                    {language === 'zh' ? '未入球' : 'Blank'}
+                  </div>
+                  <div className="text-2xl font-black text-slate-300">{stats.blankMatches}</div>
+                </div>
+              </div>
+              {/* Progress bar */}
+              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${stats.scoringRate}%`,
+                    background: stats.scoringRate >= 60
+                      ? 'linear-gradient(90deg, #10b981, #34d399)'
+                      : stats.scoringRate >= 40
+                        ? 'linear-gradient(90deg, #f59e0b, #fbbf24)'
+                        : 'linear-gradient(90deg, #f87171, #fca5a5)',
+                  }}
+                />
+              </div>
+              <div className="flex justify-between mt-1.5 text-[9px] font-bold text-slate-400">
+                <span>{language === 'zh' ? '有入球場次' : 'Games scored'}</span>
+                <span className={
+                  stats.scoringRate >= 60 ? 'text-emerald-500' :
+                  stats.scoringRate >= 40 ? 'text-amber-500' : 'text-rose-400'
+                }>
+                  {stats.scoringRate >= 60
+                    ? (language === 'zh' ? '🔥 狀態出色' : '🔥 In form')
+                    : stats.scoringRate >= 40
+                      ? (language === 'zh' ? '穩定' : 'Steady')
+                      : (language === 'zh' ? '待提升' : 'Building')}
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Attack contribution */}
           {stats.teamGoals > 0 && <AttackRing />}
