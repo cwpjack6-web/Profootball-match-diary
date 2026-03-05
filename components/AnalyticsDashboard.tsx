@@ -105,7 +105,7 @@ const DrillDownSheet: React.FC<DrillDownSheetProps> = ({ data, onClose, t, onNav
 };
 
 const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (matchId: string) => void }> = ({ matches, profile, onNavigateToMatch }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [teamFilter, setTeamFilter] = useState<string>('all');
   const [matchTypeFilter, setMatchTypeFilter] = useState<Set<string>>(new Set());
   const [timeFilterType, setTimeFilterType] = useState<TimeFilterType>('all');
