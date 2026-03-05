@@ -674,11 +674,11 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
             </select>
             <div className="flex gap-1.5 flex-wrap">
               {([
-                { key: 'league',      label: t.typeLeague,   color: 'blue'   },
-                { key: 'cup',         label: t.typeCup,      color: 'purple' },
-                { key: 'tournament',  label: t.typeTournament || (language === 'zh' ? '錦標賽' : 'Tournament'), color: 'amber' },
-                { key: 'friendly',    label: t.typeFriendly, color: 'emerald'},
-              ] as const).map(({ key, label, color }) => {
+                { key: 'league',     label: t.typeLeague,   color: 'blue'    },
+                { key: 'cup',        label: t.typeCup,      color: 'purple'  },
+                { key: 'tournament', label: (t as any).typeTournament ?? (language === 'zh' ? '錦標賽' : 'Tournament'), color: 'amber' },
+                { key: 'friendly',   label: t.typeFriendly, color: 'emerald' },
+              ]).map(({ key, label, color }) => {
                 const active = matchTypeFilter.has(key);
                 return (
                   <button key={key}
