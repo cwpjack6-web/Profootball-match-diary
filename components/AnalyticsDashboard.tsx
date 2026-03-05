@@ -675,7 +675,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
             <div className="flex gap-1.5 flex-wrap">
               {([
                 { key: 'league',     label: t.typeLeague,   color: 'blue'    },
-                { key: 'cup',        label: t.typeCup,      color: 'purple'  },
+
                 { key: 'tournament', label: (t as any).typeTournament ?? (language === 'zh' ? '錦標賽' : 'Tournament'), color: 'amber' },
                 { key: 'friendly',   label: t.typeFriendly, color: 'emerald' },
               ]).map(({ key, label, color }) => {
@@ -767,15 +767,70 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
         {/* ══ OVERVIEW TAB ══════════════════════════════════════════════════ */}
         {activeTab === 'overview' && filteredMatches.length > 0 && <>
 
-          {/* Stat cards */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-xl p-4 text-white shadow-lg">
-              <div className="text-3xl font-black">{stats.totalGoals}</div>
-              <div className="text-xs opacity-80 font-bold uppercase">{t.totalGoals}</div>
+          {/* Stat cards — 3 col: matches / goals / assists */}
+          <div className="grid grid-cols-3 gap-2">
+            {/* Matches */}
+            <div className="bg-gradient-to-br from-slate-600 to-slate-800 rounded-xl p-3 text-white shadow-lg">
+              <div className="text-2xl font-black leading-none mb-1">{stats.matchesPlayed}</div>
+              <div className="text-[9px] opacity-70 font-bold uppercase tracking-wide">{language === 'zh' ? '場次' : 'Games'}</div>
+              {matchTypeFilter.size > 0 && (
+                <div className="mt-2 flex flex-col gap-0.5">
+                  {Array.from(matchTypeFilter).map(type => {
+                    const n = filteredMatches.filter(m => (m.matchType || 'league') === type).length;
+                    const typeLabel = type === 'league' ? (language === 'zh' ? '聯' : 'L')
+                      : type === 'tournament' ? (language === 'zh' ? '錦' : 'T')
+                      : (language === 'zh' ? '友' : 'F');
+                    return (
+                      <div key={type} className="flex justify-between items-center">
+                        <span className="text-[9px] opacity-60 font-bold">{typeLabel}</span>
+                        <span className="text-[10px] font-black">{n}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-            <div className="bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl p-4 text-white shadow-lg">
-              <div className="text-3xl font-black">{stats.totalAssists}</div>
-              <div className="text-xs opacity-80 font-bold uppercase">{t.totalAssists}</div>
+            {/* Goals */}
+            <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-xl p-3 text-white shadow-lg">
+              <div className="text-2xl font-black leading-none mb-1">{stats.totalGoals}</div>
+              <div className="text-[9px] opacity-70 font-bold uppercase tracking-wide">{t.totalGoals}</div>
+              {matchTypeFilter.size > 0 && (
+                <div className="mt-2 flex flex-col gap-0.5">
+                  {Array.from(matchTypeFilter).map(type => {
+                    const n = filteredMatches.filter(m => (m.matchType || 'league') === type).reduce((a, m) => a + m.arthurGoals, 0);
+                    const typeLabel = type === 'league' ? (language === 'zh' ? '聯' : 'L')
+                      : type === 'tournament' ? (language === 'zh' ? '錦' : 'T')
+                      : (language === 'zh' ? '友' : 'F');
+                    return (
+                      <div key={type} className="flex justify-between items-center">
+                        <span className="text-[9px] opacity-60 font-bold">{typeLabel}</span>
+                        <span className="text-[10px] font-black">{n}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            {/* Assists */}
+            <div className="bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl p-3 text-white shadow-lg">
+              <div className="text-2xl font-black leading-none mb-1">{stats.totalAssists}</div>
+              <div className="text-[9px] opacity-70 font-bold uppercase tracking-wide">{t.totalAssists}</div>
+              {matchTypeFilter.size > 0 && (
+                <div className="mt-2 flex flex-col gap-0.5">
+                  {Array.from(matchTypeFilter).map(type => {
+                    const n = filteredMatches.filter(m => (m.matchType || 'league') === type).reduce((a, m) => a + m.arthurAssists, 0);
+                    const typeLabel = type === 'league' ? (language === 'zh' ? '聯' : 'L')
+                      : type === 'tournament' ? (language === 'zh' ? '錦' : 'T')
+                      : (language === 'zh' ? '友' : 'F');
+                    return (
+                      <div key={type} className="flex justify-between items-center">
+                        <span className="text-[9px] opacity-60 font-bold">{typeLabel}</span>
+                        <span className="text-[10px] font-black">{n}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
