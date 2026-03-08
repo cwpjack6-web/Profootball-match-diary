@@ -116,7 +116,6 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
   const [activeSeries, setActiveSeries] = useState<Set<ChartSeries>>(
     new Set(['rating', 'goals', 'assists'])
   );
-  const [chartFullscreen, setChartFullscreen] = useState(false);
 
   // Badge Modal State
   const [selectedBadge, setSelectedBadge] = useState<BadgeState | null>(null);
@@ -440,32 +439,23 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
 
     return (
       <>
-        {/* Legend / toggles + fullscreen button */}
-        <div className="flex items-center justify-between mb-3 gap-2">
-          <div className="flex gap-2 flex-wrap">
-            {SERIES_CONFIG.map(s => (
-              <button
-                key={s.key}
-                onClick={() => toggleSeries(s.key)}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all ${
-                  activeSeries.has(s.key)
-                    ? 'text-white border-transparent shadow-sm'
-                    : 'bg-white border-slate-200 text-slate-400'
-                }`}
-                style={activeSeries.has(s.key) ? { backgroundColor: s.color, borderColor: s.color } : {}}
-              >
-                <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: activeSeries.has(s.key) ? 'white' : s.color }} />
-                {s.label}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={() => setChartFullscreen(true)}
-            className="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 text-slate-400 hover:bg-slate-200 shrink-0"
-            title="Expand chart"
-          >
-            <i className="fas fa-expand-alt text-[10px]" />
-          </button>
+        {/* Legend / toggles */}
+        <div className="flex gap-3 mb-3 flex-wrap">
+          {SERIES_CONFIG.map(s => (
+            <button
+              key={s.key}
+              onClick={() => toggleSeries(s.key)}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all ${
+                activeSeries.has(s.key)
+                  ? 'text-white border-transparent shadow-sm'
+                  : 'bg-white border-slate-200 text-slate-400'
+              }`}
+              style={activeSeries.has(s.key) ? { backgroundColor: s.color, borderColor: s.color } : {}}
+            >
+              <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: activeSeries.has(s.key) ? 'white' : s.color }} />
+              {s.label}
+            </button>
+          ))}
         </div>
         {/* Scrollable chart container */}
         <div className="overflow-x-auto -mx-1 px-1" style={{ WebkitOverflowScrolling: 'touch' }}>
@@ -671,58 +661,8 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
   ] as const;
   type TabId = typeof TABS[number]['id'];
 
-  // ── Fullscreen chart modal ─────────────────────────────────────────────────
-  const ChartModal = () => {
-    if (!chartFullscreen) return null;
-    return (
-      <div
-        className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col"
-        onClick={() => setChartFullscreen(false)}
-      >
-        <div
-          className="bg-white m-4 rounded-2xl flex-1 flex flex-col overflow-hidden"
-          onClick={e => e.stopPropagation()}
-        >
-          {/* Modal header */}
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-            <div>
-              <h3 className="text-sm font-black text-slate-800 flex items-center gap-2">
-                <i className="fas fa-chart-line text-blue-500" /> {t.ratingTrend}
-              </h3>
-              <p className="text-[10px] text-slate-400 mt-0.5">
-                {language === 'zh' ? '左右滑動查看全部場次' : 'Swipe to view all matches'}
-              </p>
-            </div>
-            <button
-              onClick={() => setChartFullscreen(false)}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500"
-            >
-              <i className="fas fa-times" />
-            </button>
-          </div>
-          {/* Modal chart — rotated landscape */}
-          <div className="flex-1 overflow-auto p-4">
-            <Chart />
-          </div>
-          {/* Avg rating footer */}
-          <div className="px-5 py-3 border-t border-slate-100 flex items-center justify-between">
-            <div className="flex gap-3 text-xs text-slate-400 font-bold">
-              <span>{language === 'zh' ? '左軸：評分 (0-10)' : 'Left: Rating (0-10)'}</span>
-              <span>{language === 'zh' ? '右軸：入球/助攻 (0-5)' : 'Right: G/A (0-5)'}</span>
-            </div>
-            <div className="text-right">
-              <span className="text-xl font-black text-blue-600">{stats.avgRating}</span>
-              <span className="text-[9px] font-bold text-slate-400 uppercase ml-1">{t.avgRating}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div className="pb-32 animate-fade-in">
-      <ChartModal />
       <style>{`@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
 
       {/* ── Sticky header: filters + tab bar ─────────────────────────────── */}
