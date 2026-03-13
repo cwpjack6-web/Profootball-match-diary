@@ -1,11 +1,9 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-
 // ── Vercel Serverless Function: /api/coach ────────────────────────────────────
 // Acts as a secure proxy between the frontend and Google Gemini API.
 // The API key is stored in Vercel Environment Variables (GEMINI_API_KEY),
 // never exposed to the browser.
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: any, res: any) {
 
   // ── Only allow POST ────────────────────────────────────────────────────────
   if (req.method !== 'POST') {
