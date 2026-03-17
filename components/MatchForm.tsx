@@ -46,7 +46,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
     const firstTeam = profile.teams[0];
     const defaultFormat = firstTeam?.defaultMatchFormat || '7v7';
     const defaultStructure = firstTeam?.defaultMatchStructure || 'quarters';
-    const defaultPeriods = 0; // Always start at 0 — Quick Log accumulates as periods are logged
+    const defaultPeriods = defaultStructure === 'halves' ? 2 : 4;
 
     const defaultState: FormState = {
       date: new Date().toISOString().split('T')[0],
@@ -74,7 +74,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
         tournamentName: initialData.tournamentName || '', matchLabel: initialData.matchLabel || '',
         matchFormat: initialData.matchFormat || '7v7',
         matchStructure: initialData.matchStructure || 'quarters',
-        periodsPlayed: initialData.periodsPlayed !== undefined ? initialData.periodsPlayed : 0,
+        periodsPlayed: initialData.periodsPlayed !== undefined ? initialData.periodsPlayed : 4,
         pitchType: initialData.pitchType || '', weather: initialData.weather || '',
         positionPlayed: loadedPositions, scorers: initialData.scorers || [],
         videos: initialData.videos || [], commenterIdentity: initialData.commenterIdentity || 'Dad',
@@ -112,7 +112,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
       try {
         const parsed = JSON.parse(raw);
         setHasDraft(true);
-        setFormData({ ...parsed, periodsPlayed: 0 });
+        setFormData(parsed);
       } catch {
         localStorage.removeItem(DRAFT_KEY);
       }
@@ -151,7 +151,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
           ...prev,
           matchFormat: team.defaultMatchFormat || '7v7',
           matchStructure: newStructure,
-          periodsPlayed: formData.periodsPlayed, // keep current value
+          periodsPlayed: formData.periodsPlayed || (newStructure === 'halves' ? 2 : 4),
         }));
       }
     }
@@ -241,13 +241,13 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
       const isLeague = (prev.matchType || 'league') === 'league';
       const defaultPeriods = structure === 'halves' ? 2 : 4;
       const newPeriods = isLeague
-        ? prev.periodsPlayed  // keep current — Quick Log accumulates
-        : prev.periodsPlayed; // keep existing
+        ? defaultPeriods  // reset to standard for league
+        : (prev.periodsPlayed || defaultPeriods); // keep existing for cup/friendly
       return { ...prev, matchStructure: structure, periodsPlayed: newPeriods };
     });
   };
 
-  const handleAction = (type: 'my_goal' | 'op_goal' | 'kid_goal' | 'kid_assist' | 'og_for' | 'og_against') => {
+  const handleAction = (type: 'my_goal' | 'op_goal' | 'kid_goal' | 'kid_assist' | 'og_for' | 'og_against' | 'undo_og_for' | 'undo_og_against') => {
     setFormData(prev => {
       const s = { ...prev };
       if (type === 'my_goal') s.scoreMyTeam += 1;
@@ -262,6 +262,20 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
         // Our own goal — counts for them
         s.scoreOpponent += 1;
         s.scorers = [...(s.scorers || []), { playerId: 'og_against', name: 'OG', type: 'own_goal_against' }];
+      } else if (type === 'undo_og_for') {
+        // Remove one og_for entry and decrement score
+        const idx = (s.scorers || []).findLastIndex((x: any) => x.type === 'own_goal_for');
+        if (idx !== -1) {
+          s.scorers = s.scorers.filter((_: any, i: number) => i !== idx);
+          s.scoreMyTeam = Math.max(0, s.scoreMyTeam - 1);
+        }
+      } else if (type === 'undo_og_against') {
+        // Remove one og_against entry and decrement opponent score
+        const idx = (s.scorers || []).findLastIndex((x: any) => x.type === 'own_goal_against');
+        if (idx !== -1) {
+          s.scorers = s.scorers.filter((_: any, i: number) => i !== idx);
+          s.scoreOpponent = Math.max(0, s.scoreOpponent - 1);
+        }
       }
       return s;
     });
@@ -308,8 +322,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
   };
 
   const handleSubmit = () => {
-    if (!formData.opponent && formData.matchType !== 'tournament') { showToast(t.alertOpponent, 'error'); return; }
-    if (formData.matchType === 'tournament' && !formData.tournamentName) { showToast('Please enter a tournament name', 'error'); return; }
+    if (!formData.opponent) { showToast(t.alertOpponent, 'error'); return; }
     const { id, ...rest } = formData;
     const submitData: Omit<MatchData, 'id'> = {
       ...rest, profileId: profile.id,
@@ -340,7 +353,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
         </div>
         <div className="relative inline-block w-12 h-6 select-none">
           <input type="checkbox" id="fixture-toggle" checked={isFixtureMode}
-            onChange={e => { setFormData(prev => ({ ...prev, status: e.target.checked ? 'scheduled' : 'completed' })); if (e.target.checked) setCurrentPage(1); }}
+            onChange={e => setFormData(prev => ({ ...prev, status: e.target.checked ? 'scheduled' : 'completed' }))}
             className="hidden" />
           <label htmlFor="fixture-toggle"
             className={`block h-6 rounded-full cursor-pointer transition-colors ${isFixtureMode ? 'bg-blue-500' : 'bg-slate-300'}`}>
@@ -389,8 +402,6 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
       </div>
 
       {/* Opponent + Location */}
-      {/* Opponent — hidden for tournament (opponent set per Game in Quick Log) */}
-      {formData.matchType !== 'tournament' && (
       <div>
         <div className="flex justify-between items-center mb-1">
           <label className="text-xs font-bold text-slate-400 uppercase">{t.opponentName}</label>
@@ -407,12 +418,98 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
           className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm text-slate-900 outline-none focus:border-blue-300" />
         <datalist id="opp-list">{opponentOptions.map(op => <option key={op} value={op} />)}</datalist>
       </div>
-      )}
 
       <div>
         <label className="text-xs font-bold text-slate-400 uppercase block mb-1">{t.location}</label>
         <input type="text" name="location" placeholder={t.locationPlaceholder} value={formData.location} onChange={handleChange}
           className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm text-slate-900 outline-none" />
+      </div>
+
+      {/* Match Type */}
+      <div>
+        <label className="text-xs font-bold text-slate-400 uppercase block mb-1">{t.matchType}</label>
+        <div className="flex bg-white rounded-xl border border-slate-200 p-1">
+          {(['league', 'cup', 'friendly'] as MatchType[]).map(mt => (
+            <button key={mt} type="button" onClick={() => setFormData(p => ({ ...p, matchType: mt }))}
+              className={`flex-1 text-xs py-2 rounded-lg font-bold transition-all ${
+                formData.matchType === mt
+                  ? mt === 'league' ? 'bg-blue-100 text-blue-700' : mt === 'cup' ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'
+                  : 'text-slate-400'}`}>
+              {mt === 'league' ? t.typeLeague : mt === 'cup' ? t.typeCup : t.typeFriendly}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tournament */}
+      <div className="flex gap-3">
+        <div className="flex-[3]">
+          <label className="text-xs font-bold text-slate-400 uppercase block mb-1">Tournament</label>
+          <input type="text" name="tournamentName" placeholder="e.g. Easter Cup" value={formData.tournamentName || ''} onChange={handleChange}
+            className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm text-slate-900 outline-none" />
+        </div>
+        <div className="flex-[2]">
+          <label className="text-xs font-bold text-slate-400 uppercase block mb-1">Label</label>
+          <input type="text" name="matchLabel" placeholder="e.g. Game 1" value={formData.matchLabel || ''} onChange={handleChange}
+            className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm text-slate-900 outline-none" />
+        </div>
+      </div>
+
+      {/* Format */}
+      <div className="pt-2 border-t border-slate-100 space-y-3">
+        <div>
+          <label className="text-xs font-bold text-slate-400 uppercase block mb-1">{t.matchFormat}</label>
+          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+            {AVAILABLE_FORMATS.map(fmt => (
+              <button key={fmt} type="button" onClick={() => setFormData(p => ({ ...p, matchFormat: fmt }))}
+                className={`px-3 py-2 rounded-xl text-xs font-bold border whitespace-nowrap transition-all ${
+                  formData.matchFormat === fmt ? 'bg-slate-800 text-white border-slate-800 shadow-md' : 'bg-white text-slate-500 border-slate-200'}`}>
+                {fmt}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <label className="text-xs font-bold text-slate-400 uppercase block mb-1">{t.matchStructure}</label>
+            <div className="flex bg-white rounded-xl border border-slate-200 p-1">
+              <button type="button" onClick={() => setMatchStructure('quarters')}
+                className={`flex-1 text-[10px] py-2 rounded-lg font-bold ${formData.matchStructure === 'quarters' ? 'bg-blue-100 text-blue-700' : 'text-slate-400'}`}>
+                {t.structQuarters}
+              </button>
+              <button type="button" onClick={() => setMatchStructure('halves')}
+                className={`flex-1 text-[10px] py-2 rounded-lg font-bold ${formData.matchStructure === 'halves' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-400'}`}>
+                {t.structHalves}
+              </button>
+            </div>
+          </div>
+          <div className="flex-1">
+            <label className="text-xs font-bold text-slate-400 uppercase block mb-1">{t.periodsPlayed}</label>
+            <div className="flex items-center justify-between bg-white rounded-xl border border-slate-200 px-3 py-2">
+              <button type="button" onClick={() => adjustPeriods(-0.5)} className="w-6 h-6 bg-slate-100 rounded text-slate-500 flex items-center justify-center">
+                <i className="fas fa-minus text-[10px]" />
+              </button>
+              <span className="font-black text-slate-800 text-sm">{formData.periodsPlayed} <span className="text-[9px] text-slate-400 font-normal">{t.unitPeriod}</span></span>
+              <button type="button" onClick={() => adjustPeriods(0.5)} className="w-6 h-6 bg-slate-100 rounded text-slate-500 flex items-center justify-center">
+                <i className="fas fa-plus text-[10px]" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Position + Conditions */}
+      <div>
+        <label className="text-xs font-bold text-slate-400 uppercase block mb-1">{t.positionPlayed}</label>
+        <div className="flex flex-wrap gap-2">
+          {POSITIONS.map(pos => (
+            <button key={pos} type="button" onClick={() => togglePosition(pos)}
+              className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+                formData.positionPlayed?.includes(pos) ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-500 border-slate-200'}`}>
+              {pos}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex gap-3">
@@ -442,99 +539,6 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
           </select>
         </div>
       </div>
-
-      {/* Match Type */}
-      <div>
-        <label className="text-xs font-bold text-slate-400 uppercase block mb-1">{t.matchType}</label>
-        <div className="flex bg-white rounded-xl border border-slate-200 p-1">
-          {(['league', 'tournament', 'friendly'] as MatchType[]).map(mt => {
-            const isSelected = formData.matchType === mt;
-            const selectedStyle = mt === 'league'
-              ? 'bg-blue-100 text-blue-700 border border-blue-300'
-              : mt === 'tournament'
-              ? 'bg-purple-100 text-purple-700 border border-purple-300'
-              : 'bg-emerald-100 text-emerald-700 border border-emerald-300';
-            const label = mt === 'league' ? t.typeLeague : mt === 'tournament' ? (t.typeTournament || 'Tournament') : t.typeFriendly;
-            return (
-              <button key={mt} type="button" onClick={() => setFormData(p => ({ ...p, matchType: mt }))}
-                className={`flex-1 text-xs py-2 rounded-lg font-bold transition-all border ${
-                  isSelected ? selectedStyle : 'text-slate-400 border-transparent'}`}>
-                {label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Tournament */}
-      {/* Tournament name + label — only shown when Tournament is selected */}
-      {formData.matchType === 'tournament' && <div className="flex gap-3 p-3 bg-purple-50 rounded-xl border border-purple-200">
-        <div className="flex-[3]">
-          <label className="text-xs font-bold text-slate-400 uppercase block mb-1">
-            Tournament{formData.matchType === 'tournament' && <span className="text-rose-400 ml-1">*</span>}
-          </label>
-          <input type="text" name="tournamentName"
-            placeholder={formData.matchType === 'tournament' ? 'e.g. Forest Festival' : 'e.g. Easter Cup'}
-            value={formData.tournamentName || ''} onChange={handleChange}
-            className={`w-full bg-white border rounded-xl p-3 text-sm text-slate-900 outline-none ${
-              formData.matchType === 'tournament' ? 'border-purple-300 focus:border-purple-500' : 'border-slate-200'
-            }`} />
-        </div>
-        <div className="flex-[2]">
-          <label className="text-xs font-bold text-slate-400 uppercase block mb-1">Label</label>
-          <input type="text" name="matchLabel"
-            placeholder={formData.matchType === 'tournament' ? 'G1 / QF / Final' : 'e.g. Game 1'}
-            value={formData.matchLabel || ''} onChange={handleChange}
-            className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm text-slate-900 outline-none" />
-        </div>
-      </div>}
-
-      {/* Format */}
-      <div className="pt-2 border-t border-slate-100 space-y-3">
-        <div>
-          <label className="text-xs font-bold text-slate-400 uppercase block mb-1">{t.matchFormat}</label>
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-            {AVAILABLE_FORMATS.map(fmt => (
-              <button key={fmt} type="button" onClick={() => setFormData(p => ({ ...p, matchFormat: fmt }))}
-                className={`px-3 py-2 rounded-xl text-xs font-bold border whitespace-nowrap transition-all ${
-                  formData.matchFormat === fmt ? 'bg-slate-800 text-white border-slate-800 shadow-md' : 'bg-white text-slate-500 border-slate-200'}`}>
-                {fmt}
-              </button>
-            ))}
-          </div>
-        </div>
-        {formData.matchType !== 'tournament' && (
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <label className="text-xs font-bold text-slate-400 uppercase block mb-1">{t.matchStructure}</label>
-            <div className="flex bg-white rounded-xl border border-slate-200 p-1">
-              <button type="button" onClick={() => setMatchStructure('quarters')}
-                className={`flex-1 text-[10px] py-2 rounded-lg font-bold ${formData.matchStructure === 'quarters' ? 'bg-blue-100 text-blue-700' : 'text-slate-400'}`}>
-                {t.structQuarters}
-              </button>
-              <button type="button" onClick={() => setMatchStructure('halves')}
-                className={`flex-1 text-[10px] py-2 rounded-lg font-bold ${formData.matchStructure === 'halves' ? 'bg-indigo-100 text-indigo-700' : 'text-slate-400'}`}>
-                {t.structHalves}
-              </button>
-            </div>
-          </div>
-          <div className="flex-1">
-            <label className="text-xs font-bold text-slate-400 uppercase block mb-1">{t.periodsPlayed}</label>
-            <div className="flex items-center justify-between bg-white rounded-xl border border-slate-200 px-3 py-2">
-              <button type="button" onClick={() => adjustPeriods(-0.5)} className="w-6 h-6 bg-slate-100 rounded text-slate-500 flex items-center justify-center">
-                <i className="fas fa-minus text-[10px]" />
-              </button>
-              <span className="font-black text-slate-800 text-sm">{formData.periodsPlayed} <span className="text-[9px] text-slate-400 font-normal">{t.unitPeriod}</span></span>
-              <button type="button" onClick={() => adjustPeriods(0.5)} className="w-6 h-6 bg-slate-100 rounded text-slate-500 flex items-center justify-center">
-                <i className="fas fa-plus text-[10px]" />
-              </button>
-            </div>
-          </div>
-        </div>
-        )}
-      </div>
-
-
     </div>
   );
 
@@ -591,27 +595,39 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
           <span className="font-bold text-xs">{t.scoreOpponent} +1</span>
         </button>
         {/* Own goal buttons */}
-        <button type="button" onClick={() => handleAction('og_for')}
-          className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-orange-50 border-2 border-orange-200 text-orange-600 active:scale-95 transition-all">
-          <span className="font-bold text-xs">OG {language === 'zh' ? '對方' : 'Opp'} +1</span>
-        </button>
-        <button type="button" onClick={() => handleAction('og_against')}
-          className="flex items-center justify-center gap-2 h-12 rounded-2xl bg-slate-50 border-2 border-slate-200 text-slate-500 active:scale-95 transition-all">
-          <span className="font-bold text-xs">OG {language === 'zh' ? '我方' : 'Ours'} +1</span>
-        </button>
-      </div>
-
-      {/* Position */}
-      <div>
-        <label className="text-xs font-bold text-slate-400 uppercase block mb-1">{t.positionPlayed}</label>
-        <div className="flex flex-wrap gap-2">
-          {POSITIONS.map(pos => (
-            <button key={pos} type="button" onClick={() => togglePosition(pos)}
-              className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
-                formData.positionPlayed?.includes(pos) ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-500 border-slate-200'}`}>
-              {pos}
-            </button>
-          ))}
+        {/* OG 對方 — with undo */}
+        <div className="flex items-center justify-between h-12 rounded-2xl bg-orange-50 border-2 border-orange-200 px-3 gap-2">
+          <span className="font-bold text-xs text-orange-600">OG {language === 'zh' ? '對方' : 'Opp'}</span>
+          <div className="flex items-center gap-1.5">
+            {(formData.scorers || []).filter((s: any) => s.type === 'own_goal_for').length > 0 && (
+              <button type="button" onClick={() => handleAction('undo_og_for')}
+                className="w-6 h-6 rounded-full bg-white border border-orange-200 text-orange-400 text-sm font-black flex items-center justify-center active:bg-orange-50">−</button>
+            )}
+            {(formData.scorers || []).filter((s: any) => s.type === 'own_goal_for').length > 0 && (
+              <span className="text-sm font-black text-orange-500 w-4 text-center">
+                {(formData.scorers || []).filter((s: any) => s.type === 'own_goal_for').length}
+              </span>
+            )}
+            <button type="button" onClick={() => handleAction('og_for')}
+              className="w-6 h-6 rounded-full bg-orange-400 text-white text-sm font-black flex items-center justify-center active:bg-orange-500">+</button>
+          </div>
+        </div>
+        {/* OG 我方 — with undo */}
+        <div className="flex items-center justify-between h-12 rounded-2xl bg-slate-50 border-2 border-slate-200 px-3 gap-2">
+          <span className="font-bold text-xs text-slate-500">OG {language === 'zh' ? '我方' : 'Ours'}</span>
+          <div className="flex items-center gap-1.5">
+            {(formData.scorers || []).filter((s: any) => s.type === 'own_goal_against').length > 0 && (
+              <button type="button" onClick={() => handleAction('undo_og_against')}
+                className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">−</button>
+            )}
+            {(formData.scorers || []).filter((s: any) => s.type === 'own_goal_against').length > 0 && (
+              <span className="text-sm font-black text-slate-500 w-4 text-center">
+                {(formData.scorers || []).filter((s: any) => s.type === 'own_goal_against').length}
+              </span>
+            )}
+            <button type="button" onClick={() => handleAction('og_against')}
+              className="w-6 h-6 rounded-full bg-slate-400 text-white text-sm font-black flex items-center justify-center active:bg-slate-500">+</button>
+          </div>
         </div>
       </div>
 
@@ -697,85 +713,16 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
   // ── Page 3: Report + Media ─────────────────────────────────────────────────────
   const page3 = (
     <div className="space-y-5">
-      {/* Rating — non-linear slider: 1-5 = 30%, 5.5-10 = 70% */}
+      {/* Rating */}
       <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-3">
           <label className="text-xs font-bold text-slate-400 uppercase">{t.performanceRating}</label>
-          <span className={`text-5xl font-black ${styles.text}`}>
-            {formData.rating}<span className="text-base text-slate-300 font-normal ml-1">/ 10</span>
+          <span className={`text-4xl font-black ${styles.text}`}>
+            {formData.rating}<span className="text-sm text-slate-300 font-normal ml-1">/ 10</span>
           </span>
         </div>
-
-        {/* Non-linear custom slider
-            Internal value 0–100:
-              0–30  → maps to rating 1–5   (integers only, step=6)
-              30–100 → maps to rating 5.5–10 (half steps, step=7) */}
-        {(() => {
-          // Convert rating → internal position (0–100)
-          // 1–5 (5 integers) → 0–30%, each step = 7.5%
-          // 5.5–10 (10 half-steps) → 30–100%, each step = 7%
-          const ratingToPos = (r: number): number => {
-            if (r <= 5) return ((r - 1) / 4) * 30;        // 1→0, 2→7.5, 3→15, 4→22.5, 5→30
-            return 30 + ((r - 5.5) / 4.5) * 70;           // 5.5→30, 10→100
-          };
-          const posToRating = (pos: number): number => {
-            if (pos <= 30) {
-              // Snap to nearest integer 1–5
-              const raw = 1 + (pos / 30) * 4;
-              return Math.min(5, Math.round(raw));
-            }
-            // Snap to nearest 0.5 in range 5.5–10
-            const raw = 5.5 + ((pos - 30) / 70) * 4.5;
-            return Math.min(10, Math.round(raw * 2) / 2);
-          };
-          const pos = ratingToPos(formData.rating);
-          const ratingColor = formData.rating >= 8 ? '#10b981' : formData.rating >= 6 ? '#f59e0b' : '#ef4444';
-          return (
-            <div className="relative mb-3">
-              {/* Track background */}
-              <div className="absolute top-1/2 left-0 right-0 h-4 -translate-y-1/2 rounded-full bg-slate-100 overflow-hidden pointer-events-none">
-                {/* Fill */}
-                <div className="h-full rounded-full transition-all duration-100"
-                  style={{ width: `${pos}%`, backgroundColor: ratingColor, opacity: 0.85 }} />
-                {/* Zone divider at 30% */}
-                <div className="absolute top-0 bottom-0 w-0.5 bg-white/60" style={{ left: '30%' }} />
-              </div>
-              <input
-                type="range" min="0" max="100" step="0.5"
-                value={pos}
-                onChange={e => {
-                  const newRating = posToRating(Number(e.target.value));
-                  setFormData(p => ({ ...p, rating: newRating }));
-                }}
-                className="relative w-full h-4 rounded-full appearance-none cursor-pointer bg-transparent"
-                style={{ WebkitAppearance: 'none' }}
-              />
-            </div>
-          );
-        })()}
-
-        {/* Zone labels + key tick marks */}
-        <div className="flex mb-4 text-[10px] font-bold">
-          <div className="flex justify-between text-slate-300" style={{ width: '30%' }}>
-            <span>1</span><span>3</span><span>5</span>
-          </div>
-          <div className="w-0.5" />
-          <div className="flex justify-between text-slate-400 pl-1" style={{ width: '70%' }}>
-            {[5.5,6,6.5,7,7.5,8,8.5,9,9.5,10].map(n => (
-              <button key={n} type="button"
-                onClick={() => setFormData(p => ({ ...p, rating: n }))}
-                className={`transition-all ${
-                  formData.rating === n
-                    ? formData.rating >= 8 ? 'text-emerald-500 scale-125 font-black'
-                      : formData.rating >= 6 ? 'text-amber-500 scale-125 font-black'
-                      : 'text-rose-400 scale-125 font-black'
-                    : 'text-slate-300'
-                }`}>
-                {n % 1 === 0 ? n : '·'}
-              </button>
-            ))}
-          </div>
-        </div>
+        <input type="range" name="rating" min="1" max="10" step="0.5" value={formData.rating} onChange={handleChange}
+          className="w-full h-3 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600 mb-4" />
         {/* MOTM */}
         <div className="flex items-center gap-3 border-t border-slate-100 pt-3">
           <div className="relative w-10 h-6">
@@ -874,13 +821,8 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
-    <>
-      <style>{`
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%; background: white; border: 3px solid #3b82f6; box-shadow: 0 2px 8px rgba(0,0,0,0.15); cursor: pointer; }
-        input[type=range]::-moz-range-thumb { width: 28px; height: 28px; border-radius: 50%; background: white; border: 3px solid #3b82f6; box-shadow: 0 2px 8px rgba(0,0,0,0.15); cursor: pointer; }
-      `}</style>
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm sm:p-4 animate-fade-in">
-      <div className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-2xl h-[95vh] sm:h-auto sm:max-h-[85vh] flex flex-col">
+      <div className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-2xl h-[95vh] sm:h-auto sm:max-h-[90vh] flex flex-col">
 
         {/* Header */}
         <div className={`${styles.headerBg} p-4 rounded-t-2xl flex-none`}>
@@ -911,21 +853,17 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
             </div>
           </div>
 
-          {/* Page tabs — hidden in fixture mode */}
-          {!isFixtureMode && (
+          {/* Page tabs */}
           <div className="flex gap-1">
             {([t.formPage1, t.formPage2, t.formPage3] as string[]).map((label, idx) => (
               <button key={idx + 1} type="button" onClick={() => setCurrentPage(idx + 1)}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
-                  currentPage === idx + 1
-                    ? 'bg-white text-slate-800 shadow-sm'
-                    : 'bg-black/10 text-slate-800'}`}>
+                  currentPage === idx + 1 ? 'bg-white text-slate-800 shadow-sm' : 'text-white/60 hover:text-white/80'}`}>
                 <i className={`fas ${PAGE_ICONS[idx]} text-[9px]`} />
                 {label}
               </button>
             ))}
           </div>
-          )}
         </div>
 
         {/* Draft restore banner */}
@@ -963,46 +901,37 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
 
         {/* Footer navigation */}
         <div className="p-4 border-t border-slate-100 bg-white rounded-b-2xl flex-none">
-          {isFixtureMode ? (
-            /* Fixture mode: single save button on page 1 */
-            <button type="button" onClick={handleSubmit}
-              className={`w-full ${styles.button} font-bold py-3 rounded-xl shadow-md flex items-center justify-center gap-2`}>
-              <i className="fas fa-calendar-plus" /> {t.save}
-            </button>
-          ) : (
-            <>
-              <div className="flex gap-3">
-                {currentPage > 1 && (
-                  <button type="button" onClick={() => setCurrentPage(p => p - 1)}
-                    className="flex-none px-5 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-slate-200 transition-colors">
-                    <i className="fas fa-chevron-left text-xs" /> {t.prevPage}
-                  </button>
-                )}
-                {currentPage < PAGE_ICONS.length ? (
-                  <button type="button" onClick={() => setCurrentPage(p => p + 1)}
-                    className={`flex-1 ${styles.button} font-bold py-3 rounded-xl shadow-md flex items-center justify-center gap-2 transition-all`}>
-                    {t.nextPage} <i className="fas fa-chevron-right text-xs" />
-                  </button>
-                ) : (
-                  <button type="button" onClick={handleSubmit}
-                    className={`flex-1 ${styles.button} font-bold py-3 rounded-xl shadow-md flex items-center justify-center gap-2`}>
-                    <i className="fas fa-save" /> {t.save}
-                  </button>
-                )}
-              </div>
-              {/* Page dots */}
-              <div className="flex justify-center gap-2 mt-3">
-                {[1, 2, 3].map(p => (
-                  <div key={p}
-                    className={`rounded-full transition-all ${currentPage === p ? 'w-4 h-2 bg-blue-500' : 'w-2 h-2 bg-slate-200'}`} />
-                ))}
-              </div>
-            </>
-          )}
+          <div className="flex gap-3">
+            {currentPage > 1 && (
+              <button type="button" onClick={() => setCurrentPage(p => p - 1)}
+                className="flex-none px-5 py-3 bg-slate-100 text-slate-600 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-slate-200 transition-colors">
+                <i className="fas fa-chevron-left text-xs" /> {t.prevPage}
+              </button>
+            )}
+
+            {currentPage < PAGE_ICONS.length ? (
+              <button type="button" onClick={() => setCurrentPage(p => p + 1)}
+                className={`flex-1 ${styles.button} font-bold py-3 rounded-xl shadow-md flex items-center justify-center gap-2 transition-all`}>
+                {t.nextPage} <i className="fas fa-chevron-right text-xs" />
+              </button>
+            ) : (
+              <button type="button" onClick={handleSubmit}
+                className={`flex-1 ${styles.button} font-bold py-3 rounded-xl shadow-md flex items-center justify-center gap-2`}>
+                <i className={`fas ${isFixtureMode ? 'fa-calendar-plus' : 'fa-save'}`} /> {t.save}
+              </button>
+            )}
+          </div>
+
+          {/* Page dots */}
+          <div className="flex justify-center gap-2 mt-3">
+            {[1, 2, 3].map(p => (
+              <div key={p}
+                className={`rounded-full transition-all ${currentPage === p ? 'w-4 h-2 bg-blue-500' : 'w-2 h-2 bg-slate-200'}`} />
+            ))}
+          </div>
         </div>
       </div>
     </div>
-    </>
   );
 };
 
