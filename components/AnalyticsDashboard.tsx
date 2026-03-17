@@ -5,7 +5,7 @@ import { useLanguage } from '../context/LanguageContext';
 import ShareCard from './ShareCard';
 import { calculateBadges, BadgeState, getTierLabelKey } from '../utils/badges';
 
-type TimeFilterType = 'all' | 'year' | 'season' | 'month';
+type TimeFilterType = 'all' | 'year' | 'season' | 'month' | 'custom';
 type ChartSeries = 'rating' | 'goals' | 'assists';
 
 // ── DrillDown Sheet (external component — must not be defined inside render) ──
@@ -110,6 +110,8 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
   const [matchTypeFilter, setMatchTypeFilter] = useState<Set<string>>(new Set());
   const [timeFilterType, setTimeFilterType] = useState<TimeFilterType>('all');
   const [timeFilterValue, setTimeFilterValue] = useState<string>('');
+  const [customDateFrom, setCustomDateFrom] = useState<string>('');
+  const [customDateTo, setCustomDateTo] = useState<string>('');
   const [showShareModal, setShowShareModal] = useState(false);
 
   // Chart series toggles
@@ -155,9 +157,10 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
 
   const handleTypeChange = (newType: TimeFilterType) => {
     setTimeFilterType(newType);
-    if (newType === 'year' && timeOptions.years.length > 0) setTimeFilterValue(timeOptions.years[0]);
+    if (newType === 'year'   && timeOptions.years.length > 0)    setTimeFilterValue(timeOptions.years[0]);
     if (newType === 'season' && timeOptions.quarters.length > 0) setTimeFilterValue(timeOptions.quarters[0]);
-    if (newType === 'month' && timeOptions.months.length > 0) setTimeFilterValue(timeOptions.months[0]);
+    if (newType === 'month'  && timeOptions.months.length > 0)   setTimeFilterValue(timeOptions.months[0]);
+    if (newType === 'custom') { setCustomDateFrom(''); setCustomDateTo(''); }
   };
 
   const filteredMatches = useMemo(() => {
@@ -175,10 +178,13 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
           const mQ = Math.floor((d.getMonth() + 3) / 3);
           return d.getFullYear().toString() === year && mQ === q;
         });
+      } else if (timeFilterType === 'custom') {
+        if (customDateFrom) result = result.filter(m => m.date >= customDateFrom);
+        if (customDateTo)   result = result.filter(m => m.date <= customDateTo);
       }
     }
     return result.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [completedMatches, teamFilter, matchTypeFilter, timeFilterType, timeFilterValue]);
+  }, [completedMatches, teamFilter, matchTypeFilter, timeFilterType, timeFilterValue, customDateFrom, customDateTo]);
 
   const stats = useMemo(() => {
     const totalGoals   = filteredMatches.reduce((acc, m) => acc + m.arthurGoals, 0);
@@ -193,6 +199,24 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
       ? Math.round((scoringMatches / filteredMatches.length) * 100)
       : 0;
 
+    // ── Team scorer table ──
+    // Build map of { teammateId -> { name, goals } } across all filtered matches
+    const teamScorerMap: Record<string, { name: string; goals: number }> = {};
+    filteredMatches.forEach(m => {
+      if (!m.scorers) return;
+      // Get the team roster for name lookup
+      const team = profile.teams.find(t => t.id === m.teamId);
+      m.scorers.forEach((s: any) => {
+        if (!s.teammateId) return;
+        const tm = team?.roster.find(r => r.id === s.teammateId);
+        const name = tm?.name || s.teammateId;
+        if (!teamScorerMap[s.teammateId]) teamScorerMap[s.teammateId] = { name, goals: 0 };
+        teamScorerMap[s.teammateId].goals += (s.count || 1);
+      });
+    });
+    const teamScorerStats = Object.values(teamScorerMap)
+      .sort((a, b) => b.goals - a.goals);
+
     return {
       totalGoals,
       totalAssists,
@@ -206,6 +230,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
       scoringMatches,
       blankMatches,
       scoringRate,
+      teamScorerStats,
     };
   }, [filteredMatches]);
 
@@ -718,14 +743,38 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
             <option value="year">{t.filterYear}</option>
             <option value="season">{t.filterSeason}</option>
             <option value="month">{t.filterMonth}</option>
+            <option value="custom">{language === 'zh' ? '自訂日期' : 'Custom Range'}</option>
           </select>
-          {timeFilterType !== 'all' && (
+          {timeFilterType !== 'all' && timeFilterType !== 'custom' && (
             <select value={timeFilterValue} onChange={(e) => setTimeFilterValue(e.target.value)}
               className="w-full bg-blue-50 text-blue-700 text-sm rounded-lg px-3 py-2 outline-none border border-blue-200 font-bold">
               {timeFilterType === 'year'   && timeOptions.years.map(y => <option key={y} value={y}>{y}</option>)}
               {timeFilterType === 'season' && timeOptions.quarters.map(q => <option key={q} value={q}>{q}</option>)}
               {timeFilterType === 'month'  && timeOptions.months.map(m => <option key={m} value={m}>{m}</option>)}
             </select>
+          )}
+          {timeFilterType === 'custom' && (
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <div className="text-[9px] font-bold text-slate-400 uppercase mb-1 pl-1">{language === 'zh' ? '開始日期' : 'From'}</div>
+                <input
+                  type="date"
+                  value={customDateFrom}
+                  onChange={e => setCustomDateFrom(e.target.value)}
+                  className="w-full bg-blue-50 text-blue-700 text-sm rounded-lg px-3 py-2 outline-none border border-blue-200 font-bold"
+                />
+              </div>
+              <div className="text-slate-300 font-bold pt-4">→</div>
+              <div className="flex-1">
+                <div className="text-[9px] font-bold text-slate-400 uppercase mb-1 pl-1">{language === 'zh' ? '結束日期' : 'To'}</div>
+                <input
+                  type="date"
+                  value={customDateTo}
+                  onChange={e => setCustomDateTo(e.target.value)}
+                  className="w-full bg-blue-50 text-blue-700 text-sm rounded-lg px-3 py-2 outline-none border border-blue-200 font-bold"
+                />
+              </div>
+            </div>
           )}
           {filteredMatches.length > 0 && (
             <button onClick={() => setShowShareModal(true)}
@@ -891,6 +940,68 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
 
           {/* Attack contribution */}
           {stats.teamGoals > 0 && <AttackRing />}
+
+          {/* ── Team scorer table ──────────────────────────────────────── */}
+          {stats.teamScorerStats.length > 0 && (() => {
+            const playerName = profile.name;
+            // Find player's own entry goals for highlighting
+            const maxGoals = Math.max(...stats.teamScorerStats.map(s => s.goals), stats.totalGoals);
+            return (
+              <div className="bg-white rounded-xl p-5 shadow border border-slate-100">
+                <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                  <i className="fas fa-users text-indigo-500" />
+                  {language === 'zh' ? '球隊入球榜' : 'Team Scorers'}
+                  <span className="text-[10px] font-normal text-slate-400 ml-1">
+                    {language === 'zh' ? '（隊友記錄）' : '(from match logs)'}
+                  </span>
+                </h3>
+
+                {/* Player's own row — always pinned at top if has goals */}
+                {stats.totalGoals > 0 && (
+                  <div className="flex items-center gap-3 mb-2 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5">
+                    <div className="w-6 h-6 rounded-full bg-amber-400 flex items-center justify-center shrink-0">
+                      <i className="fas fa-star text-white text-[9px]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-black text-slate-800 truncate">{playerName}</div>
+                      <div className="w-full bg-amber-100 rounded-full h-1.5 mt-1">
+                        <div className="bg-amber-400 h-1.5 rounded-full transition-all"
+                          style={{ width: `${(stats.totalGoals / maxGoals) * 100}%` }} />
+                      </div>
+                    </div>
+                    <div className="text-xl font-black text-amber-500 shrink-0">{stats.totalGoals}</div>
+                  </div>
+                )}
+
+                {/* Teammate rows */}
+                <div className="space-y-2 mt-2">
+                  {stats.teamScorerStats.map((scorer, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                        <span className="text-[10px] font-black text-slate-400">{i + 1}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-bold text-slate-700 truncate">{scorer.name}</div>
+                        <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1">
+                          <div className="bg-indigo-400 h-1.5 rounded-full transition-all"
+                            style={{ width: `${(scorer.goals / maxGoals) * 100}%` }} />
+                        </div>
+                      </div>
+                      <div className="text-base font-black text-indigo-500 shrink-0">{scorer.goals}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Total */}
+                <div className="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center">
+                  <span className="text-xs font-bold text-slate-400">
+                    {language === 'zh' ? '球隊總入球' : 'Team total'}
+                  </span>
+                  <span className="text-sm font-black text-slate-600">{stats.teamGoals}</span>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Rating trend */}
           <div className="bg-white rounded-xl p-5 shadow border border-slate-100">
