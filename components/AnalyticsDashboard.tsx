@@ -307,7 +307,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
               <i className="fas fa-times text-xs" />
             </button>
           </div>
-          <div className="overflow-y-auto flex-1 divide-y divide-slate-50">
+          <div className="overflow-y-auto flex-1 divide-y divide-slate-50 pb-20">
             {matchesWithGoals.map(m => {
               const goalsThisMatch = isArthur
                 ? m.arthurGoals
