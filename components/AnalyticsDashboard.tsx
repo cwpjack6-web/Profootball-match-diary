@@ -201,9 +201,8 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
       : 0;
 
     // ── Team scorer table ──
-    // Single team selected → key by teammateId (unique, fully independent)
-    // All teams selected   → key by name (same name = same person, merge goals)
-    const showingAllTeams = teamFilter === 'all';
+    // Always key by name — filteredMatches is already team-filtered when needed.
+    // Same name across teams = same person (e.g. when showing all teams).
     const teamScorerMap: Record<string, { name: string; displayName: string; goals: number; teammateId: string }> = {};
     filteredMatches.forEach(m => {
       if (!m.scorers) return;
@@ -212,14 +211,12 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
         // Skip OG and assist entries
         if (s.type === 'own_goal_for' || s.type === 'own_goal_against' || s.type === 'assist') return;
 
-        // Old format: { playerId, name, type:'goal' } — no teammateId
+        // Old format: { playerId, name, type:'goal' }
         if (!s.teammateId && s.playerId && s.playerId !== 'arthur' && s.playerId !== 'og_for' && s.playerId !== 'og_against') {
-          // Try to resolve name from roster, fallback to s.name
           const tm = team?.roster.find((r: any) => r.id === s.playerId);
           const name = tm?.name || s.name || s.playerId;
-          const key = showingAllTeams ? name : (s.playerId + '_' + m.teamId);
-          if (!teamScorerMap[key]) teamScorerMap[key] = { name, displayName: name, goals: 0, teammateId: s.playerId };
-          teamScorerMap[key].goals += 1;
+          if (!teamScorerMap[name]) teamScorerMap[name] = { name, displayName: name, goals: 0, teammateId: s.playerId };
+          teamScorerMap[name].goals += 1;
           return;
         }
 
@@ -227,11 +224,10 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
         if (!s.teammateId) return;
         const tm = team?.roster.find((r: any) => r.id === s.teammateId);
         const name = tm?.name || s.teammateId;
-        const key = showingAllTeams ? name : s.teammateId;
-        if (!teamScorerMap[key]) {
-          teamScorerMap[key] = { name, displayName: name, goals: 0, teammateId: s.teammateId };
+        if (!teamScorerMap[name]) {
+          teamScorerMap[name] = { name, displayName: name, goals: 0, teammateId: s.teammateId };
         }
-        teamScorerMap[key].goals += (s.count || 1);
+        teamScorerMap[name].goals += (s.count || 1);
       });
     });
     const teamScorerStats = Object.values(teamScorerMap)
@@ -261,25 +257,20 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
   const ScorerDrillModal = () => {
     if (!selectedScorer) return null;
     const isArthur = selectedScorer.isArthur;
-    const tid = selectedScorer.teammateId;
     const sName = selectedScorer.name;
-    const isAllTeams = teamFilter === 'all';
 
     const matchesScorer = (m: any, s: any) => {
       if (s.type === 'own_goal_for' || s.type === 'own_goal_against' || s.type === 'assist') return false;
+      const team = profile.teams.find((t: any) => String(t.id) === String(m.teamId));
+      // Old format: { playerId, name, type:'goal' }
       if (!s.teammateId && s.playerId && s.playerId !== 'arthur' && s.playerId !== 'og_for' && s.playerId !== 'og_against') {
-        if (isAllTeams) return s.name === sName;
-        const team = profile.teams.find((t: any) => String(t.id) === String(m.teamId));
         const tm = team?.roster.find((r: any) => r.id === s.playerId);
-        return tm?.name === sName;
+        return (tm?.name || s.name) === sName;
       }
+      // New format: { teammateId, count }
       if (!s.teammateId) return false;
-      if (isAllTeams) {
-        const team = profile.teams.find((t: any) => String(t.id) === String(m.teamId));
-        const tm = team?.roster.find((r: any) => r.id === s.teammateId);
-        return tm?.name === sName;
-      }
-      return s.teammateId === tid;
+      const tm = team?.roster.find((r: any) => r.id === s.teammateId);
+      return tm?.name === sName;
     };
 
     const matchesWithGoals = [...filteredMatches]
