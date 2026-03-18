@@ -166,7 +166,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
 
   const filteredMatches = useMemo(() => {
     let result = completedMatches;
-    if (teamFilter !== 'all') result = result.filter(m => m.teamId === teamFilter);
+    if (teamFilter !== 'all') result = result.filter(m => String(m.teamId) === String(teamFilter));
     if (matchTypeFilter.size > 0) result = result.filter(m => matchTypeFilter.has(m.matchType || 'league'));
     if (timeFilterType !== 'all' && timeFilterValue) {
       if (timeFilterType === 'year') result = result.filter(m => m.date.startsWith(timeFilterValue));
@@ -207,7 +207,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
     const teamScorerMap: Record<string, { name: string; displayName: string; goals: number; teammateId: string }> = {};
     filteredMatches.forEach(m => {
       if (!m.scorers) return;
-      const team = profile.teams.find(t => t.id === m.teamId);
+      const team = profile.teams.find(t => String(t.id) === String(m.teamId));
       m.scorers.forEach((s: any) => {
         // Skip OG and assist entries
         if (s.type === 'own_goal_for' || s.type === 'own_goal_against' || s.type === 'assist') return;
@@ -269,13 +269,13 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
       if (s.type === 'own_goal_for' || s.type === 'own_goal_against' || s.type === 'assist') return false;
       if (!s.teammateId && s.playerId && s.playerId !== 'arthur' && s.playerId !== 'og_for' && s.playerId !== 'og_against') {
         if (isAllTeams) return s.name === sName;
-        const team = profile.teams.find((t: any) => t.id === m.teamId);
+        const team = profile.teams.find((t: any) => String(t.id) === String(m.teamId));
         const tm = team?.roster.find((r: any) => r.id === s.playerId);
         return tm?.name === sName;
       }
       if (!s.teammateId) return false;
       if (isAllTeams) {
-        const team = profile.teams.find((t: any) => t.id === m.teamId);
+        const team = profile.teams.find((t: any) => String(t.id) === String(m.teamId));
         const tm = team?.roster.find((r: any) => r.id === s.teammateId);
         return tm?.name === sName;
       }
