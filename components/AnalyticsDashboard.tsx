@@ -257,6 +257,95 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
   const { badges, totalLevel, maxLevel } = useMemo(() => calculateBadges(filteredMatches), [filteredMatches]);
 
   // ── Helper: calc W/D/L/goals/rating from a subset ─────────────────────────
+  // ── Scorer drill-down modal (top-level, not inside IIFE) ───────────────────
+  const ScorerDrillModal = () => {
+    if (!selectedScorer) return null;
+    const isArthur = selectedScorer.isArthur;
+    const tid = selectedScorer.teammateId;
+    const sName = selectedScorer.name;
+    const isAllTeams = teamFilter === 'all';
+
+    const matchesScorer = (m: any, s: any) => {
+      if (s.type === 'own_goal_for' || s.type === 'own_goal_against' || s.type === 'assist') return false;
+      if (!s.teammateId && s.playerId && s.playerId !== 'arthur' && s.playerId !== 'og_for' && s.playerId !== 'og_against') {
+        if (isAllTeams) return s.name === sName;
+        const team = profile.teams.find((t: any) => t.id === m.teamId);
+        const tm = team?.roster.find((r: any) => r.id === s.playerId);
+        return tm?.name === sName;
+      }
+      if (!s.teammateId) return false;
+      if (isAllTeams) {
+        const team = profile.teams.find((t: any) => t.id === m.teamId);
+        const tm = team?.roster.find((r: any) => r.id === s.teammateId);
+        return tm?.name === sName;
+      }
+      return s.teammateId === tid;
+    };
+
+    const matchesWithGoals = [...filteredMatches]
+      .filter(m => isArthur ? m.arthurGoals > 0 : m.scorers?.some((s: any) => matchesScorer(m, s)))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    const totalGoalsInModal = isArthur
+      ? matchesWithGoals.reduce((acc, m) => acc + m.arthurGoals, 0)
+      : matchesWithGoals.reduce((acc, m) =>
+          acc + (m.scorers?.filter((s: any) => matchesScorer(m, s))
+            .reduce((a: number, s: any) => a + (s.count !== undefined ? s.count : 1), 0) || 0), 0);
+
+    return (
+      <div className="fixed inset-0 z-50 bg-black/60 flex items-end" onClick={() => setSelectedScorer(null)}>
+        <div className="bg-white w-full rounded-t-2xl max-h-[75vh] flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+            <div>
+              <div className="font-black text-slate-800 text-base">{selectedScorer.displayName}</div>
+              <div className="text-xs text-slate-400 mt-0.5">
+                {totalGoalsInModal} {language === 'zh' ? `球 · ${matchesWithGoals.length} 場有入球` : `goals · ${matchesWithGoals.length} matches`}
+              </div>
+            </div>
+            <button onClick={() => setSelectedScorer(null)}
+              className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+              <i className="fas fa-times text-xs" />
+            </button>
+          </div>
+          <div className="overflow-y-auto flex-1 divide-y divide-slate-50">
+            {matchesWithGoals.map(m => {
+              const goalsThisMatch = isArthur
+                ? m.arthurGoals
+                : (m.scorers?.filter((s: any) => matchesScorer(m, s))
+                    .reduce((a: number, s: any) => a + (s.count !== undefined ? s.count : 1), 0) || 0);
+              const won  = m.scoreMyTeam > m.scoreOpponent;
+              const drew = m.scoreMyTeam === m.scoreOpponent;
+              const dateObj = new Date(m.date);
+              const dateLabel = `${dateObj.getMonth()+1}/${dateObj.getDate()}`;
+              return (
+                <div key={m.id} className="flex items-center gap-3 px-5 py-3">
+                  <div className="text-xs font-bold text-slate-400 w-8 shrink-0">{dateLabel}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-bold text-slate-700 truncate">vs {m.opponent}</div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">
+                      {m.scoreMyTeam}–{m.scoreOpponent}
+                      <span className={`ml-1.5 font-bold ${won ? 'text-emerald-500' : drew ? 'text-amber-500' : 'text-rose-400'}`}>
+                        {won ? (language === 'zh' ? '勝' : 'W') : drew ? (language === 'zh' ? '平' : 'D') : (language === 'zh' ? '負' : 'L')}
+                      </span>
+                      {m.matchType === 'tournament' && (
+                        <span className="ml-1.5 text-amber-500 font-bold">{language === 'zh' ? '錦標賽' : 'Cup'}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {Array.from({ length: goalsThisMatch }).map((_, i) => (
+                      <span key={i} className="text-base">⚽</span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const calcGroup = (ms: typeof filteredMatches) => {
     const total = ms.length;
     if (total === 0) return { total, w: 0, d: 0, l: 0, winRate: 0, goals: 0, avgRating: 0 };
@@ -708,6 +797,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
 
   return (
     <div className="pb-32 animate-fade-in">
+      <ScorerDrillModal />
       <style>{`@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
 
       {/* ── Sticky header: filters + tab bar ─────────────────────────────── */}
@@ -971,106 +1061,10 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
 
             const maxGoals = Math.max(...allScorers.map(s => s.goals), 1);
 
-            // Scorer drill-down modal
-            const scorerModal = selectedScorer && (() => {
-              const isArthur = selectedScorer.isArthur;
-              const tid = selectedScorer.teammateId;
-              const sName = selectedScorer.name;
-              const isAllTeams = teamFilter === 'all';
-              // All teams mode: match by name across rosters. Single team: match by teammateId.
-              const matchesScorer = (m: any, s: any) => {
-                // Skip OG and assist entries
-                if (s.type === 'own_goal_for' || s.type === 'own_goal_against' || s.type === 'assist') return false;
-                // Old format: { playerId, name, type:'goal' }
-                if (!s.teammateId && s.playerId && s.playerId !== 'arthur' && s.playerId !== 'og_for' && s.playerId !== 'og_against') {
-                  if (isAllTeams) return s.name === sName;
-                  // Single team: match by playerId mapped to roster
-                  const team = profile.teams.find((t: any) => t.id === m.teamId);
-                  const tm = team?.roster.find((r: any) => r.id === s.playerId);
-                  return tm?.name === sName;
-                }
-                // New format: { teammateId, count }
-                if (!s.teammateId) return false;
-                if (isAllTeams) {
-                  const team = profile.teams.find((t: any) => t.id === m.teamId);
-                  const tm = team?.roster.find((r: any) => r.id === s.teammateId);
-                  return tm?.name === sName;
-                }
-                return s.teammateId === tid;
-              };
-              const matchesWithGoals = [...filteredMatches].filter(m => {
-                if (isArthur) return m.arthurGoals > 0;
-                return m.scorers?.some((s: any) => matchesScorer(m, s));
-              }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-              const totalGoalsInModal = isArthur
-                ? matchesWithGoals.reduce((acc, m) => acc + m.arthurGoals, 0)
-                : matchesWithGoals.reduce((acc, m) => {
-                    return acc + (m.scorers?.filter((s: any) => matchesScorer(m, s))
-                      .reduce((a: number, s: any) => a + (s.count || 1), 0) || 0);
-                  }, 0);
-
-              return (
-                <div className="fixed inset-0 z-50 bg-black/60 flex items-end" onClick={() => setSelectedScorer(null)}>
-                  <div className="bg-white w-full rounded-t-2xl max-h-[75vh] flex flex-col" onClick={e => e.stopPropagation()}>
-                    {/* Modal header */}
-                    <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-                      <div>
-                        <div className="font-black text-slate-800 text-base">{selectedScorer.displayName}</div>
-                        <div className="text-xs text-slate-400 mt-0.5">
-                          {totalGoalsInModal} {language === 'zh' ? `球 · ${matchesWithGoals.length} 場有入球` : `goals · ${matchesWithGoals.length} matches`}
-                        </div>
-                      </div>
-                      <button onClick={() => setSelectedScorer(null)}
-                        className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-                        <i className="fas fa-times text-xs" />
-                      </button>
-                    </div>
-                    {/* Match list */}
-                    <div className="overflow-y-auto flex-1 divide-y divide-slate-50">
-                      {matchesWithGoals.map(m => {
-                        const goalsThisMatch = isArthur
-                          ? m.arthurGoals
-                          : (m.scorers?.filter((s: any) => matchesScorer(m, s))
-                              .reduce((a: number, s: any) => a + (s.count !== undefined ? s.count : 1), 0) || 0);
-                        const won  = m.scoreMyTeam > m.scoreOpponent;
-                        const drew = m.scoreMyTeam === m.scoreOpponent;
-                        const dateObj = new Date(m.date);
-                        const dateLabel = `${dateObj.getMonth()+1}/${dateObj.getDate()}`;
-                        return (
-                          <div key={m.id} className="flex items-center gap-3 px-5 py-3">
-                            <div className="text-xs font-bold text-slate-400 w-8 shrink-0">{dateLabel}</div>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-bold text-slate-700 truncate">
-                                vs {m.opponent}
-                              </div>
-                              <div className="text-[10px] text-slate-400 mt-0.5">
-                                {m.scoreMyTeam}–{m.scoreOpponent}
-                                <span className={`ml-1.5 font-bold ${won ? 'text-emerald-500' : drew ? 'text-amber-500' : 'text-rose-400'}`}>
-                                  {won ? (language === 'zh' ? '勝' : 'W') : drew ? (language === 'zh' ? '平' : 'D') : (language === 'zh' ? '負' : 'L')}
-                                </span>
-                                {m.matchType === 'tournament' && (
-                                  <span className="ml-1.5 text-amber-500 font-bold">{language === 'zh' ? '錦標賽' : 'Cup'}</span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1 shrink-0">
-                              {Array.from({ length: goalsThisMatch }).map((_, i) => (
-                                <span key={i} className="text-base">⚽</span>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              );
-            })();
+            // (scorer modal is rendered at top level, see ScorerDrillModal below)
 
             return (
               <>
-                {scorerModal}
                 <div className="bg-white rounded-xl p-5 shadow border border-slate-100">
                   <h3 className="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
                     <i className="fas fa-users text-indigo-500" />
