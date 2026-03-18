@@ -201,10 +201,10 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
       : 0;
 
     // ── Team scorer table ──
-    // Key by teammateId (unique per player per team) — never merge across teams
-    // Display name includes team tag only when showing all teams
+    // Single team selected → key by teammateId (unique, fully independent)
+    // All teams selected   → key by name (same name = same person, merge goals)
     const showingAllTeams = teamFilter === 'all';
-    const teamScorerMap: Record<string, { name: string; displayName: string; goals: number }> = {};
+    const teamScorerMap: Record<string, { name: string; displayName: string; goals: number; teammateId: string }> = {};
     filteredMatches.forEach(m => {
       if (!m.scorers) return;
       const team = profile.teams.find(t => t.id === m.teamId);
@@ -213,17 +213,15 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
         if (s.type === 'own_goal_for' || s.type === 'own_goal_against' || s.type === 'assist') return;
         const tm = team?.roster.find((r: any) => r.id === s.teammateId);
         const name = tm?.name || s.teammateId;
-        // Use teammateId as key — unique per player per team
-        const key = s.teammateId;
+        // All teams: merge by name. Single team: keep separate by teammateId.
+        const key = showingAllTeams ? name : s.teammateId;
         if (!teamScorerMap[key]) {
-          const teamTag = showingAllTeams && team ? ` (${team.name})` : '';
-          teamScorerMap[key] = { name, displayName: name + teamTag, goals: 0 };
+          teamScorerMap[key] = { name, displayName: name, goals: 0, teammateId: s.teammateId };
         }
         teamScorerMap[key].goals += (s.count || 1);
       });
     });
-    const teamScorerStats = Object.entries(teamScorerMap)
-      .map(([tid, v]) => ({ ...v, teammateId: tid }))
+    const teamScorerStats = Object.values(teamScorerMap)
       .sort((a, b) => b.goals - a.goals);
 
     return {
@@ -964,15 +962,26 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
             const scorerModal = selectedScorer && (() => {
               const isArthur = selectedScorer.isArthur;
               const tid = selectedScorer.teammateId;
+              const sName = selectedScorer.name;
+              const isAllTeams = teamFilter === 'all';
+              // All teams mode: match by name across rosters. Single team: match by teammateId.
+              const matchesScorer = (m: any, s: any) => {
+                if (isAllTeams) {
+                  const team = profile.teams.find((t: any) => t.id === m.teamId);
+                  const tm = team?.roster.find((r: any) => r.id === s.teammateId);
+                  return tm?.name === sName;
+                }
+                return s.teammateId === tid;
+              };
               const matchesWithGoals = filteredMatches.filter(m => {
                 if (isArthur) return m.arthurGoals > 0;
-                return m.scorers?.some((s: any) => s.teammateId === tid);
+                return m.scorers?.some((s: any) => matchesScorer(m, s));
               }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
               const totalGoalsInModal = isArthur
                 ? matchesWithGoals.reduce((acc, m) => acc + m.arthurGoals, 0)
                 : matchesWithGoals.reduce((acc, m) => {
-                    return acc + (m.scorers?.filter((s: any) => s.teammateId === tid)
+                    return acc + (m.scorers?.filter((s: any) => matchesScorer(m, s))
                       .reduce((a: number, s: any) => a + (s.count || 1), 0) || 0);
                   }, 0);
 
@@ -997,7 +1006,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
                       {matchesWithGoals.map(m => {
                         const goalsThisMatch = isArthur
                           ? m.arthurGoals
-                          : (m.scorers?.filter((s: any) => s.teammateId === tid)
+                          : (m.scorers?.filter((s: any) => matchesScorer(m, s))
                               .reduce((a: number, s: any) => a + (s.count || 1), 0) || 0);
                         const won  = m.scoreMyTeam > m.scoreOpponent;
                         const drew = m.scoreMyTeam === m.scoreOpponent;
