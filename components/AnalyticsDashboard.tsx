@@ -252,7 +252,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
       scoringRate,
       teamScorerStats,
     };
-  }, [filteredMatches]);
+  }, [filteredMatches, teamFilter]);
 
   const { badges, totalLevel, maxLevel } = useMemo(() => calculateBadges(filteredMatches), [filteredMatches]);
 
