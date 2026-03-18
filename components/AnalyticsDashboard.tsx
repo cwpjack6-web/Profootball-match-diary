@@ -113,7 +113,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
   const [customDateFrom, setCustomDateFrom] = useState<string>('');
   const [customDateTo, setCustomDateTo] = useState<string>('');
   const [showShareModal, setShowShareModal] = useState(false);
-  const [selectedScorer, setSelectedScorer] = useState<{ name: string; isArthur: boolean } | null>(null);
+  const [selectedScorer, setSelectedScorer] = useState<{ name: string; displayName: string; teammateId: string | null; isArthur: boolean } | null>(null);
 
   // Chart series toggles
   const [activeSeries, setActiveSeries] = useState<Set<ChartSeries>>(
@@ -201,21 +201,29 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
       : 0;
 
     // ── Team scorer table ──
-    // Build map of { teammateId -> { name, goals } } across all filtered matches
-    const teamScorerMap: Record<string, { name: string; goals: number }> = {};
+    // Key by teammateId (unique per player per team) — never merge across teams
+    // Display name includes team tag only when showing all teams
+    const showingAllTeams = teamFilter === 'all';
+    const teamScorerMap: Record<string, { name: string; displayName: string; goals: number }> = {};
     filteredMatches.forEach(m => {
       if (!m.scorers) return;
-      // Get the team roster for name lookup
       const team = profile.teams.find(t => t.id === m.teamId);
       m.scorers.forEach((s: any) => {
         if (!s.teammateId) return;
-        const tm = team?.roster.find(r => r.id === s.teammateId);
+        if (s.type === 'own_goal_for' || s.type === 'own_goal_against' || s.type === 'assist') return;
+        const tm = team?.roster.find((r: any) => r.id === s.teammateId);
         const name = tm?.name || s.teammateId;
-        if (!teamScorerMap[s.teammateId]) teamScorerMap[s.teammateId] = { name, goals: 0 };
-        teamScorerMap[s.teammateId].goals += (s.count || 1);
+        // Use teammateId as key — unique per player per team
+        const key = s.teammateId;
+        if (!teamScorerMap[key]) {
+          const teamTag = showingAllTeams && team ? ` (${team.name})` : '';
+          teamScorerMap[key] = { name, displayName: name + teamTag, goals: 0 };
+        }
+        teamScorerMap[key].goals += (s.count || 1);
       });
     });
-    const teamScorerStats = Object.values(teamScorerMap)
+    const teamScorerStats = Object.entries(teamScorerMap)
+      .map(([tid, v]) => ({ ...v, teammateId: tid }))
       .sort((a, b) => b.goals - a.goals);
 
     return {
@@ -946,7 +954,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
           {(stats.teamScorerStats.length > 0 || stats.totalGoals > 0) && (() => {
             // Merge Arthur into unified ranked list
             const allScorers = [
-              ...(stats.totalGoals > 0 ? [{ name: profile.name, goals: stats.totalGoals, isArthur: true }] : []),
+              ...(stats.totalGoals > 0 ? [{ name: profile.name, displayName: profile.name, teammateId: null, goals: stats.totalGoals, isArthur: true }] : []),
               ...stats.teamScorerStats.map(s => ({ ...s, isArthur: false })),
             ].sort((a, b) => b.goals - a.goals);
 
@@ -955,24 +963,17 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
             // Scorer drill-down modal
             const scorerModal = selectedScorer && (() => {
               const isArthur = selectedScorer.isArthur;
+              const tid = selectedScorer.teammateId;
               const matchesWithGoals = filteredMatches.filter(m => {
                 if (isArthur) return m.arthurGoals > 0;
-                // Find scorer's teammateId
-                const team = profile.teams.find(t => t.id === m.teamId);
-                return m.scorers?.some((s: any) => {
-                  const tm = team?.roster.find((r: any) => r.id === s.teammateId);
-                  return tm?.name === selectedScorer.name;
-                });
+                return m.scorers?.some((s: any) => s.teammateId === tid);
               }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
               const totalGoalsInModal = isArthur
                 ? matchesWithGoals.reduce((acc, m) => acc + m.arthurGoals, 0)
                 : matchesWithGoals.reduce((acc, m) => {
-                    const team = profile.teams.find(t => t.id === m.teamId);
-                    return acc + (m.scorers?.filter((s: any) => {
-                      const tm = team?.roster.find((r: any) => r.id === s.teammateId);
-                      return tm?.name === selectedScorer.name;
-                    }).reduce((a: number, s: any) => a + (s.count || 1), 0) || 0);
+                    return acc + (m.scorers?.filter((s: any) => s.teammateId === tid)
+                      .reduce((a: number, s: any) => a + (s.count || 1), 0) || 0);
                   }, 0);
 
               return (
@@ -981,7 +982,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
                     {/* Modal header */}
                     <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
                       <div>
-                        <div className="font-black text-slate-800 text-base">{selectedScorer.name}</div>
+                        <div className="font-black text-slate-800 text-base">{selectedScorer.displayName}</div>
                         <div className="text-xs text-slate-400 mt-0.5">
                           {totalGoalsInModal} {language === 'zh' ? `球 · ${matchesWithGoals.length} 場有入球` : `goals · ${matchesWithGoals.length} matches`}
                         </div>
@@ -996,13 +997,8 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
                       {matchesWithGoals.map(m => {
                         const goalsThisMatch = isArthur
                           ? m.arthurGoals
-                          : (() => {
-                              const team = profile.teams.find(t => t.id === m.teamId);
-                              return m.scorers?.filter((s: any) => {
-                                const tm = team?.roster.find((r: any) => r.id === s.teammateId);
-                                return tm?.name === selectedScorer.name;
-                              }).reduce((a: number, s: any) => a + (s.count || 1), 0) || 0;
-                            })();
+                          : (m.scorers?.filter((s: any) => s.teammateId === tid)
+                              .reduce((a: number, s: any) => a + (s.count || 1), 0) || 0);
                         const won  = m.scoreMyTeam > m.scoreOpponent;
                         const drew = m.scoreMyTeam === m.scoreOpponent;
                         const dateObj = new Date(m.date);
@@ -1052,7 +1048,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
 
                   <div className="space-y-2">
                     {allScorers.map((scorer, i) => (
-                      <button key={scorer.name} onClick={() => setSelectedScorer({ name: scorer.name, isArthur: scorer.isArthur })}
+                      <button key={scorer.isArthur ? 'arthur' : scorer.teammateId} onClick={() => setSelectedScorer({ name: scorer.name, displayName: scorer.displayName, teammateId: scorer.isArthur ? null : scorer.teammateId, isArthur: scorer.isArthur })}
                         className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all active:scale-[0.98] text-left ${
                           scorer.isArthur ? 'bg-amber-50 border border-amber-100' : 'bg-slate-50 border border-slate-100 hover:border-slate-200'
                         }`}>
