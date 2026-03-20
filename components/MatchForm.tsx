@@ -833,11 +833,11 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
               </h2>
               {profile.teams.length > 1 ? (
                 <select name="teamId" value={formData.teamId} onChange={handleChange}
-                  className="bg-white/20 text-white text-xs rounded-lg px-2 py-1 font-bold outline-none border border-white/20">
+                  className={`bg-white/20 text-xs rounded-lg px-2 py-1 font-bold outline-none border border-white/20 ${styles.headerText}`}>
                   {profile.teams.map(team => <option key={team.id} value={team.id} className="text-slate-800">{team.name}</option>)}
                 </select>
               ) : (
-                <span className="bg-white/20 text-white text-xs font-bold px-2 py-1 rounded-lg">{activeTeam.name}</span>
+                <span className={`bg-white/20 text-xs font-bold px-2 py-1 rounded-lg ${styles.headerText}`}>{activeTeam.name}</span>
               )}
             </div>
             <div className="flex items-center gap-2">
@@ -858,7 +858,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
             {([t.formPage1, t.formPage2, t.formPage3] as string[]).map((label, idx) => (
               <button key={idx + 1} type="button" onClick={() => setCurrentPage(idx + 1)}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
-                  currentPage === idx + 1 ? 'bg-white text-slate-800 shadow-sm' : 'text-white/60 hover:text-white/80'}`}>
+                  currentPage === idx + 1 ? 'bg-white text-slate-800 shadow-sm' : `${styles.headerText} opacity-50 hover:opacity-80`}`}>
                 <i className={`fas ${PAGE_ICONS[idx]} text-[9px]`} />
                 {label}
               </button>
