@@ -29,6 +29,8 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
   const [newOpponent, setNewOpponent] = useState('');
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [showNewMatchForm, setShowNewMatchForm] = useState(false);
+  const [pendingOpponent, setPendingOpponent] = useState('');
+  const [showOpponentPrompt, setShowOpponentPrompt] = useState(false);
   const [ownGoalsFor, setOwnGoalsFor] = useState(0);       // opponent own goal (counts for us)
   const [ownGoalsAgainst, setOwnGoalsAgainst] = useState(0); // our own goal (counts for them)
   type ParticipationStatus = 'full' | 'partial' | 'none';
@@ -145,6 +147,20 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
   const handleSelectMatch = (m: MatchData) => {
     setSelectedMatchId(m.id);
     prefillFromMatch(m);
+    // Tournament with no opponent yet — prompt before entering log
+    if (m.matchType === 'tournament' && !m.opponent?.trim()) {
+      setPendingOpponent('');
+      setShowOpponentPrompt(true);
+      return;
+    }
+    setStep('log');
+  };
+
+  // ── Confirm opponent name for tournament match ─────────────────────────
+  const handleConfirmOpponent = () => {
+    if (!pendingOpponent.trim() || !selectedMatchId) return;
+    onSave(selectedMatchId, { opponent: pendingOpponent.trim() });
+    setShowOpponentPrompt(false);
     setStep('log');
   };
 
@@ -563,6 +579,41 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── Opponent prompt for tournament matches ──────────────────────── */}
+        {showOpponentPrompt && (
+          <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-6">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl space-y-4">
+              <div>
+                <h3 className="font-black text-slate-800 text-base">
+                  {language === 'zh' ? '輸入對手名稱' : 'Enter Opponent'}
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  {language === 'zh' ? '錦標賽每場對手可以不同' : 'Each tournament game can have a different opponent'}
+                </p>
+              </div>
+              <input
+                type="text"
+                value={pendingOpponent}
+                onChange={e => setPendingOpponent(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleConfirmOpponent()}
+                placeholder={language === 'zh' ? '對手隊名' : 'Opponent name'}
+                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-blue-400"
+                autoFocus
+              />
+              <div className="flex gap-3">
+                <button onClick={() => { setShowOpponentPrompt(false); setStep('log'); }}
+                  className="flex-1 py-2.5 bg-slate-100 text-slate-500 rounded-xl text-sm font-bold">
+                  {language === 'zh' ? '略過' : 'Skip'}
+                </button>
+                <button onClick={handleConfirmOpponent} disabled={!pendingOpponent.trim()}
+                  className="flex-1 py-2.5 bg-blue-500 text-white rounded-xl text-sm font-bold disabled:opacity-40">
+                  {language === 'zh' ? '確認' : 'Confirm'}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
