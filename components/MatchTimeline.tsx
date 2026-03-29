@@ -661,9 +661,16 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                                   // Save new labels: Game 1, Game 2...
                                   reordered.forEach((m, idx) => {
                                     const existingLabel = m.matchLabel || '';
-                                    // Preserve custom prefix (e.g. "Semi-Final") — only update trailing number
-                                    const prefix = existingLabel.replace(/\d+$/, '').trim();
-                                    const newLabel = prefix ? `${prefix} ${idx + 1}` : `Game ${idx + 1}`;
+                                    const hasTrailingNumber = /\s+\d+$/.test(existingLabel);
+                                    let newLabel: string;
+                                    if (hasTrailingNumber) {
+                                      // Has trailing number (e.g. "Game 1", "Group 2") — update the number
+                                      const prefix = existingLabel.replace(/\s+\d+$/, '').trim();
+                                      newLabel = `${prefix} ${idx + 1}`;
+                                    } else {
+                                      // No trailing number (e.g. "Semi-final", "Final") — keep as-is
+                                      newLabel = existingLabel || `Game ${idx + 1}`;
+                                    }
                                     if (newLabel !== m.matchLabel) onSaveMatchLabel(m.id, newLabel);
                                   });
                                   setDragState(null);
