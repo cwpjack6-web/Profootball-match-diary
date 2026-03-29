@@ -122,81 +122,11 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
   const [swipedMatchId, setSwipedMatchId] = useState<string | null>(null);
   const [expandedTournamentIds, setExpandedTournamentIds] = useState<Set<string>>(new Set());
   const [dragState, setDragState] = useState<{ tournamentKey: string; dragIdx: number; overIdx: number } | null>(null);
-  const gripRefs = useRef<Map<string, HTMLElement>>(new Map());
   const touchDragData = useRef<{ startY: number; itemHeight: number; tKey: string; dragIdx: number; totalItems: number; tMatches: any[] } | null>(null);
-
-  // Non-passive touch listeners for drag reorder (must be useEffect, not React props)
-  useEffect(() => {
-    const handlers = new Map<HTMLElement, { start: (e: TouchEvent) => void; move: (e: TouchEvent) => void; end: (e: TouchEvent) => void }>();
-
-    gripRefs.current.forEach((el, key) => {
-      const [tKey, idxStr] = key.split('::');
-      const gameIdx = parseInt(idxStr);
-
-      const onStart = (e: TouchEvent) => {
-        const touch = e.touches[0];
-        const itemEl = el.closest('[data-game-item]') as HTMLElement;
-        const itemH = itemEl?.getBoundingClientRect().height || 60;
-        const container = itemEl?.closest('[data-tournament-list]') as HTMLElement;
-        const total = container ? container.querySelectorAll('[data-game-item]').length : 1;
-        // Get tMatches from data attribute
-        const tMatchesRaw = container?.getAttribute('data-matches');
-        const tMatchesParsed = tMatchesRaw ? JSON.parse(tMatchesRaw) : [];
-        touchDragData.current = { startY: touch.clientY, itemHeight: itemH, tKey, dragIdx: gameIdx, totalItems: total, tMatches: tMatchesParsed };
-        setDragState({ tournamentKey: tKey, dragIdx: gameIdx, overIdx: gameIdx });
-        e.stopPropagation();
-      };
-
-      const onMove = (e: TouchEvent) => {
-        if (!touchDragData.current || touchDragData.current.tKey !== tKey) return;
-        e.preventDefault();
-        e.stopPropagation();
-        const touch = e.touches[0];
-        const { startY, itemHeight, dragIdx, totalItems } = touchDragData.current;
-        const deltaY = touch.clientY - startY;
-        const deltaIdx = Math.round(deltaY / itemHeight);
-        const newOverIdx = Math.max(0, Math.min(totalItems - 1, dragIdx + deltaIdx));
-        setDragState(s => s ? { ...s, overIdx: newOverIdx } : s);
-      };
-
-      const onEnd = (e: TouchEvent) => {
-        if (!touchDragData.current || touchDragData.current.tKey !== tKey) return;
-        e.stopPropagation();
-        const { dragIdx, tMatches: localMatches } = touchDragData.current;
-        setDragState(prev => {
-          const overIdx = prev?.overIdx ?? dragIdx;
-          if (dragIdx !== overIdx && onSaveMatchLabel) {
-            const reordered = [...localMatches];
-            const [moved] = reordered.splice(dragIdx, 1);
-            reordered.splice(overIdx, 0, moved);
-            reordered.forEach((m: any, idx: number) => {
-              const existingLabel = m.matchLabel || '';
-              const hasTrailingNumber = /\s+\d+$/.test(existingLabel);
-              const newLabel = hasTrailingNumber
-                ? `${existingLabel.replace(/\s+\d+$/, '').trim()} ${idx + 1}`
-                : (existingLabel || `Game ${idx + 1}`);
-              if (newLabel !== m.matchLabel) onSaveMatchLabel(m.id, newLabel);
-            });
-          }
-          touchDragData.current = null;
-          return null;
-        });
-      };
-
-      el.addEventListener('touchstart', onStart, { passive: false });
-      el.addEventListener('touchmove', onMove, { passive: false });
-      el.addEventListener('touchend', onEnd, { passive: false });
-      handlers.set(el, { start: onStart, move: onMove, end: onEnd });
-    });
-
-    return () => {
-      handlers.forEach(({ start, move, end }, el) => {
-        el.removeEventListener('touchstart', start);
-        el.removeEventListener('touchmove', move);
-        el.removeEventListener('touchend', end);
-      });
-    };
-  }, [dragState, onSaveMatchLabel]);
+  const dragStateRef = useRef(dragState);
+  useEffect(() => { dragStateRef.current = dragState; }, [dragState]);
+  const onSaveMatchLabelRef = useRef(onSaveMatchLabel);
+  useEffect(() => { onSaveMatchLabelRef.current = onSaveMatchLabel; }, [onSaveMatchLabel]);
   const touchStartX = useRef<number | null>(null);
 
   const { scheduled, completed } = useMemo(() => ({
@@ -779,9 +709,57 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                                               className="text-slate-300 px-2 py-1 cursor-grab active:cursor-grabbing select-none touch-none"
                                               title="Drag to reorder"
                                               ref={el => {
-                                                const key = `${tKey}::${gameIdx}`;
-                                                if (el) gripRefs.current.set(key, el);
-                                                else gripRefs.current.delete(key);
+                                                if (!el) return;
+                                                // Remove old listeners before re-attaching
+                                                const clone = el.cloneNode(true) as HTMLElement;
+                                                el.parentNode?.replaceChild(clone, el);
+                                                const grip = clone;
+
+                                                const onStart = (e: TouchEvent) => {
+                                                  e.stopPropagation();
+                                                  const touch = e.touches[0];
+                                                  const itemEl = grip.closest('[data-game-item]') as HTMLElement;
+                                                  const itemH = itemEl?.getBoundingClientRect().height || 64;
+                                                  const container = itemEl?.closest('[data-tournament-list]') as HTMLElement;
+                                                  const total = container ? container.querySelectorAll('[data-game-item]').length : 1;
+                                                  const raw = container?.getAttribute('data-matches');
+                                                  const mList = raw ? JSON.parse(raw) : [];
+                                                  touchDragData.current = { startY: touch.clientY, itemHeight: itemH, tKey, dragIdx: gameIdx, totalItems: total, tMatches: mList };
+                                                  setDragState({ tournamentKey: tKey, dragIdx: gameIdx, overIdx: gameIdx });
+                                                };
+                                                const onMove = (e: TouchEvent) => {
+                                                  const d = touchDragData.current;
+                                                  if (!d || d.tKey !== tKey) return;
+                                                  e.preventDefault();
+                                                  e.stopPropagation();
+                                                  const dy = e.touches[0].clientY - d.startY;
+                                                  const di = Math.round(dy / d.itemHeight);
+                                                  const ni = Math.max(0, Math.min(d.totalItems - 1, d.dragIdx + di));
+                                                  setDragState(s => s ? { ...s, overIdx: ni } : s);
+                                                };
+                                                const onEnd = (e: TouchEvent) => {
+                                                  const d = touchDragData.current;
+                                                  if (!d || d.tKey !== tKey) return;
+                                                  e.stopPropagation();
+                                                  const cur = dragStateRef.current;
+                                                  const overIdx = cur?.overIdx ?? d.dragIdx;
+                                                  if (d.dragIdx !== overIdx && onSaveMatchLabelRef.current) {
+                                                    const reordered = [...d.tMatches];
+                                                    const [moved] = reordered.splice(d.dragIdx, 1);
+                                                    reordered.splice(overIdx, 0, moved);
+                                                    reordered.forEach((m: any, idx: number) => {
+                                                      const lbl = m.matchLabel || '';
+                                                      const hasNum = /\s+\d+$/.test(lbl);
+                                                      const newLbl = hasNum ? `${lbl.replace(/\s+\d+$/, '').trim()} ${idx + 1}` : (lbl || `Game ${idx + 1}`);
+                                                      if (newLbl !== m.matchLabel) onSaveMatchLabelRef.current!(m.id, newLbl);
+                                                    });
+                                                  }
+                                                  touchDragData.current = null;
+                                                  setDragState(null);
+                                                };
+                                                grip.addEventListener('touchstart', onStart, { passive: false });
+                                                grip.addEventListener('touchmove', onMove, { passive: false });
+                                                grip.addEventListener('touchend', onEnd, { passive: false });
                                               }}
                                             >
                                               <i className="fas fa-grip-vertical text-xs" />
