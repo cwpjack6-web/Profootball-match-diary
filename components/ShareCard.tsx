@@ -893,7 +893,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
                   <div style={{ display: 'table-row' }}>
                   {/* Game number */}
                   <span style={{ display: 'table-cell', verticalAlign: 'middle', width: '32px', padding: '6px 0' }} className={`text-[9px] font-black ${isDarkText ? 'text-slate-400' : 'text-white/40'}`}>
-                    G{idx + 1}
+                    {m.matchLabel?.trim() || `G${idx + 1}`}
                   </span>
                   {/* Result badge */}
                   <span style={{ display: 'table-cell', verticalAlign: 'middle', width: '24px', padding: '6px 2px' }}>
