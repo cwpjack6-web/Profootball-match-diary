@@ -121,7 +121,7 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
   const [expandedMonthGroups, setExpandedMonthGroups] = useState<Set<string>>(new Set());
   const [swipedMatchId, setSwipedMatchId] = useState<string | null>(null);
   const [expandedTournamentIds, setExpandedTournamentIds] = useState<Set<string>>(new Set());
-  const [dragState, setDragState] = useState<{ tournamentKey: string; dragIdx: number; overIdx: number } | null>(null);
+
   const touchStartX = useRef<number | null>(null);
 
   const { scheduled, completed } = useMemo(() => ({
@@ -638,7 +638,7 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                           {isTournamentExpanded && (
                             <div className="bg-slate-50 divide-y divide-slate-100" data-tournament-list data-matches={JSON.stringify(tMatches)}>
                               {tMatches.map((match, gameIdx) => {
-                                const isDragOver = dragState?.tournamentKey === tKey && dragState.overIdx === gameIdx && dragState.dragIdx !== gameIdx;
+
                                 const team = getTeamById(profile.teams, match.teamId);
                                 const styles = getTeamColorStyles(team.themeColor);
                                 const isExpanded = expandedMatchIds.has(match.id);
@@ -668,26 +668,8 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                                 const ownGoalsFor = match.scorers?.filter((s: any) => s.type === 'own_goal_for').length || 0;
 
                                 return (
-                                  <div key={match.id} id={`match-${match.id}`} data-game-item
-                                    className={`relative overflow-hidden transition-all ${isDragOver ? 'border-t-2 border-blue-400' : ''} ${dragState?.dragIdx === gameIdx && dragState?.tournamentKey === tKey ? 'opacity-40' : ''}`}
-                                    onDragOver={e => { e.preventDefault(); if (dragState?.tournamentKey === tKey && dragState.overIdx !== gameIdx) setDragState(s => s ? { ...s, overIdx: gameIdx } : s); }}
-                                    onDrop={e => {
-                                      e.preventDefault();
-                                      if (!dragState || dragState.tournamentKey !== tKey || !onSaveMatchLabel) { setDragState(null); return; }
-                                      const { dragIdx, overIdx } = dragState;
-                                      if (dragIdx === overIdx) { setDragState(null); return; }
-                                      const reordered = [...tMatches];
-                                      const [moved] = reordered.splice(dragIdx, 1);
-                                      reordered.splice(overIdx, 0, moved);
-                                      reordered.forEach((m, idx) => {
-                                        const lbl = m.matchLabel || '';
-                                        const hasNum = /\s+\d+$/.test(lbl);
-                                        const newLbl = hasNum ? `${lbl.replace(/\s+\d+$/, '').trim()} ${idx + 1}` : (lbl || `Game ${idx + 1}`);
-                                        if (newLbl !== m.matchLabel) onSaveMatchLabel(m.id, newLbl);
-                                      });
-                                      setDragState(null);
-                                    }}
-                                    onDragEnd={() => setDragState(null)}
+                                  <div key={match.id} id={`match-${match.id}`}
+                                    className="relative overflow-hidden"
                                   >
                                     {/* Swipe actions */}
                                     <div className="absolute inset-y-0 right-0 flex w-32">
@@ -718,14 +700,46 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                                                 {isSelected && <i className="fas fa-check text-white text-[10px]" />}
                                               </div>
                                             )}
-                                            <span
-                                              draggable
-                                              onDragStart={e => { e.stopPropagation(); e.dataTransfer.effectAllowed = 'move'; setDragState({ tournamentKey: tKey, dragIdx: gameIdx, overIdx: gameIdx }); }}
-                                              className="text-slate-300 px-2 py-1 cursor-grab active:cursor-grabbing select-none touch-none"
-                                              title="Drag to reorder"
-                                            >
-                                              <i className="fas fa-grip-vertical text-xs" />
-                                            </span>
+                                            {onSaveMatchLabel && (
+                                              <div className="flex flex-col gap-0.5 mr-1">
+                                                <button
+                                                  onClick={e => {
+                                                    e.stopPropagation();
+                                                    if (gameIdx === 0) return;
+                                                    const reordered = [...tMatches];
+                                                    [reordered[gameIdx - 1], reordered[gameIdx]] = [reordered[gameIdx], reordered[gameIdx - 1]];
+                                                    reordered.forEach((m, idx) => {
+                                                      const lbl = m.matchLabel || '';
+                                                      const hasNum = /\s+\d+$/.test(lbl);
+                                                      const newLbl = hasNum ? `${lbl.replace(/\s+\d+$/, '').trim()} ${idx + 1}` : (lbl || `Game ${idx + 1}`);
+                                                      if (newLbl !== m.matchLabel) onSaveMatchLabel(m.id, newLbl);
+                                                    });
+                                                  }}
+                                                  disabled={gameIdx === 0}
+                                                  className="w-5 h-5 flex items-center justify-center rounded text-slate-300 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-20 transition-all"
+                                                >
+                                                  <i className="fas fa-chevron-up text-[9px]" />
+                                                </button>
+                                                <button
+                                                  onClick={e => {
+                                                    e.stopPropagation();
+                                                    if (gameIdx === tMatches.length - 1) return;
+                                                    const reordered = [...tMatches];
+                                                    [reordered[gameIdx], reordered[gameIdx + 1]] = [reordered[gameIdx + 1], reordered[gameIdx]];
+                                                    reordered.forEach((m, idx) => {
+                                                      const lbl = m.matchLabel || '';
+                                                      const hasNum = /\s+\d+$/.test(lbl);
+                                                      const newLbl = hasNum ? `${lbl.replace(/\s+\d+$/, '').trim()} ${idx + 1}` : (lbl || `Game ${idx + 1}`);
+                                                      if (newLbl !== m.matchLabel) onSaveMatchLabel(m.id, newLbl);
+                                                    });
+                                                  }}
+                                                  disabled={gameIdx === tMatches.length - 1}
+                                                  className="w-5 h-5 flex items-center justify-center rounded text-slate-300 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-20 transition-all"
+                                                >
+                                                  <i className="fas fa-chevron-down text-[9px]" />
+                                                </button>
+                                              </div>
+                                            )}
                                             <span className="text-[10px] font-black text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
                                               {match.matchLabel || `Game ${gameIdx + 1}`}
                                             </span>
