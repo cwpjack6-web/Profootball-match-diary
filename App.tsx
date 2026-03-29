@@ -381,6 +381,14 @@ const App: React.FC = () => {
   };
 
   // Quick Log create new match handler — returns new match id
+  const handleSaveMatchLabel = (matchId: string, label: string) => {
+    if (!activeProfile) return;
+    const existing = matches.find(m => m.id === matchId);
+    if (!existing) return;
+    const updated = updateMatchInStorage({ ...existing, matchLabel: label });
+    setMatches(updated);
+  };
+
   const handleQuickLogCreate = (opponent: string, teamId: string, extra?: { matchType?: string; tournamentName?: string; matchLabel?: string }): string => {
     if (!activeProfile) return '';
     const newId = Date.now().toString();
@@ -519,7 +527,7 @@ const App: React.FC = () => {
                       )}
                   </div>
                 )}
-                <MatchTimeline matches={filteredMatches} profile={activeProfile} isSelectionMode={isSelectionMode} selectedMatchIds={selectedMatchIds} deleteConfirmId={deleteConfirmId} expandedMatchIds={expandedMatchIds} onSelectMatch={handleSelectMatch} onShare={handleShare} onShareTournament={(name, tMatches) => setShareTournament({ name, matches: tMatches })} onEditTournament={(name, tMatches) => setEditingTournament({ name, matches: tMatches })} onEdit={openEditForm} onTrashClick={handleTrashClick} onConfirmDelete={handleConfirmDelete} onCancelDelete={handleCancelDelete} onToggleExpansion={toggleMatchExpansion} onOpenVideo={handleOpenVideo} onOpponentClick={handleOpponentClick} scrollToMatchId={scrollToMatchId} onScrollToMatchDone={() => setScrollToMatchId(null)} isFiltered={!!(searchQuery.trim() || quickTeamFilter !== "all")} />
+                <MatchTimeline matches={filteredMatches} profile={activeProfile} isSelectionMode={isSelectionMode} selectedMatchIds={selectedMatchIds} deleteConfirmId={deleteConfirmId} expandedMatchIds={expandedMatchIds} onSelectMatch={handleSelectMatch} onShare={handleShare} onShareTournament={(name, tMatches) => setShareTournament({ name, matches: tMatches })} onEditTournament={(name, tMatches) => setEditingTournament({ name, matches: tMatches })} onEdit={openEditForm} onTrashClick={handleTrashClick} onConfirmDelete={handleConfirmDelete} onCancelDelete={handleCancelDelete} onToggleExpansion={toggleMatchExpansion} onOpenVideo={handleOpenVideo} onOpponentClick={handleOpponentClick} onSaveMatchLabel={handleSaveMatchLabel} scrollToMatchId={scrollToMatchId} onScrollToMatchDone={() => setScrollToMatchId(null)} isFiltered={!!(searchQuery.trim() || quickTeamFilter !== "all")} />
             </div>
             )}
             
