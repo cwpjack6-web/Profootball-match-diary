@@ -322,7 +322,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
   };
 
   const handleSubmit = () => {
-    if (!formData.opponent) { showToast(t.alertOpponent, 'error'); return; }
+    if (!formData.opponent && formData.matchType !== 'tournament') { showToast(t.alertOpponent, 'error'); return; }
     const { id, ...rest } = formData;
     const submitData: Omit<MatchData, 'id'> = {
       ...rest, profileId: profile.id,
@@ -401,7 +401,8 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
         </div>
       </div>
 
-      {/* Opponent + Location */}
+      {/* Opponent + Location — hidden for tournament (opponent set per game later) */}
+      {formData.matchType !== 'tournament' && (
       <div>
         <div className="flex justify-between items-center mb-1">
           <label className="text-xs font-bold text-slate-400 uppercase">{t.opponentName}</label>
@@ -418,6 +419,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
           className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm text-slate-900 outline-none focus:border-blue-300" />
         <datalist id="opp-list">{opponentOptions.map(op => <option key={op} value={op} />)}</datalist>
       </div>
+      )}
 
       <div>
         <label className="text-xs font-bold text-slate-400 uppercase block mb-1">{t.location}</label>
@@ -429,19 +431,20 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
       <div>
         <label className="text-xs font-bold text-slate-400 uppercase block mb-1">{t.matchType}</label>
         <div className="flex bg-white rounded-xl border border-slate-200 p-1">
-          {(['league', 'cup', 'friendly'] as MatchType[]).map(mt => (
+          {(['league', 'tournament', 'friendly'] as MatchType[]).map(mt => (
             <button key={mt} type="button" onClick={() => setFormData(p => ({ ...p, matchType: mt }))}
               className={`flex-1 text-xs py-2 rounded-lg font-bold transition-all ${
                 formData.matchType === mt
-                  ? mt === 'league' ? 'bg-blue-100 text-blue-700' : mt === 'cup' ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'
+                  ? mt === 'league' ? 'bg-blue-100 text-blue-700' : mt === 'tournament' ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'
                   : 'text-slate-400'}`}>
-              {mt === 'league' ? t.typeLeague : mt === 'cup' ? t.typeCup : t.typeFriendly}
+              {mt === 'league' ? t.typeLeague : mt === 'tournament' ? t.typeTournament || '錦標賽' : t.typeFriendly}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Tournament */}
+      {/* Tournament — only shown when matchType is tournament */}
+      {formData.matchType === 'tournament' && (
       <div className="flex gap-3">
         <div className="flex-[3]">
           <label className="text-xs font-bold text-slate-400 uppercase block mb-1">Tournament</label>
@@ -454,6 +457,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
             className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm text-slate-900 outline-none" />
         </div>
       </div>
+      )}
 
       {/* Format */}
       <div className="pt-2 border-t border-slate-100 space-y-3">
