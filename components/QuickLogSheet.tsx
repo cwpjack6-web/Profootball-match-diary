@@ -428,12 +428,44 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     onSave(selectedMatchId, update);
     setPendingFinalUpdate(null);
     setShowRatingModal(false);
-    handleClose();
+    // Tournament: return to select step for next game instead of closing
+    if (selectedMatch?.matchType === 'tournament') {
+      setSelectedMatchId('');
+      setCurrentQuarterNum(1);
+      setScoreMyTeam(0);
+      setScoreOpponent(0);
+      setArthurGoals(0);
+      setArthurAssists(0);
+      setTeammateGoals({});
+      setOwnGoalsFor(0);
+      setOwnGoalsAgainst(0);
+      setNoteText('');
+      setPendingOpponent('');
+      setStep('select');
+    } else {
+      handleClose();
+    }
   };
 
   const handleRatingSkip = () => {
     setShowRatingModal(false);
-    handleClose();
+    // Tournament: return to select step for next game instead of closing
+    if (selectedMatch?.matchType === 'tournament') {
+      setSelectedMatchId('');
+      setCurrentQuarterNum(1);
+      setScoreMyTeam(0);
+      setScoreOpponent(0);
+      setArthurGoals(0);
+      setArthurAssists(0);
+      setTeammateGoals({});
+      setOwnGoalsFor(0);
+      setOwnGoalsAgainst(0);
+      setNoteText('');
+      setPendingOpponent('');
+      setStep('select');
+    } else {
+      handleClose();
+    }
   };
 
   if (!isOpen) return null;
