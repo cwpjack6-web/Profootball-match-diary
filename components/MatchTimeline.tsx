@@ -22,6 +22,7 @@ interface MatchTimelineProps {
   onToggleExpansion: (e: React.MouseEvent, id: string) => void;
   onOpenVideo: (e: React.MouseEvent, url: string) => void;
   onOpponentClick: (e: React.MouseEvent, opponent: string) => void;
+  onSaveMatchLabel?: (matchId: string, label: string) => void;
   scrollToMatchId?: string | null;
   onScrollToMatchDone?: () => void;
   isFiltered?: boolean;
@@ -112,7 +113,7 @@ function formatDadComment(comment: string, language: string): React.ReactNode {
 
 const MatchTimeline: React.FC<MatchTimelineProps> = ({
   matches, profile, isSelectionMode, selectedMatchIds, deleteConfirmId, expandedMatchIds,
-  onSelectMatch, onShare, onShareTournament, onEditTournament, onEdit, onTrashClick, onConfirmDelete, onCancelDelete, onToggleExpansion, onOpenVideo, onOpponentClick,
+  onSelectMatch, onShare, onShareTournament, onEditTournament, onEdit, onTrashClick, onConfirmDelete, onCancelDelete, onToggleExpansion, onOpenVideo, onOpponentClick, onSaveMatchLabel,
   scrollToMatchId, onScrollToMatchDone, isFiltered, journals = [], onAddJournal
 }) => {
   const { t, language } = useLanguage();
@@ -120,6 +121,7 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
   const [expandedMonthGroups, setExpandedMonthGroups] = useState<Set<string>>(new Set());
   const [swipedMatchId, setSwipedMatchId] = useState<string | null>(null);
   const [expandedTournamentIds, setExpandedTournamentIds] = useState<Set<string>>(new Set());
+  const [dragState, setDragState] = useState<{ tournamentKey: string; dragIdx: number; overIdx: number } | null>(null);
   const touchStartX = useRef<number | null>(null);
 
   const { scheduled, completed } = useMemo(() => ({
@@ -636,6 +638,37 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                           {isTournamentExpanded && (
                             <div className="bg-slate-50 divide-y divide-slate-100">
                               {tMatches.map((match, gameIdx) => {
+                                // Drag handlers
+                                const handleDragStart = (e: React.DragEvent) => {
+                                  e.dataTransfer.effectAllowed = 'move';
+                                  setDragState({ tournamentKey: tKey, dragIdx: gameIdx, overIdx: gameIdx });
+                                };
+                                const handleDragOver = (e: React.DragEvent) => {
+                                  e.preventDefault();
+                                  e.dataTransfer.dropEffect = 'move';
+                                  if (dragState?.tournamentKey === tKey && dragState.overIdx !== gameIdx)
+                                    setDragState(s => s ? { ...s, overIdx: gameIdx } : s);
+                                };
+                                const handleDrop = (e: React.DragEvent) => {
+                                  e.preventDefault();
+                                  if (!dragState || dragState.tournamentKey !== tKey || !onSaveMatchLabel) { setDragState(null); return; }
+                                  const { dragIdx, overIdx } = dragState;
+                                  if (dragIdx === overIdx) { setDragState(null); return; }
+                                  // Reorder array
+                                  const reordered = [...tMatches];
+                                  const [moved] = reordered.splice(dragIdx, 1);
+                                  reordered.splice(overIdx, 0, moved);
+                                  // Save new labels: Game 1, Game 2...
+                                  reordered.forEach((m, idx) => {
+                                    const existingLabel = m.matchLabel || '';
+                                    // Preserve custom prefix (e.g. "Semi-Final") — only update trailing number
+                                    const prefix = existingLabel.replace(/\d+$/, '').trim();
+                                    const newLabel = prefix ? `${prefix} ${idx + 1}` : `Game ${idx + 1}`;
+                                    if (newLabel !== m.matchLabel) onSaveMatchLabel(m.id, newLabel);
+                                  });
+                                  setDragState(null);
+                                };
+                                const isDragOver = dragState?.tournamentKey === tKey && dragState.overIdx === gameIdx && dragState.dragIdx !== gameIdx;
                                 const team = getTeamById(profile.teams, match.teamId);
                                 const styles = getTeamColorStyles(team.themeColor);
                                 const isExpanded = expandedMatchIds.has(match.id);
@@ -665,7 +698,14 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                                 const ownGoalsFor = match.scorers?.filter((s: any) => s.type === 'own_goal_for').length || 0;
 
                                 return (
-                                  <div key={match.id} id={`match-${match.id}`} className="relative overflow-hidden">
+                                  <div key={match.id} id={`match-${match.id}`}
+                                    className={`relative overflow-hidden transition-all ${isDragOver ? 'ring-2 ring-inset ring-blue-400 bg-blue-50' : ''}`}
+                                    draggable
+                                    onDragStart={handleDragStart}
+                                    onDragOver={handleDragOver}
+                                    onDrop={handleDrop}
+                                    onDragEnd={() => setDragState(null)}
+                                  >
                                     {/* Swipe actions */}
                                     <div className="absolute inset-y-0 right-0 flex w-32">
                                       <button onClick={e => onEdit(e, match)} className="w-1/2 bg-blue-500 text-white flex items-center justify-center font-bold text-xs">
@@ -695,8 +735,11 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                                                 {isSelected && <i className="fas fa-check text-white text-[10px]" />}
                                               </div>
                                             )}
+                                            <span className="text-slate-300 cursor-grab active:cursor-grabbing px-1 touch-none" title="Drag to reorder">
+                                              <i className="fas fa-grip-vertical text-xs" />
+                                            </span>
                                             <span className="text-[10px] font-black text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
-                                              Game {gameIdx + 1}
+                                              {match.matchLabel || `Game ${gameIdx + 1}`}
                                             </span>
                                             <span className="text-[10px] font-bold text-slate-400">{new Date(match.date).getDate()}日</span>
                                             {getResultBadge(match.scoreMyTeam, match.scoreOpponent)}
