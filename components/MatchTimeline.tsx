@@ -122,6 +122,7 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
   const [swipedMatchId, setSwipedMatchId] = useState<string | null>(null);
   const [expandedTournamentIds, setExpandedTournamentIds] = useState<Set<string>>(new Set());
   const [dragState, setDragState] = useState<{ tournamentKey: string; dragIdx: number; overIdx: number } | null>(null);
+  const touchDragRef = React.useRef<{ startY: number; itemHeight: number; tKey: string; dragIdx: number; totalItems: number } | null>(null);
   const touchStartX = useRef<number | null>(null);
 
   const { scheduled, completed } = useMemo(() => ({
@@ -638,42 +639,57 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                           {isTournamentExpanded && (
                             <div className="bg-slate-50 divide-y divide-slate-100">
                               {tMatches.map((match, gameIdx) => {
-                                // Drag handlers
-                                const handleDragStart = (e: React.DragEvent) => {
-                                  e.dataTransfer.effectAllowed = 'move';
-                                  setDragState({ tournamentKey: tKey, dragIdx: gameIdx, overIdx: gameIdx });
-                                };
-                                const handleDragOver = (e: React.DragEvent) => {
-                                  e.preventDefault();
-                                  e.dataTransfer.dropEffect = 'move';
-                                  if (dragState?.tournamentKey === tKey && dragState.overIdx !== gameIdx)
-                                    setDragState(s => s ? { ...s, overIdx: gameIdx } : s);
-                                };
-                                const handleDrop = (e: React.DragEvent) => {
-                                  e.preventDefault();
-                                  if (!dragState || dragState.tournamentKey !== tKey || !onSaveMatchLabel) { setDragState(null); return; }
-                                  const { dragIdx, overIdx } = dragState;
-                                  if (dragIdx === overIdx) { setDragState(null); return; }
-                                  // Reorder array
+                                // ── Touch drag handlers ──
+                                const applyReorder = (dragIdx: number, overIdx: number) => {
+                                  if (dragIdx === overIdx || !onSaveMatchLabel) return;
                                   const reordered = [...tMatches];
                                   const [moved] = reordered.splice(dragIdx, 1);
                                   reordered.splice(overIdx, 0, moved);
-                                  // Save new labels: Game 1, Game 2...
                                   reordered.forEach((m, idx) => {
                                     const existingLabel = m.matchLabel || '';
                                     const hasTrailingNumber = /\s+\d+$/.test(existingLabel);
                                     let newLabel: string;
                                     if (hasTrailingNumber) {
-                                      // Has trailing number (e.g. "Game 1", "Group 2") — update the number
                                       const prefix = existingLabel.replace(/\s+\d+$/, '').trim();
                                       newLabel = `${prefix} ${idx + 1}`;
                                     } else {
-                                      // No trailing number (e.g. "Semi-final", "Final") — keep as-is
                                       newLabel = existingLabel || `Game ${idx + 1}`;
                                     }
                                     if (newLabel !== m.matchLabel) onSaveMatchLabel(m.id, newLabel);
                                   });
+                                };
+                                const handleTouchDragStart = (e: React.TouchEvent) => {
+                                  const touch = e.touches[0];
+                                  const el = (e.currentTarget as HTMLElement);
+                                  touchDragRef.current = {
+                                    startY: touch.clientY,
+                                    itemHeight: el.getBoundingClientRect().height,
+                                    tKey,
+                                    dragIdx: gameIdx,
+                                    totalItems: tMatches.length,
+                                  };
+                                  setDragState({ tournamentKey: tKey, dragIdx: gameIdx, overIdx: gameIdx });
+                                  e.stopPropagation();
+                                };
+                                const handleTouchDragMove = (e: React.TouchEvent) => {
+                                  if (!touchDragRef.current || touchDragRef.current.tKey !== tKey) return;
+                                  const touch = e.touches[0];
+                                  const { startY, itemHeight, dragIdx, totalItems } = touchDragRef.current;
+                                  const deltaY = touch.clientY - startY;
+                                  const deltaIdx = Math.round(deltaY / itemHeight);
+                                  const newOverIdx = Math.max(0, Math.min(totalItems - 1, dragIdx + deltaIdx));
+                                  setDragState(s => s ? { ...s, overIdx: newOverIdx } : s);
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                };
+                                const handleTouchDragEnd = (e: React.TouchEvent) => {
+                                  if (!touchDragRef.current || touchDragRef.current.tKey !== tKey) return;
+                                  const { dragIdx } = touchDragRef.current;
+                                  const overIdx = dragState?.overIdx ?? dragIdx;
+                                  applyReorder(dragIdx, overIdx);
+                                  touchDragRef.current = null;
                                   setDragState(null);
+                                  e.stopPropagation();
                                 };
                                 const isDragOver = dragState?.tournamentKey === tKey && dragState.overIdx === gameIdx && dragState.dragIdx !== gameIdx;
                                 const team = getTeamById(profile.teams, match.teamId);
@@ -706,12 +722,7 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
 
                                 return (
                                   <div key={match.id} id={`match-${match.id}`}
-                                    className={`relative overflow-hidden transition-all ${isDragOver ? 'ring-2 ring-inset ring-blue-400 bg-blue-50' : ''}`}
-                                    draggable
-                                    onDragStart={handleDragStart}
-                                    onDragOver={handleDragOver}
-                                    onDrop={handleDrop}
-                                    onDragEnd={() => setDragState(null)}
+                                    className={`relative overflow-hidden transition-all ${isDragOver ? 'border-t-2 border-blue-400' : ''} ${dragState?.dragIdx === gameIdx && dragState?.tournamentKey === tKey ? 'opacity-40' : ''}`}
                                   >
                                     {/* Swipe actions */}
                                     <div className="absolute inset-y-0 right-0 flex w-32">
@@ -742,7 +753,13 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                                                 {isSelected && <i className="fas fa-check text-white text-[10px]" />}
                                               </div>
                                             )}
-                                            <span className="text-slate-300 cursor-grab active:cursor-grabbing px-1 touch-none" title="Drag to reorder">
+                                            <span
+                                              className="text-slate-300 px-1 cursor-grab active:cursor-grabbing select-none"
+                                              title="Drag to reorder"
+                                              onTouchStart={handleTouchDragStart}
+                                              onTouchMove={handleTouchDragMove}
+                                              onTouchEnd={handleTouchDragEnd}
+                                            >
                                               <i className="fas fa-grip-vertical text-xs" />
                                             </span>
                                             <span className="text-[10px] font-black text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
