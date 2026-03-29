@@ -520,21 +520,9 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                   return items.map((item, itemIdx) => {
                     if (item.type === 'tournament') {
                       const { key: tKey, matches: tMatchesRaw } = item;
-                      // Sort by matchLabel (Game 1, Game 2...) if available, fallback to date then id
-                      const tMatches = [...tMatchesRaw].sort((a, b) => {
-                        const labelA = a.matchLabel || '';
-                        const labelB = b.matchLabel || '';
-                        if (labelA && labelB) {
-                          // Extract numeric part: "Game 1" → 1, "G3" → 3
-                          const numA = parseInt(labelA.replace(/[^0-9]/g, '')) || 0;
-                          const numB = parseInt(labelB.replace(/[^0-9]/g, '')) || 0;
-                          if (numA !== numB) return numA - numB;
-                        }
-                        // Fallback: label present vs absent, then date, then id
-                        if (labelA && !labelB) return -1;
-                        if (!labelA && labelB) return 1;
-                        return new Date(a.date).getTime() - new Date(b.date).getTime() || a.id.localeCompare(b.id);
-                      });
+                      // Sort by id (creation timestamp) — reflects true game order
+                      // Arrow buttons swap labels between matches to reorder
+                      const tMatches = [...tMatchesRaw].sort((a, b) => a.id.localeCompare(b.id));
                       const isTournamentExpanded = expandedTournamentIds.has(tKey + groupKey);
                       const tFirst = tMatches[0];
                       const tTeam = getTeamById(profile.teams, tFirst.teamId);
@@ -705,15 +693,14 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                                                 <button
                                                   onClick={e => {
                                                     e.stopPropagation();
-                                                    if (gameIdx === 0) return;
-                                                    const reordered = [...tMatches];
-                                                    [reordered[gameIdx - 1], reordered[gameIdx]] = [reordered[gameIdx], reordered[gameIdx - 1]];
-                                                    reordered.forEach((m, idx) => {
-                                                      const lbl = m.matchLabel || '';
-                                                      const hasNum = /\s+\d+$/.test(lbl);
-                                                      const newLbl = hasNum ? `${lbl.replace(/\s+\d+$/, '').trim()} ${idx + 1}` : (lbl || `Game ${idx + 1}`);
-                                                      if (newLbl !== m.matchLabel) onSaveMatchLabel(m.id, newLbl);
-                                                    });
+                                                    if (gameIdx === 0 || !onSaveMatchLabel) return;
+                                                    // Swap labels between this match and the one above
+                                                    const above = tMatches[gameIdx - 1];
+                                                    const curr  = tMatches[gameIdx];
+                                                    const lblAbove = above.matchLabel || `Game ${gameIdx}`;
+                                                    const lblCurr  = curr.matchLabel  || `Game ${gameIdx + 1}`;
+                                                    onSaveMatchLabel(above.id, lblCurr);
+                                                    onSaveMatchLabel(curr.id,  lblAbove);
                                                   }}
                                                   disabled={gameIdx === 0}
                                                   className="w-5 h-5 flex items-center justify-center rounded text-slate-300 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-20 transition-all"
@@ -723,15 +710,14 @@ const MatchTimeline: React.FC<MatchTimelineProps> = ({
                                                 <button
                                                   onClick={e => {
                                                     e.stopPropagation();
-                                                    if (gameIdx === tMatches.length - 1) return;
-                                                    const reordered = [...tMatches];
-                                                    [reordered[gameIdx], reordered[gameIdx + 1]] = [reordered[gameIdx + 1], reordered[gameIdx]];
-                                                    reordered.forEach((m, idx) => {
-                                                      const lbl = m.matchLabel || '';
-                                                      const hasNum = /\s+\d+$/.test(lbl);
-                                                      const newLbl = hasNum ? `${lbl.replace(/\s+\d+$/, '').trim()} ${idx + 1}` : (lbl || `Game ${idx + 1}`);
-                                                      if (newLbl !== m.matchLabel) onSaveMatchLabel(m.id, newLbl);
-                                                    });
+                                                    if (gameIdx === tMatches.length - 1 || !onSaveMatchLabel) return;
+                                                    // Swap labels between this match and the one below
+                                                    const curr  = tMatches[gameIdx];
+                                                    const below = tMatches[gameIdx + 1];
+                                                    const lblCurr  = curr.matchLabel  || `Game ${gameIdx + 1}`;
+                                                    const lblBelow = below.matchLabel || `Game ${gameIdx + 2}`;
+                                                    onSaveMatchLabel(curr.id,  lblBelow);
+                                                    onSaveMatchLabel(below.id, lblCurr);
                                                   }}
                                                   disabled={gameIdx === tMatches.length - 1}
                                                   className="w-5 h-5 flex items-center justify-center rounded text-slate-300 hover:text-slate-600 hover:bg-slate-100 disabled:opacity-20 transition-all"
