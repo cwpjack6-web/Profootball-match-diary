@@ -9,7 +9,7 @@ interface QuickLogSheetProps {
   matches: MatchData[];
   profile: UserProfile;
   onSave: (matchId: string, update: Partial<MatchData>) => void;
-  onCreateMatch: (opponent: string, teamId: string) => string; // returns new match id
+  onCreateMatch: (opponent: string, teamId: string, extra?: { matchType?: string; tournamentName?: string; matchLabel?: string }) => string;
 }
 
 const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
@@ -42,6 +42,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
   const [pendingRating, setPendingRating] = useState(8);
   // Tournament / Quarter state
   const [currentQuarterNum, setCurrentQuarterNum] = useState(1);
+  const [tournamentGameNum, setTournamentGameNum] = useState(1);
 
   // ── Derived ───────────────────────────────────────────────────────────────
   const today = new Date().toISOString().split('T')[0];
@@ -140,6 +141,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     setLocalPeriodOffset(0);
     setShowRatingModal(false);
     setPendingRating(8);
+    setTournamentGameNum(1);
     onClose();
   };
 
@@ -428,9 +430,17 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     onSave(selectedMatchId, update);
     setPendingFinalUpdate(null);
     setShowRatingModal(false);
-    // Tournament: return to select step for next game instead of closing
+    // Tournament: auto-create next game with same tournamentName
     if (selectedMatch?.matchType === 'tournament') {
-      setSelectedMatchId('');
+      const nextGameNum = tournamentGameNum + 1;
+      setTournamentGameNum(nextGameNum);
+      const teamId = selectedMatch.teamId;
+      const newId = onCreateMatch('', teamId, {
+        matchType: 'tournament',
+        tournamentName: selectedMatch.tournamentName || '',
+        matchLabel: `Game ${nextGameNum}`,
+      });
+      setSelectedMatchId(newId);
       setCurrentQuarterNum(1);
       setScoreMyTeam(0);
       setScoreOpponent(0);
@@ -441,7 +451,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
       setOwnGoalsAgainst(0);
       setNoteText('');
       setPendingOpponent('');
-      setStep('select');
+      setStep('log');
     } else {
       handleClose();
     }
@@ -449,9 +459,17 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
 
   const handleRatingSkip = () => {
     setShowRatingModal(false);
-    // Tournament: return to select step for next game instead of closing
+    // Tournament: auto-create next game with same tournamentName
     if (selectedMatch?.matchType === 'tournament') {
-      setSelectedMatchId('');
+      const nextGameNum = tournamentGameNum + 1;
+      setTournamentGameNum(nextGameNum);
+      const teamId = selectedMatch.teamId;
+      const newId = onCreateMatch('', teamId, {
+        matchType: 'tournament',
+        tournamentName: selectedMatch.tournamentName || '',
+        matchLabel: `Game ${nextGameNum}`,
+      });
+      setSelectedMatchId(newId);
       setCurrentQuarterNum(1);
       setScoreMyTeam(0);
       setScoreOpponent(0);
@@ -462,7 +480,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
       setOwnGoalsAgainst(0);
       setNoteText('');
       setPendingOpponent('');
-      setStep('select');
+      setStep('log');
     } else {
       handleClose();
     }
