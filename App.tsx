@@ -1,6 +1,6 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
-import { MatchData, UserProfile, Team, migrateMatchType } from './types';
-import JournalSheet, { JournalEntry } from './components/JournalSheet';
+import { MatchData, UserProfile, Team } from './types';
 import { 
   getMatches, 
   addMatchToStorage, 
@@ -11,7 +11,7 @@ import {
   deleteUserProfile,
   isBackupNeeded
 } from './services/storage';
-import { getTeamById, getTeamColorStyles, COLORS } from './utils/colors';
+import { getTeamById, getTeamColorStyles } from './utils/colors';
 import { extractYoutubeId } from './utils/youtube';
 import { useLanguage } from './context/LanguageContext';
 import { useToast } from './context/ToastContext';
@@ -32,7 +32,7 @@ import QuickLogSheet from './components/QuickLogSheet';
 import OnboardingModal from './components/OnboardingModal';
 
 type AppView = 'cover' | 'setup' | 'dashboard';
-type Tab = 'matches' | 'stats' | 'teams' | 'coach' | 'journal';
+type Tab = 'matches' | 'stats' | 'teams' | 'profile' | 'coach';
 
 const APP_VERSION = '1.2.0';
 
@@ -50,11 +50,6 @@ const App: React.FC = () => {
   const [matches, setMatches] = useState<MatchData[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSyncOpen, setIsSyncOpen] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [journals, setJournals] = useState<JournalEntry[]>(() => {
-    try { const r = localStorage.getItem('journal_entries'); return r ? JSON.parse(r) : []; }
-    catch { return []; }
-  });
   const [editingMatch, setEditingMatch] = useState<MatchData | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('matches');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -117,7 +112,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (activeProfile) {
-        const userMatches = getMatches(activeProfile.id).map(migrateMatchType);
+        const userMatches = getMatches(activeProfile.id);
         setMatches(userMatches);
         setIsSelectionMode(false);
         setSelectedMatchIds(new Set());
@@ -237,7 +232,7 @@ const App: React.FC = () => {
       const profiles = getAllProfiles();
       setAllProfiles(profiles);
       if (activeProfile) {
-          const userMatches = getMatches(activeProfile.id).map(migrateMatchType);
+          const userMatches = getMatches(activeProfile.id);
           setMatches(userMatches);
           const updatedProfile = profiles.find(p => p.id === activeProfile.id);
           if (updatedProfile) setActiveProfile(updatedProfile);
@@ -301,7 +296,7 @@ const App: React.FC = () => {
     return selected.map(m => {
         const team = getTeamById(activeProfile.teams, m.teamId);
         const homeAway = m.isHome ? t.home : t.away;
-        const matchType = m.matchType ? (m.matchType === 'league' ? t.typeLeague : (m.matchType === 'cup' || m.matchType === 'tournament') ? (t.typeTournament || t.typeCup || 'Tournament') : t.typeFriendly) : '';
+        const matchType = m.matchType ? (m.matchType === 'league' ? t.typeLeague : m.matchType === 'cup' ? t.typeCup : t.typeFriendly) : '';
         const locationStr = m.location ? `@ ${m.location}` : '';
         const contextLine = [matchType, homeAway, locationStr].filter(Boolean).join(' | ');
         const isScheduled = m.status === 'scheduled';
@@ -386,7 +381,7 @@ const App: React.FC = () => {
   };
 
   // Quick Log create new match handler — returns new match id
-  const handleQuickLogCreate = (opponent: string, teamId: string): string => {
+  const handleQuickLogCreate = (opponent: string, teamId: string, extra?: { matchType?: string; tournamentName?: string; matchLabel?: string }): string => {
     if (!activeProfile) return '';
     const newId = Date.now().toString();
     const today = new Date().toISOString().split('T')[0];
@@ -396,7 +391,9 @@ const App: React.FC = () => {
       opponent,
       date: today,
       isHome: true,
-      matchType: 'friendly', // default for new
+      matchType: (extra?.matchType as any) || 'friendly',
+      tournamentName: extra?.tournamentName || '',
+      matchLabel: extra?.matchLabel || '',
       matchFormat: '',
       scoreMyTeam: 0,
       scoreOpponent: 0,
@@ -420,7 +417,6 @@ const App: React.FC = () => {
       : activeProfile?.teams?.[0];
 
   const mainTheme = activeTeam ? getTeamColorStyles(activeTeam.themeColor) : getTeamColorStyles('blue');
-  const teamHex = activeTeam ? (COLORS.find((c: {value: string; hex: string}) => c.value === activeTeam.themeColor)?.hex ?? '#3b82f6') : '#3b82f6';
 
   // ── 賽季分享 title ─────────────────────────────────────────────────────────
   const seasonShareTitle = useMemo(() => {
@@ -433,27 +429,11 @@ const App: React.FC = () => {
   }, [activeProfile, quickTeamFilter]);
 
   if (loading) return null;
-  // ── Journal handlers ──────────────────────────────────────────────────────
-  const handleSaveJournal = (data: Omit<JournalEntry, 'id' | 'createdAt'>) => {
-    setJournals(prev => {
-      const next = [...prev, { ...data, id: `j_${Date.now()}`, createdAt: Date.now() }];
-      localStorage.setItem('journal_entries', JSON.stringify(next));
-      return next;
-    });
-  };
-  const handleDeleteJournal = (id: string) => {
-    setJournals(prev => {
-      const next = prev.filter(e => e.id !== id);
-      localStorage.setItem('journal_entries', JSON.stringify(next));
-      return next;
-    });
-  };
-
   if (currentView === 'setup') return <ProfileSetup initialProfile={activeProfile} onSave={handleSaveProfile} onCancel={() => setCurrentView('cover')} />;
   if (currentView === 'cover' || !activeProfile) return <><CoverPage profiles={allProfiles} onSelectProfile={handleSelectProfile} onAddProfile={handleAddNewProfile} onImportData={() => { setSyncSubset(null); setIsSyncOpen(true); }} onDeleteProfile={handleDeleteProfile} /><SyncModal isOpen={isSyncOpen} onClose={() => setIsSyncOpen(false)} matches={[]} profile={null} onSyncComplete={handleSyncComplete} syncOnlyMatches={null} /></>;
 
   return (
-    <div className="flex flex-col h-[100dvh] overflow-hidden" style={{ background: `linear-gradient(180deg, ${teamHex}12 0%, ${teamHex}06 120px, #f1f5f9 300px)` }}>
+    <div className="flex flex-col h-[100dvh] bg-slate-100 overflow-hidden">
       {/* HEADER */}
       <header className={`${mainTheme.headerBg} flex-none z-30 shadow-md transition-colors duration-300 safe-area-top`}>
         <div className="max-w-2xl mx-auto px-4 py-3">
@@ -479,8 +459,8 @@ const App: React.FC = () => {
 
                 {activeTab === 'matches' && <button onClick={toggleSelectionMode} className={`${isSelectionMode ? 'bg-white text-slate-800' : 'bg-black/20 text-white hover:bg-black/30'} w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors`}><i className={`fas ${isSelectionMode ? 'fa-check-square' : 'fa-list-ul'} text-sm`}></i></button>}
                 {!isSelectionMode && (
-                    <button onClick={() => setShowSettings(true)} className="relative bg-black/20 hover:bg-black/30 text-white w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors">
-                        <i className="fas fa-cog text-sm"></i>
+                    <button onClick={() => { setSyncSubset(null); setIsSyncOpen(true); }} className="relative bg-black/20 hover:bg-black/30 text-white w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors">
+                        <i className="fas fa-qrcode text-sm"></i>
                         {showBackupAlert && <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>}
                     </button>
                 )}
@@ -490,7 +470,7 @@ const App: React.FC = () => {
       </header>
 
       {/* CONTENT */}
-      <main className="flex-1 overflow-y-auto pb-40 relative w-full min-h-0">
+      <main className="flex-1 overflow-y-auto pb-40 relative bg-slate-100 w-full min-h-0">
         <div className="max-w-2xl mx-auto min-h-full">
             {activeTab === 'stats' && <AnalyticsDashboard matches={matches} profile={activeProfile} onNavigateToMatch={handleNavigateToMatch} />}
             {activeTab === 'teams' && <TeamManager profile={activeProfile} onUpdateProfile={handleUpdateProfileFromManager} />}
@@ -499,7 +479,7 @@ const App: React.FC = () => {
             {activeTab === 'matches' && (
             <div className="animate-fade-in relative">
                 {activeProfile.teams.length > 0 && matches.length > 0 && (
-                  <div className="sticky top-0 z-20 backdrop-blur-md border-b border-slate-200/50 shadow-sm" style={{ backgroundColor: `${teamHex}15` }}>
+                  <div className="sticky top-0 z-20 bg-slate-100/95 backdrop-blur-sm border-b border-slate-200/50 shadow-sm">
                       <div className="px-4 py-3 flex gap-2 overflow-x-auto no-scrollbar items-center">
                           <button onClick={() => setQuickTeamFilter('all')} className={`flex-none px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${quickTeamFilter === 'all' ? 'bg-slate-800 text-white border-slate-800 shadow-md' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}>{t.allTeams}</button>
                           {activeProfile.teams.filter(t => showArchived || !t.isArchived).map(team => {
@@ -539,22 +519,39 @@ const App: React.FC = () => {
                       )}
                   </div>
                 )}
-                <MatchTimeline matches={filteredMatches} profile={activeProfile} isSelectionMode={isSelectionMode} selectedMatchIds={selectedMatchIds} deleteConfirmId={deleteConfirmId} expandedMatchIds={expandedMatchIds} onSelectMatch={handleSelectMatch} onShare={handleShare} onShareTournament={(name, tMatches) => setShareTournament({ name, matches: tMatches })} onEditTournament={(name, tMatches) => setEditingTournament({ name, matches: tMatches })} onEdit={openEditForm} onTrashClick={handleTrashClick} onConfirmDelete={handleConfirmDelete} onCancelDelete={handleCancelDelete} onToggleExpansion={toggleMatchExpansion} onOpenVideo={handleOpenVideo} onOpponentClick={handleOpponentClick} scrollToMatchId={scrollToMatchId} onScrollToMatchDone={() => setScrollToMatchId(null)} isFiltered={!!(searchQuery.trim() || quickTeamFilter !== "all")} journals={journals} />
+                <MatchTimeline matches={filteredMatches} profile={activeProfile} isSelectionMode={isSelectionMode} selectedMatchIds={selectedMatchIds} deleteConfirmId={deleteConfirmId} expandedMatchIds={expandedMatchIds} onSelectMatch={handleSelectMatch} onShare={handleShare} onShareTournament={(name, tMatches) => setShareTournament({ name, matches: tMatches })} onEditTournament={(name, tMatches) => setEditingTournament({ name, matches: tMatches })} onEdit={openEditForm} onTrashClick={handleTrashClick} onConfirmDelete={handleConfirmDelete} onCancelDelete={handleCancelDelete} onToggleExpansion={toggleMatchExpansion} onOpenVideo={handleOpenVideo} onOpponentClick={handleOpponentClick} scrollToMatchId={scrollToMatchId} onScrollToMatchDone={() => setScrollToMatchId(null)} isFiltered={!!(searchQuery.trim() || quickTeamFilter !== "all")} />
             </div>
             )}
             
-            {activeTab === 'journal' && (
-              <JournalSheet
-                entries={journals}
-                matches={matches.map(m => ({ id: m.id, opponent: m.opponent, date: m.date, tournamentName: m.tournamentName, matchType: m.matchType }))}
-                onSave={handleSaveJournal}
-                onDelete={handleDeleteJournal}
-                teamHex={teamHex}
-              />
-            )}
+             {activeTab === 'profile' && (
+                 <div className="p-4 flex flex-col items-center justify-center min-h-[50vh] space-y-4 animate-fade-in">
+                     <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 w-full text-center">
+                         <div className="w-20 h-20 rounded-full bg-slate-100 mx-auto mb-4 overflow-hidden border-4 border-white shadow-md relative">
+                             {activeProfile.avatar ? <img src={activeProfile.avatar} className="w-full h-full object-cover"/> : <i className="fas fa-user text-3xl text-slate-300 mt-5"></i>}
+                         </div>
+                         <h2 className="text-xl font-bold text-slate-800">{activeProfile.name}</h2>
+                         <button onClick={handleEditProfile} className="w-full py-3 bg-blue-50 text-blue-600 rounded-xl font-bold mb-3 hover:bg-blue-100 mt-6">{t.edit} {t.navProfile}</button>
+                         <button onClick={handleSwitchUser} className="w-full py-3 bg-slate-50 text-slate-600 rounded-xl font-bold hover:bg-slate-100">{t.switchUser}</button>
+                     </div>
+
+                     <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-2xl shadow-sm border border-orange-100 w-full text-center relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-orange-100/50 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
+                        <h3 className="text-lg font-bold text-slate-800 mb-2">{t.supportDevTitle}</h3>
+                        <p className="text-xs text-slate-600 mb-4 leading-relaxed opacity-90">{t.supportDevDesc}</p>
+                        <a 
+                            href="https://buymeacoffee.com/jcfromhk" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 bg-[#FFDD00] text-black font-black px-6 py-3 rounded-full shadow-md hover:shadow-lg hover:scale-105 transition-all text-xs"
+                        >
+                            <span className="text-base">☕</span> {t.buyCoffeeBtn}
+                        </a>
+                    </div>
+                 </div>
+             )}
 
             {!isSelectionMode && activeTab === 'matches' && (
-                <div className="fixed bottom-24 right-6 sm:right-[calc(50%-336px)] z-40 flex flex-col gap-3 items-end">
+                <div className="fixed bottom-24 right-6 z-40 flex flex-col gap-3 items-end">
                     <button onClick={() => setShowQuickLog(true)}
                         className="bg-amber-400 hover:bg-amber-500 text-white font-black px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2 text-xs transition-transform hover:scale-105 active:scale-95">
                         <i className="fas fa-bolt"></i>{language === 'zh' ? '快速記錄' : 'Quick Log'}
@@ -564,7 +561,7 @@ const App: React.FC = () => {
             )}
 
             {isSelectionMode && (
-                <div className="fixed bottom-24 left-4 right-4 sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-200 p-2 z-50 flex items-center justify-between animate-fade-in flex-col gap-3">
+                <div className="fixed bottom-24 left-4 right-4 bg-white rounded-2xl shadow-2xl border border-slate-200 p-2 z-50 flex items-center justify-between animate-fade-in flex-col gap-3">
                     <div className="flex items-center justify-between w-full px-2">
                         <button onClick={toggleSelectionMode} className="w-10 h-10 flex flex-col items-center justify-center text-slate-400 hover:text-slate-600"><i className="fas fa-times text-lg"></i></button>
                         <span className="font-bold text-slate-800">{selectedMatchIds.size} {t.selected}</span>
@@ -587,117 +584,15 @@ const App: React.FC = () => {
       </main>
 
       {/* NAVBAR */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 safe-area-bottom">
+      <nav className="fixed bottom-0 w-full bg-white border-t border-slate-200 z-50 safe-area-bottom">
         <div className="max-w-2xl mx-auto grid grid-cols-5 h-16">
             <button onClick={() => transitionTab('matches')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'matches' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-list-ul text-lg ${activeTab === 'matches' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.navMatches}</span></button>
             <button onClick={() => transitionTab('stats')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'stats' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-chart-pie text-lg ${activeTab === 'stats' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.navStats}</span></button>
-            <button onClick={() => transitionTab('journal')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'journal' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-book-open text-lg ${activeTab === 'journal' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{language === 'zh' ? '日誌' : 'Journal'}</span></button>
             <button onClick={() => transitionTab('coach')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'coach' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-magic text-lg ${activeTab === 'coach' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.navCoach}</span></button>
             <button onClick={() => transitionTab('teams')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'teams' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-users-cog text-lg ${activeTab === 'teams' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.manageTeams}</span></button>
+            <button onClick={() => transitionTab('profile')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'profile' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-user-circle text-lg ${activeTab === 'profile' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.navProfile}</span></button>
         </div>
       </nav>
-
-      {/* ── Settings Drawer ── */}
-      {showSettings && (
-        <div className="fixed inset-0 z-[80] flex justify-end" onClick={() => setShowSettings(false)}>
-          <div className="absolute inset-0 bg-black/50" />
-          <div
-            className="relative z-10 bg-white w-80 h-full shadow-2xl flex flex-col"
-            style={{ animation: 'slideInRight 0.25s cubic-bezier(0.32,0.72,0,1)' }}
-            onClick={e => e.stopPropagation()}
-          >
-            <style>{`@keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }`}</style>
-
-            {/* Header */}
-            <div className={`${mainTheme.headerBg} p-4 flex items-center justify-between flex-none`}>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-white/20 overflow-hidden flex items-center justify-center">
-                  {activeProfile.avatar
-                    ? <img src={activeProfile.avatar} className="w-full h-full object-cover" />
-                    : <i className="fas fa-user text-white" />}
-                </div>
-                <div>
-                  <p className={`font-black text-sm ${mainTheme.headerText}`}>{activeProfile.name}</p>
-                  <p className="text-white/60 text-[10px]">{activeProfile.teams?.length ?? 0} {language === 'zh' ? '支球隊' : 'teams'}</p>
-                </div>
-              </div>
-              <button onClick={() => setShowSettings(false)}
-                className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white">
-                <i className="fas fa-times text-sm" />
-              </button>
-            </div>
-
-            {/* Menu items */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-2">
-
-              <p className="text-[10px] font-black text-slate-400 uppercase px-2 mb-1">{language === 'zh' ? '帳戶' : 'Account'}</p>
-
-              <button onClick={() => { setShowSettings(false); handleEditProfile(); }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors text-left">
-                <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center">
-                  <i className="fas fa-user-edit text-blue-600 text-sm" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-slate-700">{language === 'zh' ? '編輯檔案' : 'Edit Profile'}</p>
-                  <p className="text-[11px] text-slate-400">{language === 'zh' ? '修改名稱、頭像' : 'Name, avatar'}</p>
-                </div>
-                <i className="fas fa-chevron-right text-slate-300 text-xs ml-auto" />
-              </button>
-
-              <button onClick={() => { setShowSettings(false); handleSwitchUser(); }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors text-left">
-                <div className="w-9 h-9 rounded-xl bg-purple-100 flex items-center justify-center">
-                  <i className="fas fa-exchange-alt text-purple-600 text-sm" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-slate-700">{language === 'zh' ? '切換用戶' : 'Switch User'}</p>
-                  <p className="text-[11px] text-slate-400">{language === 'zh' ? '返回選擇頁面' : 'Go to profile select'}</p>
-                </div>
-                <i className="fas fa-chevron-right text-slate-300 text-xs ml-auto" />
-              </button>
-
-              <div className="pt-2">
-                <p className="text-[10px] font-black text-slate-400 uppercase px-2 mb-1">{language === 'zh' ? '數據' : 'Data'}</p>
-              </div>
-
-              <button onClick={() => { setShowSettings(false); setSyncSubset(null); setIsSyncOpen(true); }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors text-left relative">
-                <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center">
-                  <i className="fas fa-sync-alt text-emerald-600 text-sm" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-slate-700">{language === 'zh' ? '備份 / 匯出 / 匯入' : 'Backup / Export / Import'}</p>
-                  <p className="text-[11px] text-slate-400">{language === 'zh' ? '保護你嘅數據' : 'Protect your data'}</p>
-                </div>
-                {showBackupAlert && <span className="absolute right-4 top-1/2 -translate-y-1/2 w-2 h-2 bg-red-500 rounded-full" />}
-                <i className="fas fa-chevron-right text-slate-300 text-xs ml-auto" />
-              </button>
-
-              <div className="pt-2">
-                <p className="text-[10px] font-black text-slate-400 uppercase px-2 mb-1">{language === 'zh' ? '支持開發' : 'Support'}</p>
-              </div>
-
-              <a href="https://buymeacoffee.com/jcfromhk" target="_blank" rel="noopener noreferrer"
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50 hover:bg-amber-100 transition-colors">
-                <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center">
-                  <span className="text-lg">☕</span>
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-slate-700">{t.buyCoffeeBtn}</p>
-                  <p className="text-[11px] text-slate-400">{t.supportDevDesc}</p>
-                </div>
-                <i className="fas fa-external-link-alt text-slate-300 text-xs ml-auto" />
-              </a>
-
-            </div>
-
-            {/* Version */}
-            <div className="p-4 border-t border-slate-100 flex-none">
-              <p className="text-[10px] text-slate-400 text-center">ProFootball Match Diary</p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── Modals ── */}
       <MatchForm isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} onSubmit={handleFormSubmit} profile={activeProfile} initialData={editingMatch} previousMatches={matches} onAddTeammate={handleAddTeammate} />
