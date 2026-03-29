@@ -679,7 +679,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
               <span className="text-slate-800 text-[9px] font-black uppercase tracking-[0.3em]">Season Report</span>
             </div>
             <h2 className="text-2xl font-black uppercase leading-none text-slate-800 text-center">{title}</h2>
-            <div className="text-sm font-bold opacity-70 mt-1 text-center text-slate-700">{profile.name}</div>
+            {shareView === 'personal' && <div className="text-sm font-bold opacity-70 mt-1 text-center text-slate-700">{profile.name}</div>}
           </>
         ) : (
           <>
@@ -826,6 +826,10 @@ const ShareCard: React.FC<ShareCardProps> = ({
               </div>
               <h2 className="text-2xl font-black uppercase leading-none text-slate-800 text-center">{tournamentName}</h2>
               {shareView === 'personal' && <div className="text-sm font-bold opacity-70 mt-1 text-center text-slate-700">{profile.name}</div>}
+              {shareView === 'team' && firstMatch && (() => {
+                const tm = getTeamById(profile.teams, firstMatch.teamId);
+                return tm ? <div className="text-sm font-bold opacity-70 mt-1 text-center text-slate-700">{tm.name}</div> : null;
+              })()}
             </>
           ) : (
             <>
@@ -833,7 +837,11 @@ const ShareCard: React.FC<ShareCardProps> = ({
                 <i className="fas fa-trophy text-amber-400" style={{ marginRight: '4px' }} />{language === 'zh' ? '杯賽報告' : 'Tournament Report'}
               </div>
               <h2 className="text-2xl font-black italic uppercase leading-none drop-shadow-md text-white">{tournamentName}</h2>
-              <div className="text-sm font-bold opacity-80 mt-1 text-white">{profile.name}</div>
+              {shareView === 'personal' && <div className="text-sm font-bold opacity-80 mt-1 text-white">{profile.name}</div>}
+              {shareView === 'team' && firstMatch && (() => {
+                const tm = getTeamById(profile.teams, firstMatch.teamId);
+                return tm ? <div className="text-sm font-bold opacity-80 mt-1 text-white">{tm.name}</div> : null;
+              })()}
             </>
           )}
 
