@@ -624,6 +624,26 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
             {/* Tournament: Quarter tabs */}
             {isTournament && (
               <div className="px-4 pt-3">
+                {/* Opponent name — shown on Q1 if not yet set */}
+                {currentQuarterNum === 1 && !selectedMatch?.opponent?.trim() && (
+                  <div className="mb-3">
+                    <label className="text-[10px] font-black text-purple-600 uppercase mb-1 block">
+                      {language === 'zh' ? '對手名稱（可選）' : 'Opponent (optional)'}
+                    </label>
+                    <input
+                      type="text"
+                      value={pendingOpponent}
+                      onChange={e => setPendingOpponent(e.target.value)}
+                      onBlur={() => {
+                        if (pendingOpponent.trim() && selectedMatchId) {
+                          onSave(selectedMatchId, { opponent: pendingOpponent.trim() });
+                        }
+                      }}
+                      placeholder={language === 'zh' ? '輸入對手隊名...' : 'Enter opponent name...'}
+                      className="w-full bg-white border border-purple-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-purple-400"
+                    />
+                  </div>
+                )}
                 <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
                   {Array.from({ length: currentQuarterNum }, (_, i) => i + 1).map(q => (
                     <button key={q} onClick={() => setCurrentQuarterNum(q)}
