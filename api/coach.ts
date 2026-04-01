@@ -31,7 +31,7 @@ export default async function handler(req: any, res: any) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
         body: JSON.stringify({
-          systemInstruction: {
+          system_Instruction: {
             parts: [{ text: systemInstruction }],
           },
           contents: [
