@@ -25,29 +25,29 @@ export default async function handler(req: any, res: any) {
 
   // ── Call Google Gemini API ────────────────────────────────────────────────
   try {
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-3.1-flash:generateContent`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-        body: JSON.stringify({
-          system_Instruction: {
-            parts: [{ text: systemInstruction }],
-          },
-          contents: [
-            {
-              role: 'user',
-              parts: [{ text: prompt }],
-            },
-          ],
-          generationConfig: {
-            temperature:     0.85,
-            maxOutputTokens: 4096,
-            topP:            0.95,
-          },
-        }),
-      }
-    );
+   const geminiRes = await fetch(
+     `https://generativelanguage.googleapis.com/v1/models/gemini-3.1-flash:generateContent`,
+     {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+       body: JSON.stringify({
+         // 為了極大化相容性，我們只在 contents 內定義 role
+         contents: [
+           {
+             role: 'user',
+             parts: [
+               { text: `System Instruction: ${systemInstruction}\n\nUser Prompt: ${prompt}` }
+             ]
+           }
+         ],
+         generationConfig: {
+           temperature: 0.85,
+           maxOutputTokens: 4096,
+           topP: 0.95,
+         },
+       }),
+     }
+   );
 
     const data = await geminiRes.json();
 
