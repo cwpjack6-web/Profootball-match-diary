@@ -26,7 +26,7 @@ export default async function handler(req: any, res: any) {
   // ── Call Google Gemini API ────────────────────────────────────────────────
   try {
    const geminiRes = await fetch(
-     `https://generativelanguage.googleapis.com/v1/models/gemini-3.1-flash:generateContent`,
+     `https://generativelanguage.googleapis.com/v1/models/gemini-3.1-flash-preview:generateContent`,
      {
        method: 'POST',
        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
