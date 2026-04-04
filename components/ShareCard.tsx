@@ -816,7 +816,11 @@ const ShareCard: React.FC<ShareCardProps> = ({
     };
 
     return (
-      <div className="relative z-10 h-full flex flex-col justify-center gap-3 pointer-events-none">
+      <div className={`relative z-10 h-full flex flex-col gap-3 pointer-events-none ${
+        textPosition === 'top' ? 'justify-start pt-6' :
+        textPosition === 'bottom' ? 'justify-end pb-6' :
+        'justify-center'
+      }`}>
         {/* Header */}
         <div className="px-5">
           {isRetro && !bgImage ? (
@@ -1053,8 +1057,8 @@ const ShareCard: React.FC<ShareCardProps> = ({
           </div>
         )}
 
-        {/* ── Match-only layout/theme controls ── */}
-        {mode === 'match' && (
+        {/* ── Match/Tournament layout/theme controls ── */}
+        {(mode === 'match' || mode === 'tournament') && (
           <div className="bg-white/10 p-2 rounded-xl backdrop-blur-sm grid grid-cols-2 gap-2">
             <div className="flex bg-black/20 rounded-lg p-1 gap-1">
               {(['top', 'center', 'bottom'] as LayoutPosition[]).map((pos, i) => (
