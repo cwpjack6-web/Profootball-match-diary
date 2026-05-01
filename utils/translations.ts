@@ -24,7 +24,8 @@ export const translations = {
     navMatches: "戰報",
     navStats: "數據",
     navProfile: "檔案",
-    navCoach: "名帥", 
+    navCoach: "名帥",
+    navJournal: "日誌",
     manageTeams: "球隊管理",
 
     // Match Types
@@ -262,6 +263,7 @@ export const translations = {
     levelSilver: "初級",
     levelGold: "中級",
     levelDiamond: "高級",
+    levelElite: "精英",
     nextLevel: "下一級",
     locked: "未解鎖",
     progress: "進度",
@@ -396,6 +398,52 @@ export const translations = {
 
     // Month summary (改動 1) — uses existing keys: win/draw/loss/goals/avgRating
 
+    // Journal
+    journalAll: "全部",
+    journalNoEntries: "未有日誌記錄",
+    journalTapToAdd: "撳下方 ＋ 開始記錄",
+    journalEmptyCategory: "呢個分類未有記錄",
+    journalCollapse: "收起",
+    journalReadMore: "展開全文",
+    journalEdit: "編輯日誌",
+    journalNew: "新增日誌",
+    journalCategory: "類別",
+    journalDate: "日期",
+    journalLinkMatch: "關聯比賽（可選）",
+    journalNone: "-- 唔關聯 --",
+    journalTournaments: "錦標賽",
+    journalMatches: "比賽",
+    journalContent: "內容",
+    journalPlaceholder: "記低今日嘅觀察、感受或者重要事項...",
+    journalSave: "儲存日誌",
+    journalCatMatch: "比賽",
+    journalCatTraining: "訓練",
+    journalCatGrowth: "成長",
+    journalCatOther: "其他",
+
+    // Journal
+    journalAll: "All",
+    journalNoEntries: "No journal entries yet",
+    journalTapToAdd: "Tap + below to start",
+    journalEmptyCategory: "No entries in this category",
+    journalCollapse: "Collapse",
+    journalReadMore: "Read more",
+    journalEdit: "Edit Entry",
+    journalNew: "New Journal Entry",
+    journalCategory: "Category",
+    journalDate: "Date",
+    journalLinkMatch: "Link to Match (optional)",
+    journalNone: "-- None --",
+    journalTournaments: "Tournaments",
+    journalMatches: "Matches",
+    journalContent: "Content",
+    journalPlaceholder: "Write your observations, reflections, or notes...",
+    journalSave: "Save Entry",
+    journalCatMatch: "Match",
+    journalCatTraining: "Training",
+    journalCatGrowth: "Growth",
+    journalCatOther: "Other",
+
     // Scorer list (改動 9) — uses existing key: whoScored
 
     // Analytics tab labels and units
@@ -454,6 +502,7 @@ export const translations = {
     navStats: "Stats",
     navProfile: "Profile",
     navCoach: "Coach",
+    navJournal: "Journal",
     manageTeams: "Teams",
 
     // Match Types
@@ -691,6 +740,7 @@ export const translations = {
     levelSilver: "Beginner",
     levelGold: "Intermediate",
     levelDiamond: "Advanced",
+    levelElite: "Elite",
     nextLevel: "Next",
     locked: "Locked",
     progress: "Progress",
