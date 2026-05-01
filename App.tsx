@@ -29,10 +29,13 @@ import TeamManager from './components/TeamManager';
 import CoachReport from './components/CoachReport';
 import WhatsNewModal from './components/WhatsNewModal';
 import QuickLogSheet from './components/QuickLogSheet';
+import AICoachModal from './components/AICoachModal';
 import OnboardingModal from './components/OnboardingModal';
+import JournalSheet, { JournalEntry } from './components/JournalSheet';
+import SettingsDrawer from './components/SettingsDrawer';
 
 type AppView = 'cover' | 'setup' | 'dashboard';
-type Tab = 'matches' | 'stats' | 'teams' | 'profile' | 'coach';
+type Tab = 'matches' | 'stats' | 'journal' | 'coach' | 'teams';
 
 const APP_VERSION = '1.2.0';
 
@@ -48,8 +51,11 @@ const App: React.FC = () => {
   
   // Dashboard Data
   const [matches, setMatches] = useState<MatchData[]>([]);
+  const [journals, setJournals] = useState<JournalEntry[]>([]);
+  const [journalAddRequest, setJournalAddRequest] = useState<{ linkedMatchId: string, linkedMatchName: string, timestamp: number } | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSyncOpen, setIsSyncOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [editingMatch, setEditingMatch] = useState<MatchData | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('matches');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -58,6 +64,7 @@ const App: React.FC = () => {
   // Update Modal State
   const [showWhatsNew, setShowWhatsNew] = useState(false);
   const [showQuickLog, setShowQuickLog] = useState(false);
+  const [showAICoach, setShowAICoach] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Filter & Search State
@@ -114,6 +121,16 @@ const App: React.FC = () => {
     if (activeProfile) {
         const userMatches = getMatches(activeProfile.id);
         setMatches(userMatches);
+        
+        const storedJournals = localStorage.getItem('match_diary_journals_' + activeProfile.id);
+        if (storedJournals) {
+            try {
+                setJournals(JSON.parse(storedJournals));
+            } catch(e) { setJournals([]); }
+        } else {
+            setJournals([]);
+        }
+
         setIsSelectionMode(false);
         setSelectedMatchIds(new Set());
         setDeleteConfirmId(null);
@@ -226,6 +243,31 @@ const App: React.FC = () => {
       setAllProfiles(getAllProfiles());
       setActiveProfile(updated);
       showToast(t.save + ' ' + t.done, 'success');
+  };
+
+  const handleSaveJournal = (partial: Omit<JournalEntry, 'id' | 'createdAt'>, id?: string) => {
+      if (!activeProfile) return;
+      setJournals(prev => {
+          let next = [...prev];
+          if (id) {
+              next = next.map(j => j.id === id ? { ...j, ...partial } : j);
+          } else {
+              next = [{ ...partial, id: Date.now().toString(), createdAt: Date.now() }, ...next];
+          }
+          localStorage.setItem('match_diary_journals_' + activeProfile.id, JSON.stringify(next));
+          return next;
+      });
+      showToast(t.save + ' ' + t.done, 'success');
+  };
+
+  const handleDeleteJournal = (id: string) => {
+      if (!activeProfile) return;
+      setJournals(prev => {
+          const next = prev.filter(j => j.id !== id);
+          localStorage.setItem('match_diary_journals_' + activeProfile.id, JSON.stringify(next));
+          return next;
+      });
+      showToast(t.deleteSuccess, 'success');
   };
 
   const handleSyncComplete = () => {
@@ -467,8 +509,8 @@ const App: React.FC = () => {
 
                 {activeTab === 'matches' && <button onClick={toggleSelectionMode} className={`${isSelectionMode ? 'bg-white text-slate-800' : 'bg-black/20 text-white hover:bg-black/30'} w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors`}><i className={`fas ${isSelectionMode ? 'fa-check-square' : 'fa-list-ul'} text-sm`}></i></button>}
                 {!isSelectionMode && (
-                    <button onClick={() => { setSyncSubset(null); setIsSyncOpen(true); }} className="relative bg-black/20 hover:bg-black/30 text-white w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors">
-                        <i className="fas fa-qrcode text-sm"></i>
+                    <button onClick={() => setIsSettingsOpen(true)} className="relative bg-black/20 hover:bg-black/30 text-white w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors">
+                        <i className="fas fa-cog text-sm"></i>
                         {showBackupAlert && <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>}
                     </button>
                 )}
@@ -527,39 +569,51 @@ const App: React.FC = () => {
                       )}
                   </div>
                 )}
-                <MatchTimeline matches={filteredMatches} profile={activeProfile} isSelectionMode={isSelectionMode} selectedMatchIds={selectedMatchIds} deleteConfirmId={deleteConfirmId} expandedMatchIds={expandedMatchIds} onSelectMatch={handleSelectMatch} onShare={handleShare} onShareTournament={(name, tMatches) => setShareTournament({ name, matches: tMatches })} onEditTournament={(name, tMatches) => setEditingTournament({ name, matches: tMatches })} onEdit={openEditForm} onTrashClick={handleTrashClick} onConfirmDelete={handleConfirmDelete} onCancelDelete={handleCancelDelete} onToggleExpansion={toggleMatchExpansion} onOpenVideo={handleOpenVideo} onOpponentClick={handleOpponentClick} onSaveMatchLabel={handleSaveMatchLabel} scrollToMatchId={scrollToMatchId} onScrollToMatchDone={() => setScrollToMatchId(null)} isFiltered={!!(searchQuery.trim() || quickTeamFilter !== "all")} />
+                <MatchTimeline 
+                  matches={filteredMatches} 
+                  profile={activeProfile} 
+                  isSelectionMode={isSelectionMode} 
+                  selectedMatchIds={selectedMatchIds} 
+                  deleteConfirmId={deleteConfirmId} 
+                  expandedMatchIds={expandedMatchIds} 
+                  onSelectMatch={handleSelectMatch} 
+                  onShare={handleShare} 
+                  onShareTournament={(name, tMatches) => setShareTournament({ name, matches: tMatches })} 
+                  onEditTournament={(name, tMatches) => setEditingTournament({ name, matches: tMatches })} 
+                  onEdit={openEditForm} 
+                  onTrashClick={handleTrashClick} 
+                  onConfirmDelete={handleConfirmDelete} 
+                  onCancelDelete={handleCancelDelete} 
+                  onToggleExpansion={toggleMatchExpansion} 
+                  onOpenVideo={handleOpenVideo} 
+                  onOpponentClick={handleOpponentClick} 
+                  onSaveMatchLabel={handleSaveMatchLabel} 
+                  scrollToMatchId={scrollToMatchId} 
+                  onScrollToMatchDone={() => setScrollToMatchId(null)} 
+                  isFiltered={!!(searchQuery.trim() || quickTeamFilter !== "all")} 
+                  journals={journals}
+                  onAddJournal={(id, name) => {
+                      setJournalAddRequest({ linkedMatchId: id, linkedMatchName: name, timestamp: Date.now() });
+                      setActiveTab('journal');
+                  }}
+                />
             </div>
             )}
             
-             {activeTab === 'profile' && (
-                 <div className="p-4 flex flex-col items-center justify-center min-h-[50vh] space-y-4 animate-fade-in">
-                     <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 w-full text-center">
-                         <div className="w-20 h-20 rounded-full bg-slate-100 mx-auto mb-4 overflow-hidden border-4 border-white shadow-md relative">
-                             {activeProfile.avatar ? <img src={activeProfile.avatar} className="w-full h-full object-cover"/> : <i className="fas fa-user text-3xl text-slate-300 mt-5"></i>}
-                         </div>
-                         <h2 className="text-xl font-bold text-slate-800">{activeProfile.name}</h2>
-                         <button onClick={handleEditProfile} className="w-full py-3 bg-blue-50 text-blue-600 rounded-xl font-bold mb-3 hover:bg-blue-100 mt-6">{t.edit} {t.navProfile}</button>
-                         <button onClick={handleSwitchUser} className="w-full py-3 bg-slate-50 text-slate-600 rounded-xl font-bold hover:bg-slate-100">{t.switchUser}</button>
-                     </div>
-
-                     <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-2xl shadow-sm border border-orange-100 w-full text-center relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-orange-100/50 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
-                        <h3 className="text-lg font-bold text-slate-800 mb-2">{t.supportDevTitle}</h3>
-                        <p className="text-xs text-slate-600 mb-4 leading-relaxed opacity-90">{t.supportDevDesc}</p>
-                        <a 
-                            href="https://buymeacoffee.com/jcfromhk" 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 bg-[#FFDD00] text-black font-black px-6 py-3 rounded-full shadow-md hover:shadow-lg hover:scale-105 transition-all text-xs"
-                        >
-                            <span className="text-base">☕</span> {t.buyCoffeeBtn}
-                        </a>
-                    </div>
-                 </div>
-             )}
+            {activeTab === 'journal' && (
+                <JournalSheet 
+                  entries={journals} 
+                  matches={matches} 
+                  onSave={handleSaveJournal} 
+                  onDelete={handleDeleteJournal} 
+                  teamHex={activeProfile.teams.length > 0 ? getTeamById(activeProfile.teams, activeProfile.teams[0].id).themeColor : '#3b82f6'}
+                  externalAddRequest={journalAddRequest}
+                />
+            )}
 
             {!isSelectionMode && activeTab === 'matches' && (
                 <div className="fixed bottom-24 right-6 z-40 flex flex-col gap-3 items-end">
+                    {matches.length > 0 && <button onClick={() => setShowAICoach(true)} className="bg-emerald-50 text-emerald-600 hover:text-emerald-700 font-bold px-4 py-2 rounded-full shadow-lg flex items-center gap-2 text-xs transition-transform hover:scale-105 active:scale-95 border border-emerald-100"><i className="fas fa-robot"></i>{language === 'zh' ? 'AI 教練' : 'AI Coach'}</button>}
                     <button onClick={() => setShowQuickLog(true)}
                         className="bg-amber-400 hover:bg-amber-500 text-white font-black px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2 text-xs transition-transform hover:scale-105 active:scale-95">
                         <i className="fas fa-bolt"></i>{language === 'zh' ? '快速記錄' : 'Quick Log'}
@@ -596,9 +650,9 @@ const App: React.FC = () => {
         <div className="max-w-2xl mx-auto grid grid-cols-5 h-16">
             <button onClick={() => transitionTab('matches')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'matches' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-list-ul text-lg ${activeTab === 'matches' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.navMatches}</span></button>
             <button onClick={() => transitionTab('stats')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'stats' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-chart-pie text-lg ${activeTab === 'stats' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.navStats}</span></button>
+            <button onClick={() => transitionTab('journal')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'journal' ? 'text-purple-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-book-open text-lg ${activeTab === 'journal' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.navJournal}</span></button>
             <button onClick={() => transitionTab('coach')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'coach' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-magic text-lg ${activeTab === 'coach' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.navCoach}</span></button>
             <button onClick={() => transitionTab('teams')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'teams' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-users-cog text-lg ${activeTab === 'teams' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.manageTeams}</span></button>
-            <button onClick={() => transitionTab('profile')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'profile' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-user-circle text-lg ${activeTab === 'profile' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.navProfile}</span></button>
         </div>
       </nav>
 
@@ -606,6 +660,7 @@ const App: React.FC = () => {
       <MatchForm isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} onSubmit={handleFormSubmit} profile={activeProfile} initialData={editingMatch} previousMatches={matches} onAddTeammate={handleAddTeammate} />
       <SyncModal isOpen={isSyncOpen} onClose={() => setIsSyncOpen(false)} matches={matches} profile={activeProfile} onSyncComplete={handleSyncComplete} syncOnlyMatches={syncSubset} />
       <VideoModal isOpen={!!viewingVideoId} videoId={viewingVideoId} onClose={() => setViewingVideoId(null)} />
+      {activeProfile && <AICoachModal isOpen={showAICoach} onClose={() => setShowAICoach(false)} matches={matches} profile={activeProfile} />}
       
       {/* 單場分享 — mode="match" */}
       {shareMatch && (
@@ -665,6 +720,18 @@ const App: React.FC = () => {
           profile={activeProfile}
           onSave={handleQuickLogSave}
           onCreateMatch={handleQuickLogCreate}
+        />
+      )}
+
+      {activeProfile && (
+        <SettingsDrawer
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          profile={activeProfile}
+          onEditProfile={handleEditProfile}
+          onSwitchUser={handleSwitchUser}
+          onOpenSync={() => { setSyncSubset(null); setIsSyncOpen(true); }}
+          showBackupAlert={showBackupAlert}
         />
       )}
     </div>
