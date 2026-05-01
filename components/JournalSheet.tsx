@@ -14,9 +14,10 @@ export interface JournalEntry {
 interface JournalSheetProps {
   entries: JournalEntry[];
   matches: { id: string; opponent: string; date: string; tournamentName?: string; matchType?: string }[];
-  onSave: (entry: Omit<JournalEntry, 'id' | 'createdAt'>) => void;
+  onSave: (entry: Omit<JournalEntry, 'id' | 'createdAt'>, id?: string) => void;
   onDelete: (id: string) => void;
   teamHex?: string;
+  externalAddRequest?: { linkedMatchId: string, linkedMatchName: string, timestamp: number } | null;
 }
 
 const CATEGORIES = [
@@ -28,8 +29,8 @@ const CATEGORIES = [
 
 const getCategoryMeta = (key: string) => CATEGORIES.find(c => c.key === key) ?? CATEGORIES[3];
 
-const JournalSheet: React.FC<JournalSheetProps> = ({ entries, matches, onSave, onDelete, teamHex = '#3b82f6' }) => {
-  const { language } = useLanguage();
+const JournalSheet: React.FC<JournalSheetProps> = ({ entries, matches, onSave, onDelete, teamHex = '#3b82f6', externalAddRequest }) => {
+  const { t, language } = useLanguage();
   const zh = language === 'zh';
 
   const [filterCat, setFilterCat] = useState<string>('all');
@@ -45,6 +46,18 @@ const JournalSheet: React.FC<JournalSheetProps> = ({ entries, matches, onSave, o
   const [formContent, setFormContent] = useState('');
   const [formLinkedId, setFormLinkedId] = useState('');
   const [formLinkedName, setFormLinkedName] = useState('');
+
+  React.useEffect(() => {
+    if (externalAddRequest) {
+      setEditingEntry(null);
+      setFormDate(today);
+      setFormCat('match'); // default to match
+      setFormContent('');
+      setFormLinkedId(externalAddRequest.linkedMatchId);
+      setFormLinkedName(externalAddRequest.linkedMatchName);
+      setShowForm(true);
+    }
+  }, [externalAddRequest]);
 
   const openNewForm = () => {
     setEditingEntry(null);
@@ -87,7 +100,7 @@ const JournalSheet: React.FC<JournalSheetProps> = ({ entries, matches, onSave, o
       content: formContent.trim(),
       linkedMatchId: formLinkedId || undefined,
       linkedMatchName: formLinkedName || undefined,
-    });
+    }, editingEntry?.id);
     setShowForm(false);
   };
 
@@ -135,13 +148,13 @@ const JournalSheet: React.FC<JournalSheetProps> = ({ entries, matches, onSave, o
         <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-1">
           <button onClick={() => setFilterCat('all')}
             className={`flex-none px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${filterCat === 'all' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-500 border-slate-200'}`}>
-            {zh ? '全部' : 'All'}
+            {t.journalAll}
           </button>
           {CATEGORIES.map(c => (
             <button key={c.key} onClick={() => setFilterCat(c.key)}
               className={`flex-none px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${filterCat === c.key ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-500 border-slate-200'}`}>
               <i className={`fas ${c.icon} mr-1`} />
-              {zh ? c.zhLabel : c.enLabel}
+              {c.key === 'match' ? t.journalCatMatch : c.key === 'training' ? t.journalCatTraining : c.key === 'growth' ? t.journalCatGrowth : t.journalCatOther}
             </button>
           ))}
         </div>
@@ -152,13 +165,13 @@ const JournalSheet: React.FC<JournalSheetProps> = ({ entries, matches, onSave, o
         {entries.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-slate-400">
             <i className="fas fa-book-open text-4xl mb-3 opacity-30" />
-            <p className="text-sm font-bold">{zh ? '未有日誌記錄' : 'No journal entries yet'}</p>
-            <p className="text-xs mt-1 opacity-60">{zh ? '撳下方 ＋ 開始記錄' : 'Tap + below to start'}</p>
+            <p className="text-sm font-bold">{t.journalNoEntries}</p>
+            <p className="text-xs mt-1 opacity-60">{t.journalTapToAdd}</p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-slate-400">
             <i className="fas fa-filter text-3xl mb-3 opacity-30" />
-            <p className="text-sm font-bold">{zh ? '呢個分類未有記錄' : 'No entries in this category'}</p>
+            <p className="text-sm font-bold">{t.journalEmptyCategory}</p>
           </div>
         ) : (
           groupKeys.map(gk => (
@@ -189,7 +202,7 @@ const JournalSheet: React.FC<JournalSheetProps> = ({ entries, matches, onSave, o
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${cat.color}`}>
-                              {zh ? cat.zhLabel : cat.enLabel}
+                              {cat.key === 'match' ? t.journalCatMatch : cat.key === 'training' ? t.journalCatTraining : cat.key === 'growth' ? t.journalCatGrowth : t.journalCatOther}
                             </span>
                             {entry.linkedMatchName && (
                               <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-100 flex items-center gap-1">
@@ -218,7 +231,7 @@ const JournalSheet: React.FC<JournalSheetProps> = ({ entries, matches, onSave, o
                         {entry.content.length > 80 && (
                           <button onClick={() => setExpandedId(isExpanded ? null : entry.id)}
                             className="text-[11px] text-blue-500 font-bold mt-1">
-                            {isExpanded ? (zh ? '收起' : 'Collapse') : (zh ? '展開全文' : 'Read more')}
+                            {isExpanded ? t.journalCollapse : t.journalReadMore}
                           </button>
                         )}
                       </div>
@@ -226,15 +239,15 @@ const JournalSheet: React.FC<JournalSheetProps> = ({ entries, matches, onSave, o
                       {/* Delete confirm */}
                       {confirmDeleteId === entry.id && (
                         <div className="mx-4 mb-4 p-3 bg-rose-50 rounded-xl border border-rose-100 flex items-center justify-between">
-                          <p className="text-xs font-bold text-rose-600">{zh ? '確認刪除？' : 'Delete this entry?'}</p>
+                          <p className="text-xs font-bold text-rose-600">{t.confirmDelete}</p>
                           <div className="flex gap-2">
                             <button onClick={() => setConfirmDeleteId(null)}
                               className="text-xs font-bold text-slate-500 px-3 py-1 bg-white rounded-lg border">
-                              {zh ? '取消' : 'Cancel'}
+                              {t.cancel}
                             </button>
                             <button onClick={() => handleDelete(entry.id)}
                               className="text-xs font-bold text-white px-3 py-1 bg-rose-500 rounded-lg">
-                              {zh ? '刪除' : 'Delete'}
+                              {t.delete}
                             </button>
                           </div>
                         </div>
@@ -269,9 +282,7 @@ const JournalSheet: React.FC<JournalSheetProps> = ({ entries, matches, onSave, o
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-slate-100 flex-none">
               <h3 className="text-base font-black text-slate-800">
-                {editingEntry
-                  ? (zh ? '編輯日誌' : 'Edit Entry')
-                  : (zh ? '新增日誌' : 'New Journal Entry')}
+                {editingEntry ? t.journalEdit : t.journalNew}
               </h3>
               <button onClick={() => setShowForm(false)}
                 className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
@@ -283,7 +294,7 @@ const JournalSheet: React.FC<JournalSheetProps> = ({ entries, matches, onSave, o
               {/* Category */}
               <div>
                 <label className="text-xs font-black text-slate-400 uppercase block mb-2">
-                  {zh ? '類別' : 'Category'}
+                  {t.journalCategory}
                 </label>
                 <div className="grid grid-cols-4 gap-2">
                   {CATEGORIES.map(c => (
@@ -291,7 +302,7 @@ const JournalSheet: React.FC<JournalSheetProps> = ({ entries, matches, onSave, o
                       onClick={() => setFormCat(c.key as JournalEntry['category'])}
                       className={`py-2 rounded-xl text-xs font-bold border transition-all flex flex-col items-center gap-1 ${formCat === c.key ? c.color + ' shadow-sm' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
                       <i className={`fas ${c.icon}`} />
-                      {zh ? c.zhLabel : c.enLabel}
+                      {c.key === 'match' ? t.journalCatMatch : c.key === 'training' ? t.journalCatTraining : c.key === 'growth' ? t.journalCatGrowth : t.journalCatOther}
                     </button>
                   ))}
                 </div>
@@ -300,7 +311,7 @@ const JournalSheet: React.FC<JournalSheetProps> = ({ entries, matches, onSave, o
               {/* Date */}
               <div>
                 <label className="text-xs font-black text-slate-400 uppercase block mb-2">
-                  {zh ? '日期' : 'Date'}
+                  {t.journalDate}
                 </label>
                 <input type="date" value={formDate} onChange={e => setFormDate(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:border-blue-400" />
@@ -309,11 +320,11 @@ const JournalSheet: React.FC<JournalSheetProps> = ({ entries, matches, onSave, o
               {/* Link to match */}
               <div>
                 <label className="text-xs font-black text-slate-400 uppercase block mb-2">
-                  {zh ? '關聯比賽（可選）' : 'Link to Match (optional)'}
+                  {t.journalLinkMatch}
                 </label>
                 <select value={formLinkedId} onChange={e => handleLinkChange(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-700 outline-none focus:border-blue-400">
-                  <option value="">{zh ? '-- 唔關聯 --' : '-- None --'}</option>
+                  <option value="">{t.journalNone}</option>
                   {(() => {
                     // Group: tournaments first (deduplicated), then standalone matches
                     const seen = new Set<string>();
@@ -332,14 +343,14 @@ const JournalSheet: React.FC<JournalSheetProps> = ({ entries, matches, onSave, o
                     return (
                       <>
                         {tournaments.length > 0 && (
-                          <optgroup label={zh ? '錦標賽' : 'Tournaments'}>
+                          <optgroup label={t.journalTournaments}>
                             {tournaments.map(t => (
                               <option key={t.id} value={t.id}>{t.date.slice(0,7)} · 🏆 {t.name}</option>
                             ))}
                           </optgroup>
                         )}
                         {standalone.length > 0 && (
-                          <optgroup label={zh ? '比賽' : 'Matches'}>
+                          <optgroup label={t.journalMatches}>
                             {standalone.map(m => (
                               <option key={m.id} value={m.id}>{m.date} · {m.opponent}</option>
                             ))}
@@ -354,13 +365,13 @@ const JournalSheet: React.FC<JournalSheetProps> = ({ entries, matches, onSave, o
               {/* Content */}
               <div>
                 <label className="text-xs font-black text-slate-400 uppercase block mb-2">
-                  {zh ? '內容' : 'Content'}
+                  {t.journalContent}
                 </label>
                 <textarea
                   value={formContent}
                   onChange={e => setFormContent(e.target.value)}
                   rows={5}
-                  placeholder={zh ? '記低今日嘅觀察、感受或者重要事項...' : 'Write your observations, reflections, or notes...'}
+                  placeholder={t.journalPlaceholder}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 outline-none focus:border-blue-400 resize-none leading-relaxed"
                 />
               </div>
@@ -373,7 +384,7 @@ const JournalSheet: React.FC<JournalSheetProps> = ({ entries, matches, onSave, o
                 className="w-full py-3 rounded-xl font-black text-sm text-white flex items-center justify-center gap-2 shadow-lg disabled:opacity-40 transition-all active:scale-95"
                 style={{ backgroundColor: teamHex }}>
                 <i className="fas fa-save" />
-                {zh ? '儲存日誌' : 'Save Entry'}
+                {t.journalSave}
               </button>
             </div>
           </div>
