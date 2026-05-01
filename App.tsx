@@ -20,14 +20,22 @@ import ProfileSetup from './components/ProfileSetup';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
 import CoverPage from './components/CoverPage';
 import SyncModal from './components/SyncModal';
-import ShareModal from './components/ShareModal';
+import ShareCard from './components/ShareCard';
+import TournamentEditModal from './components/TournamentEditModal';           // ← 換成統一組件
 import OpponentStatsModal from './components/OpponentStatsModal';
 import MatchTimeline from './components/MatchTimeline';
 import VideoModal from './components/VideoModal';
 import TeamManager from './components/TeamManager';
+import CoachReport from './components/CoachReport';
+import WhatsNewModal from './components/WhatsNewModal';
+import QuickLogSheet from './components/QuickLogSheet';
+import OnboardingModal from './components/OnboardingModal';
+import JournalSheet, { JournalEntry } from './components/JournalSheet';
 
 type AppView = 'cover' | 'setup' | 'dashboard';
-type Tab = 'matches' | 'stats' | 'teams' | 'profile';
+type Tab = 'matches' | 'stats' | 'journal' | 'teams' | 'profile' | 'coach';
+
+const APP_VERSION = '1.2.0';
 
 const App: React.FC = () => {
   const { t, language, toggleLanguage } = useLanguage();
@@ -41,12 +49,19 @@ const App: React.FC = () => {
   
   // Dashboard Data
   const [matches, setMatches] = useState<MatchData[]>([]);
+  const [journals, setJournals] = useState<JournalEntry[]>([]);
+  const [journalAddRequest, setJournalAddRequest] = useState<{ linkedMatchId: string, linkedMatchName: string, timestamp: number } | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSyncOpen, setIsSyncOpen] = useState(false);
   const [editingMatch, setEditingMatch] = useState<MatchData | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('matches');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [showBackupAlert, setShowBackupAlert] = useState(false);
+  
+  // Update Modal State
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
+  const [showQuickLog, setShowQuickLog] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Filter & Search State
   const [quickTeamFilter, setQuickTeamFilter] = useState<string>('all');
@@ -60,21 +75,56 @@ const App: React.FC = () => {
 
   // UI State
   const [expandedMatchIds, setExpandedMatchIds] = useState<Set<string>>(new Set());
+  const [scrollToMatchId, setScrollToMatchId] = useState<string | null>(null);
   const [shareMatch, setShareMatch] = useState<MatchData | null>(null);
+  const [shareTournament, setShareTournament] = useState<{ name: string; matches: MatchData[] } | null>(null);
+  const [editingTournament, setEditingTournament] = useState<{ name: string; matches: MatchData[] } | null>(null);
   const [selectedOpponent, setSelectedOpponent] = useState<string | null>(null);
   const [viewingVideoId, setViewingVideoId] = useState<string | null>(null);
+
+  // ── 新增：賽季分享 state ──────────────────────────────────────────────────
+  const [showSeasonShare, setShowSeasonShare] = useState(false);
 
   useEffect(() => {
     const profiles = getAllProfiles();
     setAllProfiles(profiles);
     setCurrentView('cover');
     setLoading(false);
+    
+    const lastVersion = localStorage.getItem('arthur_app_version');
+    if (lastVersion !== APP_VERSION) {
+        setShowWhatsNew(true);
+    }
+
+    // Show onboarding for first-time users (no profiles, never seen onboarding)
+    const hasSeenOnboarding = localStorage.getItem('arthur_onboarding_done');
+    if (!hasSeenOnboarding && profiles.length === 0) {
+        setShowOnboarding(true);
+    }
   }, []);
+  
+  const handleCloseWhatsNew = () => {
+      localStorage.setItem('arthur_app_version', APP_VERSION);
+      setShowWhatsNew(false);
+  };
+
+  const handleOnboardingComplete = () => {
+      localStorage.setItem('arthur_onboarding_done', '1');
+      setShowOnboarding(false);
+  };
 
   useEffect(() => {
     if (activeProfile) {
         const userMatches = getMatches(activeProfile.id);
         setMatches(userMatches);
+        
+        const savedJournals = localStorage.getItem(`journals_${activeProfile.id}`);
+        if (savedJournals) {
+          try { setJournals(JSON.parse(savedJournals)); } catch(e) { setJournals([]); }
+        } else {
+          setJournals([]);
+        }
+
         setIsSelectionMode(false);
         setSelectedMatchIds(new Set());
         setDeleteConfirmId(null);
@@ -90,12 +140,9 @@ const App: React.FC = () => {
       setShowBackupAlert(isBackupNeeded());
   };
 
-  // Helper for View Transitions
   const transitionView = (view: AppView) => {
     if ((document as any).startViewTransition) {
-      (document as any).startViewTransition(() => {
-        setCurrentView(view);
-      });
+      (document as any).startViewTransition(() => { setCurrentView(view); });
     } else {
       setCurrentView(view);
     }
@@ -103,19 +150,15 @@ const App: React.FC = () => {
 
   const transitionTab = (tab: Tab) => {
     if ((document as any).startViewTransition) {
-      (document as any).startViewTransition(() => {
-        setActiveTab(tab);
-      });
+      (document as any).startViewTransition(() => { setActiveTab(tab); });
     } else {
       setActiveTab(tab);
     }
   };
 
-  // --- FILTER LOGIC with Archive Support ---
   const filteredMatches = useMemo(() => {
     let result = matches;
 
-    // 1. Archive Filter (Hide archived teams unless toggle is on)
     if (!showArchived && activeProfile) {
         result = result.filter(m => {
             const team = getTeamById(activeProfile.teams, m.teamId);
@@ -123,12 +166,10 @@ const App: React.FC = () => {
         });
     }
 
-    // 2. Team Filter
     if (quickTeamFilter !== 'all') {
         result = result.filter(m => m.teamId === quickTeamFilter);
     }
 
-    // 3. Search
     if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         result = result.filter(m => 
@@ -140,7 +181,6 @@ const App: React.FC = () => {
     return result;
   }, [matches, quickTeamFilter, searchQuery, showArchived, activeProfile]);
 
-  // --- FORM GUIDE LOGIC (Last 5) ---
   const formGuide = useMemo(() => {
       if (!activeProfile || matches.length === 0) return null;
       
@@ -150,12 +190,8 @@ const App: React.FC = () => {
           relevantMatches = relevantMatches.filter(m => m.teamId === quickTeamFilter);
       }
       
-      // Sort by date descending (newest first)
       relevantMatches.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      
-      // Take top 5 and reverse for display (Oldest -> Newest: Left to Right)
       const last5 = relevantMatches.slice(0, 5).reverse();
-      
       if (last5.length === 0) return null;
 
       return last5.map(m => {
@@ -164,7 +200,6 @@ const App: React.FC = () => {
           return 'D';
       });
   }, [matches, quickTeamFilter, activeProfile]);
-
 
   // --- Handlers ---
 
@@ -213,13 +248,14 @@ const App: React.FC = () => {
           const updatedProfile = profiles.find(p => p.id === activeProfile.id);
           if (updatedProfile) setActiveProfile(updatedProfile);
       }
-      checkBackupStatus(); // Re-check backup status
+      checkBackupStatus();
       showToast(t.syncSuccess, 'success');
   };
 
   const handleFormSubmit = (data: Omit<MatchData, 'id'>) => {
     if (!activeProfile) return;
-    if (editingMatch) {
+    
+    if (editingMatch && editingMatch.id) {
       const updatedList = updateMatchInStorage({ ...data, id: editingMatch.id, profileId: activeProfile.id });
       setMatches(updatedList);
       showToast(t.save + ' ' + t.done, 'success');
@@ -232,7 +268,6 @@ const App: React.FC = () => {
     setEditingMatch(null);
   };
 
-  // --- Standard Handlers ---
   const handleDuplicateLast = () => {
     if (matches.length === 0) { setIsFormOpen(true); return; }
     const sorted = [...matches].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -241,6 +276,16 @@ const App: React.FC = () => {
   };
   const openEditForm = (e: React.MouseEvent, match: MatchData) => { e.stopPropagation(); setEditingMatch(match); setIsFormOpen(true); };
   const handleShare = (e: React.MouseEvent, match: MatchData) => { e.stopPropagation(); setShareMatch(match); };
+  const handleTournamentSave = (name: string, tMatches: MatchData[], updates: Partial<MatchData>) => {
+    if (!activeProfile) return;
+    let updatedList = [...matches];
+    tMatches.forEach(m => {
+      updatedList = updateMatchInStorage({ ...m, ...updates, id: m.id, profileId: activeProfile.id });
+    });
+    setMatches(updatedList);
+    setEditingTournament(null);
+    showToast(language === 'zh' ? `已同步到 ${tMatches.length} 場比賽` : `Synced to ${tMatches.length} games`, 'success');
+  };
   const handleTrashClick = (e: React.MouseEvent, id: string) => { e.stopPropagation(); setDeleteConfirmId(id); };
   const handleConfirmDelete = (e: React.MouseEvent, id: string) => { e.stopPropagation(); if(activeProfile) setMatches(deleteMatchFromStorage(id, activeProfile.id)); setDeleteConfirmId(null); showToast(t.deleteSuccess, 'info'); };
   const handleCancelDelete = (e: React.MouseEvent) => { e.stopPropagation(); setDeleteConfirmId(null); };
@@ -249,32 +294,51 @@ const App: React.FC = () => {
   const handleOpponentClick = (e: React.MouseEvent, op: string) => { e.stopPropagation(); if(!isSelectionMode) setSelectedOpponent(op); };
   const toggleSelectionMode = () => { setIsSelectionMode(!isSelectionMode); setSelectedMatchIds(new Set()); };
   const handleSelectMatch = (id: string) => { const n = new Set(selectedMatchIds); if(n.has(id)) n.delete(id); else n.add(id); setSelectedMatchIds(n); };
+
+  const handleSaveJournal = (entryData: Omit<JournalEntry, 'id' | 'createdAt'>, id?: string) => {
+    if (!activeProfile) return;
+    let updated: JournalEntry[];
+    if (id) {
+       updated = journals.map(j => j.id === id ? { ...j, ...entryData } : j);
+    } else {
+       const newEntry: JournalEntry = {
+          ...entryData,
+          id: Date.now().toString(),
+          createdAt: Date.now()
+       };
+       updated = [...journals, newEntry];
+    }
+    setJournals(updated);
+    localStorage.setItem(`journals_${activeProfile.id}`, JSON.stringify(updated));
+    showToast(language === 'zh' ? '日誌已儲存 ✓' : 'Journal saved ✓', 'success');
+  };
+
+  const handleDeleteJournal = (id: string) => {
+    if (!activeProfile) return;
+    const updated = journals.filter(j => j.id !== id);
+    setJournals(updated);
+    localStorage.setItem(`journals_${activeProfile.id}`, JSON.stringify(updated));
+    showToast(language === 'zh' ? '日誌已刪除' : 'Journal deleted', 'info');
+  };
   
-  // --- Bulk Selection Logic ---
   const handleSelectAllFiltered = () => {
       const allIds = new Set(filteredMatches.map(m => m.id));
       setSelectedMatchIds(allIds);
   };
 
-  // --- Comprehensive Text Report Generation ---
   const generateTextReport = (ids: Set<string>): string => {
     if (!activeProfile) return '';
     const selected = matches.filter(m => ids.has(m.id)).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     
     return selected.map(m => {
         const team = getTeamById(activeProfile.teams, m.teamId);
-        
-        // Match Context
         const homeAway = m.isHome ? t.home : t.away;
         const matchType = m.matchType ? (m.matchType === 'league' ? t.typeLeague : m.matchType === 'cup' ? t.typeCup : t.typeFriendly) : '';
         const locationStr = m.location ? `@ ${m.location}` : '';
         const contextLine = [matchType, homeAway, locationStr].filter(Boolean).join(' | ');
-
-        // Result & Score
         const isScheduled = m.status === 'scheduled';
         const resultSymbol = isScheduled ? '⏳' : (m.scoreMyTeam > m.scoreOpponent ? '✅' : m.scoreMyTeam < m.scoreOpponent ? '❌' : '🤝');
         
-        // Stats
         let statsParts = [];
         if (!isScheduled) {
             if (m.arthurGoals > 0) statsParts.push(`⚽ ${m.arthurGoals} ${t.goals}`);
@@ -284,29 +348,17 @@ const App: React.FC = () => {
         }
         const statsLine = statsParts.join('  ');
 
-        // Times
         let timeParts = [];
         if (m.matchTime) timeParts.push(`⏰ ${t.matchTime}: ${m.matchTime}`);
         if (m.assemblyTime) timeParts.push(`👥 ${t.assemblyTime}: ${m.assemblyTime}`);
         const timeLine = timeParts.join(' | ');
 
-        // Extra details
         let extraLine = '';
-        const positions = Array.isArray(m.positionPlayed) 
-            ? m.positionPlayed.join(', ') 
-            : typeof m.positionPlayed === 'string' 
-                ? m.positionPlayed 
-                : '';
-
+        const positions = Array.isArray(m.positionPlayed) ? m.positionPlayed.join(', ') : typeof m.positionPlayed === 'string' ? m.positionPlayed : '';
         if (m.pitchType || m.weather || positions) {
-            extraLine = [
-                m.pitchType, 
-                m.weather, 
-                positions
-            ].filter(Boolean).join(' • ');
+            extraLine = [m.pitchType, m.weather, positions].filter(Boolean).join(' • ');
         }
 
-        // Build Block
         let block = `📅 ${m.date} (${team.name})\n`;
         if (timeLine) block += `${timeLine}\n`;
         block += `${contextLine}\n`;
@@ -349,12 +401,77 @@ const App: React.FC = () => {
       handleUpdateProfileFromManager(updated);
   };
 
-  // Determine Active Team for Logo Logic
+  // Navigate from Analytics drill-down to a specific match in the matches tab
+  const handleNavigateToMatch = (matchId: string) => {
+    setScrollToMatchId(matchId);
+    transitionTab('matches');
+  };
+
+  // Quick Log save handler
+  const handleQuickLogSave = (matchId: string, update: Partial<MatchData>) => {
+    if (!activeProfile) return;
+    const existing = matches.find(m => m.id === matchId);
+    if (!existing) return;
+    const updated = updateMatchInStorage({ ...existing, ...update, id: matchId, profileId: activeProfile.id });
+    setMatches(updated);
+    showToast(language === 'zh' ? '已儲存 ✓' : 'Saved ✓', 'success');
+  };
+
+  // Quick Log create new match handler — returns new match id
+  const handleSaveMatchLabel = (matchId: string, label: string) => {
+    if (!activeProfile) return;
+    const existing = matches.find(m => m.id === matchId);
+    if (!existing) return;
+    const updated = updateMatchInStorage({ ...existing, matchLabel: label });
+    setMatches(updated);
+  };
+
+  const handleQuickLogCreate = (opponent: string, teamId: string, extra?: { matchType?: string; tournamentName?: string; matchLabel?: string }): string => {
+    if (!activeProfile) return '';
+    const newId = Date.now().toString();
+    const today = new Date().toISOString().split('T')[0];
+    const updated = addMatchToStorage({
+      profileId: activeProfile.id,
+      teamId,
+      opponent,
+      date: today,
+      isHome: true,
+      matchType: (extra?.matchType as any) || 'friendly',
+      tournamentName: extra?.tournamentName || '',
+      matchLabel: extra?.matchLabel || '',
+      matchFormat: '',
+      scoreMyTeam: 0,
+      scoreOpponent: 0,
+      arthurGoals: 0,
+      arthurAssists: 0,
+      scorers: [],
+      rating: 0,
+      isMotm: false,
+      dadComment: '',
+      kidInterview: '',
+      videos: [],
+      status: 'completed',
+      id: newId,
+    });
+    setMatches(updated);
+    return newId;
+  };
+
   const activeTeam = quickTeamFilter !== 'all' 
       ? getTeamById(activeProfile?.teams || [], quickTeamFilter)
-      : activeProfile?.teams?.[0]; // Default to first team if all shown
+      : activeProfile?.teams?.[0];
 
   const mainTheme = activeTeam ? getTeamColorStyles(activeTeam.themeColor) : getTeamColorStyles('blue');
+
+  // ── 賽季分享 title ─────────────────────────────────────────────────────────
+  const seasonShareTitle = useMemo(() => {
+    if (!activeProfile) return '';
+    const teamName = quickTeamFilter !== 'all'
+      ? getTeamById(activeProfile.teams, quickTeamFilter)?.name ?? ''
+      : activeProfile.teams[0]?.name ?? '';
+    const year = new Date().getFullYear();
+    return teamName ? `${teamName} · ${year}` : `${year}`;
+  }, [activeProfile, quickTeamFilter]);
 
   if (loading) return null;
   if (currentView === 'setup') return <ProfileSetup initialProfile={activeProfile} onSave={handleSaveProfile} onCancel={() => setCurrentView('cover')} />;
@@ -389,7 +506,6 @@ const App: React.FC = () => {
                 {!isSelectionMode && (
                     <button onClick={() => { setSyncSubset(null); setIsSyncOpen(true); }} className="relative bg-black/20 hover:bg-black/30 text-white w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors">
                         <i className="fas fa-qrcode text-sm"></i>
-                        {/* Backup Notification Dot */}
                         {showBackupAlert && <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>}
                     </button>
                 )}
@@ -401,11 +517,23 @@ const App: React.FC = () => {
       {/* CONTENT */}
       <main className="flex-1 overflow-y-auto pb-40 relative bg-slate-100 w-full min-h-0">
         <div className="max-w-2xl mx-auto min-h-full">
-            {activeTab === 'stats' && <AnalyticsDashboard matches={matches} profile={activeProfile} />}
+            {activeTab === 'stats' && <AnalyticsDashboard matches={matches} profile={activeProfile} onNavigateToMatch={handleNavigateToMatch} />}
             {activeTab === 'teams' && <TeamManager profile={activeProfile} onUpdateProfile={handleUpdateProfileFromManager} />}
+            {activeTab === 'coach' && <CoachReport profile={activeProfile} matches={matches} />}
+            
+            {activeTab === 'journal' && (
+              <JournalSheet
+                entries={journals}
+                matches={matches}
+                onSave={handleSaveJournal}
+                onDelete={handleDeleteJournal}
+                teamHex="#3b82f6"
+                externalAddRequest={journalAddRequest}
+              />
+            )}
+            
             {activeTab === 'matches' && (
             <div className="animate-fade-in relative">
-                {/* Team Filter & Archive Toggle */}
                 {activeProfile.teams.length > 0 && matches.length > 0 && (
                   <div className="sticky top-0 z-20 bg-slate-100/95 backdrop-blur-sm border-b border-slate-200/50 shadow-sm">
                       <div className="px-4 py-3 flex gap-2 overflow-x-auto no-scrollbar items-center">
@@ -416,9 +544,19 @@ const App: React.FC = () => {
                           })}
                           <div className="w-px h-6 bg-slate-300 mx-1"></div>
                           <button onClick={() => setShowArchived(!showArchived)} className={`flex-none w-8 h-8 rounded-full flex items-center justify-center border transition-all ${showArchived ? 'bg-orange-100 text-orange-600 border-orange-200' : 'bg-white text-slate-400 border-slate-200'}`} title="Toggle Archives"><i className="fas fa-archive text-xs"></i></button>
+                          
+                          {/* ── 賽季分享按鈕 ── */}
+                          {filteredMatches.filter(m => m.status !== 'scheduled').length > 0 && (
+                            <button
+                              onClick={() => setShowSeasonShare(true)}
+                              className="flex-none w-8 h-8 rounded-full flex items-center justify-center border bg-white text-slate-400 border-slate-200 hover:text-yellow-500 hover:border-yellow-300 transition-all"
+                              title={t.shareSeason}
+                            >
+                              <i className="fas fa-trophy text-xs"></i>
+                            </button>
+                          )}
                       </div>
                       
-                      {/* FORM GUIDE - Visible below filter */}
                       {formGuide && (
                           <div className="px-4 pb-2 pt-0 flex justify-end items-center gap-2 text-[10px] animate-fade-in">
                               <span className="font-bold text-slate-400 uppercase">{t.last5}:</span>
@@ -437,7 +575,7 @@ const App: React.FC = () => {
                       )}
                   </div>
                 )}
-                <MatchTimeline matches={filteredMatches} profile={activeProfile} isSelectionMode={isSelectionMode} selectedMatchIds={selectedMatchIds} deleteConfirmId={deleteConfirmId} expandedMatchIds={expandedMatchIds} onSelectMatch={handleSelectMatch} onShare={handleShare} onEdit={openEditForm} onTrashClick={handleTrashClick} onConfirmDelete={handleConfirmDelete} onCancelDelete={handleCancelDelete} onToggleExpansion={toggleMatchExpansion} onOpenVideo={handleOpenVideo} onOpponentClick={handleOpponentClick} />
+                <MatchTimeline matches={filteredMatches} profile={activeProfile} isSelectionMode={isSelectionMode} selectedMatchIds={selectedMatchIds} deleteConfirmId={deleteConfirmId} expandedMatchIds={expandedMatchIds} onSelectMatch={handleSelectMatch} onShare={handleShare} onShareTournament={(name, tMatches) => setShareTournament({ name, matches: tMatches })} onEditTournament={(name, tMatches) => setEditingTournament({ name, matches: tMatches })} onEdit={openEditForm} onTrashClick={handleTrashClick} onConfirmDelete={handleConfirmDelete} onCancelDelete={handleCancelDelete} onToggleExpansion={toggleMatchExpansion} onOpenVideo={handleOpenVideo} onOpponentClick={handleOpponentClick} onSaveMatchLabel={handleSaveMatchLabel} scrollToMatchId={scrollToMatchId} onScrollToMatchDone={() => setScrollToMatchId(null)} isFiltered={!!(searchQuery.trim() || quickTeamFilter !== "all")} journals={journals} onAddJournal={(linkedMatchId, linkedMatchName, timestamp) => { setJournalAddRequest({ linkedMatchId, linkedMatchName, timestamp }); setActiveTab('journal'); }} />
             </div>
             )}
             
@@ -451,12 +589,29 @@ const App: React.FC = () => {
                          <button onClick={handleEditProfile} className="w-full py-3 bg-blue-50 text-blue-600 rounded-xl font-bold mb-3 hover:bg-blue-100 mt-6">{t.edit} {t.navProfile}</button>
                          <button onClick={handleSwitchUser} className="w-full py-3 bg-slate-50 text-slate-600 rounded-xl font-bold hover:bg-slate-100">{t.switchUser}</button>
                      </div>
+
+                     <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-2xl shadow-sm border border-orange-100 w-full text-center relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-orange-100/50 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl"></div>
+                        <h3 className="text-lg font-bold text-slate-800 mb-2">{t.supportDevTitle}</h3>
+                        <p className="text-xs text-slate-600 mb-4 leading-relaxed opacity-90">{t.supportDevDesc}</p>
+                        <a 
+                            href="https://buymeacoffee.com/jcfromhk" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 bg-[#FFDD00] text-black font-black px-6 py-3 rounded-full shadow-md hover:shadow-lg hover:scale-105 transition-all text-xs"
+                        >
+                            <span className="text-base">☕</span> {t.buyCoffeeBtn}
+                        </a>
+                    </div>
                  </div>
              )}
 
             {!isSelectionMode && activeTab === 'matches' && (
                 <div className="fixed bottom-24 right-6 z-40 flex flex-col gap-3 items-end">
-                    {matches.length > 0 && <button onClick={handleDuplicateLast} className="bg-white text-slate-600 hover:text-blue-600 font-bold px-4 py-2 rounded-full shadow-lg flex items-center gap-2 text-xs transition-transform hover:scale-105 active:scale-95 border border-slate-100"><i className="fas fa-copy"></i>{t.duplicate}</button>}
+                    <button onClick={() => setShowQuickLog(true)}
+                        className="bg-amber-400 hover:bg-amber-500 text-white font-black px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2 text-xs transition-transform hover:scale-105 active:scale-95">
+                        <i className="fas fa-bolt"></i>{language === 'zh' ? '快速記錄' : 'Quick Log'}
+                    </button>
                     <button onClick={() => { setEditingMatch(null); setIsFormOpen(true); }} className={`w-14 h-14 ${mainTheme.button} rounded-full shadow-lg flex items-center justify-center text-xl transition-transform hover:scale-110 active:scale-95`}><i className="fas fa-plus"></i></button>
                 </div>
             )}
@@ -486,19 +641,81 @@ const App: React.FC = () => {
 
       {/* NAVBAR */}
       <nav className="fixed bottom-0 w-full bg-white border-t border-slate-200 z-50 safe-area-bottom">
-        <div className="max-w-2xl mx-auto grid grid-cols-4 h-16">
+        <div className="max-w-2xl mx-auto grid grid-cols-6 h-16">
             <button onClick={() => transitionTab('matches')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'matches' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-list-ul text-lg ${activeTab === 'matches' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.navMatches}</span></button>
             <button onClick={() => transitionTab('stats')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'stats' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-chart-pie text-lg ${activeTab === 'stats' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.navStats}</span></button>
+            <button onClick={() => transitionTab('journal')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'journal' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-book-open text-lg ${activeTab === 'journal' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.navJournal}</span></button>
+            <button onClick={() => transitionTab('coach')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'coach' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-magic text-lg ${activeTab === 'coach' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.navCoach}</span></button>
             <button onClick={() => transitionTab('teams')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'teams' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-users-cog text-lg ${activeTab === 'teams' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.manageTeams}</span></button>
             <button onClick={() => transitionTab('profile')} className={`flex flex-col items-center justify-center space-y-1 ${activeTab === 'profile' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}><i className={`fas fa-user-circle text-lg ${activeTab === 'profile' ? 'scale-110' : ''} transition-transform`}></i><span className="text-[10px] font-bold">{t.navProfile}</span></button>
         </div>
       </nav>
 
+      {/* ── Modals ── */}
       <MatchForm isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} onSubmit={handleFormSubmit} profile={activeProfile} initialData={editingMatch} previousMatches={matches} onAddTeammate={handleAddTeammate} />
       <SyncModal isOpen={isSyncOpen} onClose={() => setIsSyncOpen(false)} matches={matches} profile={activeProfile} onSyncComplete={handleSyncComplete} syncOnlyMatches={syncSubset} />
       <VideoModal isOpen={!!viewingVideoId} videoId={viewingVideoId} onClose={() => setViewingVideoId(null)} />
-      {shareMatch && activeProfile && <ShareModal isOpen={!!shareMatch} onClose={() => setShareMatch(null)} match={shareMatch} profile={activeProfile} />}
-      {selectedOpponent && activeProfile && <OpponentStatsModal isOpen={!!selectedOpponent} onClose={() => setSelectedOpponent(null)} opponentName={selectedOpponent} allMatches={matches} profile={activeProfile} />}
+      
+      {/* 單場分享 — mode="match" */}
+      {shareMatch && (
+        <ShareCard
+          mode="match"
+          isOpen={!!shareMatch}
+          onClose={() => setShareMatch(null)}
+          match={shareMatch}
+          profile={activeProfile}
+        />
+      )}
+
+      {/* 賽季分享 — mode="season" */}
+      {showSeasonShare && (
+        <ShareCard
+          mode="season"
+          isOpen={showSeasonShare}
+          onClose={() => setShowSeasonShare(false)}
+          matches={filteredMatches}
+          profile={activeProfile}
+          title={seasonShareTitle}
+        />
+      )}
+
+      {/* 杯賽分享 — mode="tournament" */}
+      {shareTournament && (
+        <ShareCard
+          mode="tournament"
+          isOpen={!!shareTournament}
+          onClose={() => setShareTournament(null)}
+          matches={shareTournament.matches}
+          profile={activeProfile}
+          tournamentName={shareTournament.name}
+        />
+      )}
+
+      {/* 杯賽編輯 — TournamentEditModal */}
+      {editingTournament && (
+        <TournamentEditModal
+          isOpen={!!editingTournament}
+          onClose={() => setEditingTournament(null)}
+          tournamentName={editingTournament.name}
+          matches={editingTournament.matches}
+          onSave={updates => handleTournamentSave(editingTournament.name, editingTournament.matches, updates)}
+        />
+      )}
+
+      {selectedOpponent && <OpponentStatsModal isOpen={!!selectedOpponent} onClose={() => setSelectedOpponent(null)} opponentName={selectedOpponent} allMatches={matches} profile={activeProfile} />}
+      <OnboardingModal isOpen={showOnboarding} onComplete={handleOnboardingComplete} />
+      <WhatsNewModal isOpen={showWhatsNew} onClose={handleCloseWhatsNew} />
+
+      {activeProfile && (
+        <QuickLogSheet
+          isOpen={showQuickLog}
+          onClose={() => setShowQuickLog(false)}
+          matches={matches}
+          profile={activeProfile}
+          onSave={handleQuickLogSave}
+          onCreateMatch={handleQuickLogCreate}
+        />
+      )}
     </div>
   );
 };
