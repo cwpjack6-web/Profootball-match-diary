@@ -35,7 +35,7 @@ function formatDadComment(comment: string, language: string): React.ReactNode {
   if (!comment) return null;
 
   // Detect if comment has period markers
-  const hasPeriods = /【節\d+】|\[Period \d+\]/.test(comment);
+  const hasPeriods = /【節\d+】|\[Period \d+\]|【Q\d+】|\[Q\d+\]/.test(comment);
   if (!hasPeriods) {
     // Plain comment — render as-is with line breaks
     return (
@@ -46,7 +46,7 @@ function formatDadComment(comment: string, language: string): React.ReactNode {
   }
 
   // Split into period blocks (split on blank line before a period header)
-  const blocks = comment.split(/\n{2,}(?=【節\d+】|\[Period \d+\])/);
+  const blocks = comment.split(/\n{2,}(?=【(?:節|Q)\d+】|\[(?:Period |Q)\d+\])/);
 
   return (
     <div className="space-y-3">
@@ -56,12 +56,15 @@ function formatDadComment(comment: string, language: string): React.ReactNode {
 
         const headerLine = lines[0];
         const isZh = headerLine.startsWith('【');
-        const headerMatch = headerLine.match(/【節(\d+)】|\[Period (\d+)\]/);
+        const headerMatch = headerLine.match(/【(?:節|Q)(\d+)】|\[(?:Period |Q)(\d+)\]/);
         const periodNum = headerMatch ? (headerMatch[1] || headerMatch[2]) : String(idx + 1);
 
-        // Meta info on same line as header (participation, position)
+        // check if it's a Q block or typical period block
+        const isQ = /【Q\d+】|\[Q\d+\]/.test(headerLine);
+
+        // Meta info on same line as header (participation, position, or score for Q's)
         const metaText = headerLine
-          .replace(/【節\d+】|\[Period \d+\]/, '')
+          .replace(/【(?:節|Q)\d+】|\[(?:Period |Q)\d+\]/, '')
           .trim();
 
         // Goal line — line starting with 入球 or Goals
@@ -73,7 +76,9 @@ function formatDadComment(comment: string, language: string): React.ReactNode {
           .filter(l => l !== goalLine && l.trim())
           .join('\n');
 
-        const periodLabel = isZh ? `第 ${periodNum} 節` : `Period ${periodNum}`;
+        const periodLabel = isZh 
+          ? (isQ ? `Q${periodNum}` : `第 ${periodNum} 節`) 
+          : (isQ ? `Q${periodNum}` : `Period ${periodNum}`);
 
         return (
           <div key={idx} className="border-l-2 border-blue-200 pl-3">
