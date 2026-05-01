@@ -29,7 +29,6 @@ import TeamManager from './components/TeamManager';
 import CoachReport from './components/CoachReport';
 import WhatsNewModal from './components/WhatsNewModal';
 import QuickLogSheet from './components/QuickLogSheet';
-import AICoachModal from './components/AICoachModal';
 import OnboardingModal from './components/OnboardingModal';
 import JournalSheet, { JournalEntry } from './components/JournalSheet';
 import SettingsDrawer from './components/SettingsDrawer';
@@ -64,7 +63,6 @@ const App: React.FC = () => {
   // Update Modal State
   const [showWhatsNew, setShowWhatsNew] = useState(false);
   const [showQuickLog, setShowQuickLog] = useState(false);
-  const [showAICoach, setShowAICoach] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Filter & Search State
@@ -613,7 +611,6 @@ const App: React.FC = () => {
 
             {!isSelectionMode && activeTab === 'matches' && (
                 <div className="fixed bottom-24 right-6 z-40 flex flex-col gap-3 items-end">
-                    {matches.length > 0 && <button onClick={() => setShowAICoach(true)} className="bg-emerald-50 text-emerald-600 hover:text-emerald-700 font-bold px-4 py-2 rounded-full shadow-lg flex items-center gap-2 text-xs transition-transform hover:scale-105 active:scale-95 border border-emerald-100"><i className="fas fa-robot"></i>{language === 'zh' ? 'AI 教練' : 'AI Coach'}</button>}
                     <button onClick={() => setShowQuickLog(true)}
                         className="bg-amber-400 hover:bg-amber-500 text-white font-black px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2 text-xs transition-transform hover:scale-105 active:scale-95">
                         <i className="fas fa-bolt"></i>{language === 'zh' ? '快速記錄' : 'Quick Log'}
@@ -660,7 +657,6 @@ const App: React.FC = () => {
       <MatchForm isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} onSubmit={handleFormSubmit} profile={activeProfile} initialData={editingMatch} previousMatches={matches} onAddTeammate={handleAddTeammate} />
       <SyncModal isOpen={isSyncOpen} onClose={() => setIsSyncOpen(false)} matches={matches} profile={activeProfile} onSyncComplete={handleSyncComplete} syncOnlyMatches={syncSubset} />
       <VideoModal isOpen={!!viewingVideoId} videoId={viewingVideoId} onClose={() => setViewingVideoId(null)} />
-      {activeProfile && <AICoachModal isOpen={showAICoach} onClose={() => setShowAICoach(false)} matches={matches} profile={activeProfile} />}
       
       {/* 單場分享 — mode="match" */}
       {shareMatch && (
