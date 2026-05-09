@@ -401,8 +401,8 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
         </div>
       </div>
 
-      {/* Opponent + Location — hidden for tournament (opponent set per game later) */}
-      {formData.matchType !== 'tournament' && (
+      {/* Opponent — hidden ONLY when creating a NEW tournament (so they can add it later via QuickLog). Show when editing so they can correct it. */}
+      {!(formData.matchType === 'tournament' && !initialData) && (
       <div>
         <div className="flex justify-between items-center mb-1">
           <label className="text-xs font-bold text-slate-400 uppercase">{t.opponentName}</label>
@@ -414,7 +414,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
             </span>
           )}
         </div>
-        <input required type="text" name="opponent" list="opp-list" placeholder={t.opponentPlaceholder}
+        <input type="text" name="opponent" list="opp-list" placeholder={t.opponentPlaceholder} required={formData.matchType !== 'tournament'}
           value={formData.opponent} onChange={handleChange}
           className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm text-slate-900 outline-none focus:border-blue-300" />
         <datalist id="opp-list">{opponentOptions.map(op => <option key={op} value={op} />)}</datalist>
