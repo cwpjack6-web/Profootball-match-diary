@@ -1,15 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useLanguage } from '../context/LanguageContext';
 
-export interface JournalEntry {
-  id: string;
-  date: string;          // YYYY-MM-DD
-  category: 'match' | 'training' | 'growth' | 'other';
-  content: string;
-  linkedMatchId?: string;   // optional — links to a match or tournament
-  linkedMatchName?: string; // display name e.g. "Leicester City Tournament"
-  createdAt: number;        // timestamp
-}
+import { JournalEntry } from '../types';
 
 interface JournalSheetProps {
   entries: JournalEntry[];
