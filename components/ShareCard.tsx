@@ -1000,9 +1000,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
-  const aspectRatio = mode === 'season' || mode === 'tournament'
-    ? 'aspect-[4/5]'
-    : layoutMode === 'poster' ? 'aspect-[9/16]' : 'aspect-[4/5]';
+  const aspectRatio = layoutMode === 'poster' ? 'aspect-[9/16]' : 'aspect-[4/5]';
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-fade-in overflow-y-auto">
