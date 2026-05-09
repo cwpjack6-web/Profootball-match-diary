@@ -24,8 +24,12 @@ export const translations = {
     navMatches: "戰報",
     navStats: "數據",
     navProfile: "檔案",
+    navJournal: "日誌",
     navCoach: "名帥", 
     manageTeams: "球隊管理",
+    editProfile: "編輯檔案",
+    importExport: "匯入匯出",
+    settings: "設定",
 
     // Match Types
     matchType: "比賽性質", 
@@ -100,6 +104,8 @@ export const translations = {
     syncConflictDesc: "這場比賽在兩邊裝置都有紀錄。你想保留哪一份？",
     useIncoming: "使用新資料 (覆蓋)",
     keepLocal: "保留舊資料 (取消)",
+    syncedCount: "已同步到 {n} 場比賽",
+    savedTick: "已儲存 ✓",
 
     // Header & Profile
     matchDiary: "的足球日記",
@@ -358,6 +364,29 @@ export const translations = {
     supportDevDesc: "如果這應用程式對你有幫助，歡迎請我飲杯咖啡！你的支持有助伺服器運作及開發新功能。",
     buyCoffeeBtn: "請我飲咖啡",
 
+    // Journal
+    journalAll: "全部",
+    journalCatMatch: "比賽",
+    journalCatTraining: "訓練",
+    journalCatGrowth: "成長",
+    journalCatOther: "其他",
+    journalNoEntries: "未有任何日誌",
+    journalTapToAdd: "點擊右下角按鈕新增你的第一篇日誌",
+    journalEmptyCategory: "此分類未有日誌",
+    journalCollapse: "收起",
+    journalReadMore: "閱讀更多",
+    journalCategory: "分類",
+    journalDate: "日期",
+    journalLinkMatch: "連結賽事 (可選)",
+    journalNone: "無",
+    journalTournaments: "盃賽/聯賽",
+    journalMatches: "單場比賽",
+    journalContent: "內容",
+    journalPlaceholder: "寫下你的足球點滴...",
+    journalSave: "儲存日誌",
+    journalEdit: "編輯日誌",
+    journalNew: "新增日誌",
+
     // Match Form Pages & Draft
     formPage1: "基本資料",
     formPage2: "比賽數據",
@@ -453,8 +482,12 @@ export const translations = {
     navMatches: "Matches",
     navStats: "Stats",
     navProfile: "Profile",
+    navJournal: "Journal",
     navCoach: "Coach",
     manageTeams: "Teams",
+    editProfile: "Edit Profile",
+    importExport: "Import/Export",
+    settings: "Settings",
 
     // Match Types
     matchType: "Type", 
@@ -529,6 +562,8 @@ export const translations = {
     syncConflictDesc: "This match exists on both devices. Which one do you want to keep?",
     useIncoming: "Use Incoming (Overwrite)",
     keepLocal: "Keep Local (Cancel)",
+    syncedCount: "Synced to {n} games",
+    savedTick: "Saved ✓",
 
     // Header & Profile
     matchDiary: "'s Match Diary",
@@ -786,6 +821,29 @@ export const translations = {
     supportDevTitle: "Support Development",
     supportDevDesc: "If you enjoy using Match Diary, consider buying me a coffee! Your support keeps the servers running and features coming.",
     buyCoffeeBtn: "Buy me a Coffee",
+
+    // Journal
+    journalAll: "All",
+    journalCatMatch: "Match",
+    journalCatTraining: "Training",
+    journalCatGrowth: "Growth",
+    journalCatOther: "Other",
+    journalNoEntries: "No journal entries yet",
+    journalTapToAdd: "Tap the button to add your first entry",
+    journalEmptyCategory: "No entries in this category",
+    journalCollapse: "Show less",
+    journalReadMore: "Read more",
+    journalCategory: "Category",
+    journalDate: "Date",
+    journalLinkMatch: "Link to Match (Optional)",
+    journalNone: "None",
+    journalTournaments: "Tournaments",
+    journalMatches: "Matches",
+    journalContent: "Content",
+    journalPlaceholder: "Write about your football journey...",
+    journalSave: "Save Journal",
+    journalEdit: "Edit Entry",
+    journalNew: "New Entry",
 
     // Match Form Pages & Draft
     formPage1: "Match Info",
