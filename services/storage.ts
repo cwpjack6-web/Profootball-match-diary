@@ -1,5 +1,5 @@
 
-import { MatchData, UserProfile, CoachReport } from '../types';
+import { MatchData, UserProfile, CoachReport, JournalEntry } from '../types';
 
 const MATCH_STORAGE_KEY = 'arthur_match_diary_v1';
 const PROFILES_STORAGE_KEY = 'arthur_match_profiles_list_v1';
@@ -7,6 +7,7 @@ const LEGACY_PROFILE_KEY = 'arthur_match_profile_v1';
 const BACKUP_TIMESTAMP_KEY = 'arthur_last_backup_timestamp';
 const COACH_REPORTS_KEY = 'arthur_coach_reports_v1';
 const COACH_AVATARS_KEY = 'arthur_coach_avatars_v1'; // New Key
+const JOURNALS_STORAGE_KEY = 'arthur_match_journals_v1';
 
 // --- Helper: Generate ID ---
 const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2);
@@ -304,4 +305,21 @@ export const getFullBackupData = () => {
         coachReports: localStorage.getItem(COACH_REPORTS_KEY) ? JSON.parse(localStorage.getItem(COACH_REPORTS_KEY)!) : [],
         coachAvatars: getCoachAvatars() // Include custom avatars in backup
     };
+};
+
+// --- Journals ---
+export const getJournals = (profileId: string): JournalEntry[] => {
+  try {
+    const data = localStorage.getItem(`${JOURNALS_STORAGE_KEY}_${profileId}`);
+    if (data) {
+      return JSON.parse(data);
+    }
+  } catch (err) {
+    console.error('Failed to parse journals', err);
+  }
+  return [];
+};
+
+export const saveJournals = (profileId: string, journals: JournalEntry[]): void => {
+  localStorage.setItem(`${JOURNALS_STORAGE_KEY}_${profileId}`, JSON.stringify(journals));
 };
