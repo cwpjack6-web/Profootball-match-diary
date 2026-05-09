@@ -45,7 +45,6 @@ export type WeatherType = 'sunny' | 'rain' | 'cloudy' | 'night' | 'hot' | 'windy
 export type MatchFormat = '5v5' | '6v6' | '7v7' | '8v8' | '9v9' | '11v11' | 'other';
 export type MatchStructure = 'halves' | 'quarters';
 
-// New: Quarter data for per-period breakdown
 export interface MatchQuarter {
   scoreMyTeam: number;
   scoreOpponent: number;
@@ -92,6 +91,16 @@ export interface MatchData {
   // New: quarter-level breakdown
   quarters?: MatchQuarter[];
   useQuarters?: boolean;
+}
+
+export interface JournalEntry {
+  id: string;
+  date: string;          // YYYY-MM-DD
+  category: 'match' | 'training' | 'growth' | 'other';
+  content: string;
+  linkedMatchId?: string;   // optional — links to a match or tournament
+  linkedMatchName?: string; // display name e.g. "Leicester City Tournament"
+  createdAt: number;        // timestamp
 }
 
 // Migration helper: call on app load to convert legacy 'cup' → 'tournament'
