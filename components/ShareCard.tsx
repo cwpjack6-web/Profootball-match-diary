@@ -174,12 +174,14 @@ const ShareCard: React.FC<ShareCardProps> = ({
     const losses  = total - wins - draws;
     const goals   = done.reduce((a, m) => a + m.arthurGoals, 0);
     const assists = done.reduce((a, m) => a + m.arthurAssists, 0);
+    const teamGoals = done.reduce((a, m) => a + m.scoreMyTeam, 0);
+    const teamConceded = done.reduce((a, m) => a + m.scoreOpponent, 0);
     const avgRating = total > 0
       ? parseFloat((done.reduce((a, m) => a + (m.rating || 0), 0) / total).toFixed(1))
       : 0;
     const winRate   = total > 0 ? Math.round((wins / total) * 100) : 0;
     const motmCount = done.filter(m => m.isMotm).length;
-    return { total, wins, draws, losses, goals, assists, avgRating, winRate, motmCount };
+    return { total, wins, draws, losses, goals, assists, teamGoals, teamConceded, avgRating, winRate, motmCount };
   }, [matches]);
 
   const seasonHighlights = useMemo(() => {
@@ -599,7 +601,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
                     {resultLabel}
                   </div>
                 )}
-                {vis.showMotm && match.isMotm && (
+                {shareView === 'personal' && vis.showMotm && match.isMotm && (
                   <div className="bg-yellow-500 text-black px-2 rounded-full font-black text-[9px] shadow" style={{ lineHeight: '20px', display: 'inline-block', whiteSpace: 'nowrap' }}>
                     <i className="fas fa-trophy" style={{ marginRight: '3px' }} />MOTM
                   </div>
@@ -615,7 +617,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
               </div>
               <div style={{ textAlign: 'center' }}>
                 <div style={{ width: '1px', height: '32px', background: 'rgba(255,255,255,0.4)', display: 'inline-block', verticalAlign: 'middle' }} />
-                {vis.showRating && match.rating > 0 && (
+                {shareView === 'personal' && vis.showRating && match.rating > 0 && (
                   <div className="px-2 rounded-full border" style={{ borderColor: ratingColor(match.rating), backgroundColor: `${ratingColor(match.rating)}22`, lineHeight: '22px', display: 'inline-block', whiteSpace: 'nowrap' }}>
                     <i className="fas fa-star text-[8px]" style={{ color: ratingColor(match.rating), marginRight: '2px' }} /><span className="text-[11px] font-black" style={{ color: ratingColor(match.rating), ...textShadow }}>{match.rating}</span>
                   </div>
@@ -635,7 +637,7 @@ const ShareCard: React.FC<ShareCardProps> = ({
             )}
 
             {/* Personal stats pills */}
-            {vis.showPersonalStats && (match.arthurGoals > 0 || match.arthurAssists > 0) && (
+            {shareView === 'personal' && vis.showPersonalStats && (match.arthurGoals > 0 || match.arthurAssists > 0) && (
               <div style={{ textAlign: 'center', marginBottom: '8px' }}>
                 {match.arthurGoals > 0 && (
                   <div className="bg-emerald-500/20 border border-emerald-400/40 px-2 rounded-full" style={{ lineHeight: '22px', display: 'inline-block', whiteSpace: 'nowrap', marginRight: '6px' }}>
@@ -758,18 +760,23 @@ const ShareCard: React.FC<ShareCardProps> = ({
       {/* Stats footer */}
       {vis.showStatsFooter && (
         <div className={`relative z-10 mt-auto grid divide-x ${
-          vis.showAvgRating ? 'grid-cols-5' : 'grid-cols-4'
+          shareView === 'personal' ? (vis.showAvgRating ? 'grid-cols-5' : 'grid-cols-4') : 'grid-cols-4'
         } ${isDarkText
           ? 'bg-amber-200/60 border-t border-amber-300 divide-amber-300'
           : 'bg-white/10 backdrop-blur-md border-t border-white/10 divide-white/10'
         } pointer-events-none`}>
-          {[
+          {(shareView === 'personal' ? [
             { value: seasonStats.total,   label: t.played,  color: '' },
             { value: seasonStats.wins,    label: t.won,     color: 'text-emerald-400' },
             { value: seasonStats.goals,   label: t.goals,   color: 'text-blue-400' },
             { value: seasonStats.assists, label: t.assists, color: 'text-purple-400' },
             ...(vis.showAvgRating ? [{ value: seasonStats.avgRating > 0 ? seasonStats.avgRating : '–', label: 'Avg ★', color: 'text-yellow-400' }] : []),
-          ].map(({ value, label, color }) => (
+          ] : [
+            { value: seasonStats.total,   label: t.played,  color: '' },
+            { value: seasonStats.wins,    label: t.won,     color: 'text-emerald-400' },
+            { value: seasonStats.teamGoals, label: language === 'zh' ? '入球' : 'Goals', color: 'text-blue-400' },
+            { value: seasonStats.teamConceded, label: language === 'zh' ? '失球' : 'Conceded', color: 'text-rose-400' },
+          ]).map(({ value, label, color }) => (
             <div key={label} className="py-3 flex flex-col items-center">
               <span className={`text-base font-black ${color || textCls}`}>{value}</span>
               <span className={`text-[7px] uppercase font-bold ${isDarkText ? 'text-slate-500' : 'opacity-60 text-white'}`}>{label}</span>
@@ -924,13 +931,13 @@ const ShareCard: React.FC<ShareCardProps> = ({
                     </span>
                   )}
                   {/* Personal stats */}
-                  {vis.showGamePersonalStats && (m.arthurGoals > 0 || m.arthurAssists > 0) && (
+                  {shareView === 'personal' && vis.showGamePersonalStats && (m.arthurGoals > 0 || m.arthurAssists > 0) && (
                     <span style={{ display: 'table-cell', verticalAlign: 'middle', width: '1px', whiteSpace: 'nowrap', paddingLeft: '4px' }} className={`text-[9px] font-bold ${isDarkText ? 'text-slate-500' : 'text-white/50'}`}>
                       {m.arthurGoals > 0 && `⚽${m.arthurGoals}`}{m.arthurAssists > 0 && ` 👟${m.arthurAssists}`}
                     </span>
                   )}
                   {/* Rating */}
-                  {vis.showGameRating && m.rating > 0 && (
+                  {shareView === 'personal' && vis.showGameRating && m.rating > 0 && (
                     <span style={{ display: 'table-cell', verticalAlign: 'middle', width: '1px', whiteSpace: 'nowrap', paddingLeft: '4px' }} className="text-[9px] font-black text-amber-400">★{m.rating}</span>
                   )}
                   </div>
@@ -1030,13 +1037,13 @@ const ShareCard: React.FC<ShareCardProps> = ({
         </div>
 
         {/* ── Personal / Team toggle ── */}
-        {(mode === 'match' || mode === 'tournament') && (
+        {(mode === 'match' || mode === 'tournament' || mode === 'season') && (
           <div className="flex bg-white/10 rounded-xl p-1 gap-1">
-            <button onClick={() => { setShareView('personal'); setVis(v => ({ ...v, showPersonalStats: true, showMotm: true, showRating: true })); }}
+            <button onClick={() => { setShareView('personal'); setVis(v => ({ ...v, showPersonalStats: true, showMotm: true, showRating: true, showGamePersonalStats: true, showGameRating: true, showAvgRating: true, showHighlights: true, showStatsFooter: true })); }}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-black transition-all ${shareView === 'personal' ? 'bg-white text-slate-900 shadow' : 'text-white/60 hover:text-white'}`}>
               <i className="fas fa-user text-[10px]" />{language === 'zh' ? '個人版' : 'Personal'}
             </button>
-            <button onClick={() => { setShareView('team'); setVis(v => ({ ...v, showPersonalStats: false, showMotm: false, showRating: false })); }}
+            <button onClick={() => { setShareView('team'); setVis(v => ({ ...v, showPersonalStats: false, showMotm: false, showRating: false, showGamePersonalStats: false, showGameRating: false, showAvgRating: false, showHighlights: false, showStatsFooter: false })); }}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-black transition-all ${shareView === 'team' ? 'bg-white text-slate-900 shadow' : 'text-white/60 hover:text-white'}`}>
               <i className="fas fa-users text-[10px]" />{language === 'zh' ? '球隊版' : 'Team'}
             </button>
