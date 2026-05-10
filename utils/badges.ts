@@ -1,7 +1,7 @@
 
 import { MatchData } from '../types';
 
-export type BadgeTier = 'locked' | 'bronze' | 'silver' | 'gold' | 'diamond';
+export type BadgeTier = 'locked' | 'bronze' | 'silver' | 'gold' | 'diamond' | 'elite' | 'master';
 
 export interface BadgeDefinition {
     id: string;
@@ -13,6 +13,8 @@ export interface BadgeDefinition {
         silver: number;
         gold: number;
         diamond: number;
+        elite: number;
+        master: number;
     };
 }
 
@@ -33,42 +35,42 @@ const BADGE_CONFIGS: BadgeDefinition[] = [
         icon: 'fa-futbol',
         labelKey: 'badgeGoalMachine',
         descriptionKey: 'badgeGoalMachineDesc',
-        tiers: { bronze: 3, silver: 10, gold: 25, diamond: 50 }
+        tiers: { bronze: 3, silver: 10, gold: 25, diamond: 50, elite: 75, master: 100 }
     },
     {
         id: 'assists',
         icon: 'fa-shoe-prints',
         labelKey: 'badgePlaymaker',
         descriptionKey: 'badgePlaymakerDesc',
-        tiers: { bronze: 3, silver: 10, gold: 25, diamond: 50 }
+        tiers: { bronze: 3, silver: 10, gold: 25, diamond: 50, elite: 75, master: 100 }
     },
     {
         id: 'matches',
         icon: 'fa-dumbbell',
         labelKey: 'badgeIronMan',
         descriptionKey: 'badgeIronManDesc',
-        tiers: { bronze: 5, silver: 15, gold: 30, diamond: 60 }
+        tiers: { bronze: 5, silver: 15, gold: 30, diamond: 60, elite: 90, master: 120 }
     },
     {
         id: 'motm',
         icon: 'fa-trophy',
         labelKey: 'badgeStar',
         descriptionKey: 'badgeStarDesc',
-        tiers: { bronze: 1, silver: 3, gold: 5, diamond: 10 }
+        tiers: { bronze: 1, silver: 3, gold: 5, diamond: 10, elite: 15, master: 20 }
     },
     {
         id: 'cleansheet',
         icon: 'fa-shield-alt',
         labelKey: 'badgeWall',
         descriptionKey: 'badgeWallDesc',
-        tiers: { bronze: 1, silver: 5, gold: 10, diamond: 20 }
+        tiers: { bronze: 1, silver: 5, gold: 10, diamond: 20, elite: 30, master: 40 }
     },
     {
         id: 'hattrick',
         icon: 'fa-hat-wizard',
         labelKey: 'badgeHattrick',
         descriptionKey: 'badgeHattrickDesc',
-        tiers: { bronze: 1, silver: 2, gold: 3, diamond: 5 }
+        tiers: { bronze: 1, silver: 2, gold: 3, diamond: 5, elite: 7, master: 10 }
     }
 ];
 
@@ -77,7 +79,9 @@ const TIER_COLORS = {
     bronze: 'bg-orange-50 border-orange-200 text-orange-700',
     silver: 'bg-slate-100 border-slate-300 text-slate-600',
     gold: 'bg-yellow-50 border-yellow-300 text-yellow-700',
-    diamond: 'bg-cyan-50 border-cyan-300 text-cyan-700'
+    diamond: 'bg-cyan-50 border-cyan-300 text-cyan-700',
+    elite: 'bg-violet-50 border-violet-300 text-violet-700',
+    master: 'bg-rose-50 border-rose-300 text-rose-700',
 };
 
 const TIER_LABELS_KEY = {
@@ -85,7 +89,9 @@ const TIER_LABELS_KEY = {
     bronze: 'levelBronze',
     silver: 'levelSilver',
     gold: 'levelGold',
-    diamond: 'levelDiamond'
+    diamond: 'levelDiamond',
+    elite: 'levelElite',
+    master: 'levelMaster'
 };
 
 export const getTierLabelKey = (tier: BadgeTier) => TIER_LABELS_KEY[tier];
@@ -118,10 +124,20 @@ export const calculateBadges = (matches: MatchData[]): { badges: BadgeState[], t
         let nextThreshold = config.tiers.bronze;
         let levelIndex = 0;
 
-        if (currentValue >= config.tiers.diamond) {
-            currentTier = 'diamond';
+        if (currentValue >= config.tiers.master) {
+            currentTier = 'master';
             nextTier = null;
-            nextThreshold = config.tiers.diamond; // Cap at max
+            nextThreshold = config.tiers.master; // Cap at max
+            levelIndex = 6;
+        } else if (currentValue >= config.tiers.elite) {
+            currentTier = 'elite';
+            nextTier = 'master';
+            nextThreshold = config.tiers.master;
+            levelIndex = 5;
+        } else if (currentValue >= config.tiers.diamond) {
+            currentTier = 'diamond';
+            nextTier = 'elite';
+            nextThreshold = config.tiers.elite;
             levelIndex = 4;
         } else if (currentValue >= config.tiers.gold) {
             currentTier = 'gold';
@@ -148,7 +164,7 @@ export const calculateBadges = (matches: MatchData[]): { badges: BadgeState[], t
 
         // Calculate percent
         let progressPercent = 0;
-        if (currentTier === 'diamond') {
+        if (currentTier === 'master') {
             progressPercent = 100;
         } else {
             // Simple linear progress to next tier. 
@@ -171,8 +187,8 @@ export const calculateBadges = (matches: MatchData[]): { badges: BadgeState[], t
 
     // 3. Calculate Overall Growth Level
     const totalLevel = badges.reduce((acc, b) => acc + b.levelIndex, 0);
-    // Max possible level = 6 badges * 4 levels = 24
-    const maxLevel = badges.length * 4;
+    // Max possible level = 6 badges * 6 levels = 36
+    const maxLevel = badges.length * 6;
 
     return { badges, totalLevel, maxLevel };
 };
