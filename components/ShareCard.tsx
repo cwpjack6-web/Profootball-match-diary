@@ -581,17 +581,17 @@ const ShareCard: React.FC<ShareCardProps> = ({
 
             {/* Team name + badges */}
             <div className="flex justify-between items-start mb-2">
-              <div>
-                <span className="text-[9px] font-bold tracking-widest uppercase opacity-70 block mb-0.5" style={textShadow}>
+              <div className="flex-1 min-w-0 pr-2">
+                <span className="text-[9px] font-bold tracking-widest uppercase opacity-70 block mb-1 whitespace-nowrap" style={textShadow}>
                   {t.matchResult}
                 </span>
                 <div className="flex items-center gap-2">
                   {cardTheme === 'broadcast' && (
-                    <div className="h-5 w-1 rounded-full" style={{ backgroundColor: teamHex }} />
+                    <div className="h-5 w-1 rounded-full flex-shrink-0" style={{ backgroundColor: teamHex }} />
                   )}
-                  <h2 className="text-base font-black italic uppercase leading-none flex items-center gap-2" style={textShadow}>
+                  <h2 className="text-base font-black italic uppercase leading-tight flex items-center gap-2 truncate" style={textShadow}>
                     {matchTeam.name}
-                    {matchTeam.logo && <img src={matchTeam.logo} className="h-7 w-7 object-contain drop-shadow-md" alt="" />}
+                    {matchTeam.logo && <img src={matchTeam.logo} className="h-7 w-7 flex-shrink-0 object-contain drop-shadow-md" alt="" />}
                   </h2>
                 </div>
               </div>
