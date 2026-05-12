@@ -233,12 +233,13 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
     const teamScorerStats = Object.values(teamScorerMap)
       .sort((a, b) => b.goals - a.goals);
 
+    const ratedMatches = filteredMatches.filter(m => typeof m.rating === 'number' && m.rating > 0);
     return {
       totalGoals,
       totalAssists,
       matchesPlayed: filteredMatches.length,
-      avgRating: filteredMatches.length > 0
-        ? (filteredMatches.reduce((acc, m) => acc + (m.rating || 0), 0) / filteredMatches.length).toFixed(1)
+      avgRating: ratedMatches.length > 0
+        ? (ratedMatches.reduce((acc, m) => acc + m.rating, 0) / ratedMatches.length).toFixed(1)
         : '0.0',
       teamGoals,
       contributions,
@@ -344,7 +345,8 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
     const d = ms.filter(m => m.scoreMyTeam === m.scoreOpponent).length;
     const l = total - w - d;
     const goals = ms.reduce((a, m) => a + m.arthurGoals, 0);
-    const avgRating = parseFloat((ms.reduce((a, m) => a + (m.rating || 0), 0) / total).toFixed(1));
+    const rated = ms.filter(m => typeof m.rating === 'number' && m.rating > 0);
+    const avgRating = rated.length > 0 ? parseFloat((rated.reduce((a, m) => a + m.rating, 0) / rated.length).toFixed(1)) : 0;
     return { total, w, d, l, winRate: Math.round((w / total) * 100), goals, avgRating };
   };
 
@@ -442,19 +444,23 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
     const mid = Math.floor(sorted.length / 2);
     const early  = sorted.slice(0, mid);
     const recent = sorted.slice(mid);
-    const avgEarly  = parseFloat((early.reduce((a, m) => a + (m.rating || 0), 0) / early.length).toFixed(1));
-    const avgRecent = parseFloat((recent.reduce((a, m) => a + (m.rating || 0), 0) / recent.length).toFixed(1));
+    const earlyRated = early.filter(m => typeof m.rating === 'number' && m.rating > 0);
+    const recentRated = recent.filter(m => typeof m.rating === 'number' && m.rating > 0);
+    
+    const avgEarly  = earlyRated.length > 0 ? parseFloat((earlyRated.reduce((a, m) => a + m.rating, 0) / earlyRated.length).toFixed(1)) : 0;
+    const avgRecent = recentRated.length > 0 ? parseFloat((recentRated.reduce((a, m) => a + m.rating, 0) / recentRated.length).toFixed(1)) : 0;
     const diff = parseFloat((avgRecent - avgEarly).toFixed(1));
     const byQuarter: { label: string; avg: number }[] = [];
     const qMap: Record<string, number[]> = {};
     sorted.forEach(m => {
+      if (typeof m.rating !== 'number' || m.rating <= 0) return;
       const d = new Date(m.date);
       const key = `${d.getFullYear()} Q${Math.floor((d.getMonth() + 3) / 3)}`;
       if (!qMap[key]) qMap[key] = [];
-      qMap[key].push(m.rating || 0);
+      qMap[key].push(m.rating);
     });
     Object.entries(qMap).sort().forEach(([label, ratings]) => {
-      byQuarter.push({ label, avg: parseFloat((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)) });
+      byQuarter.push({ label, avg: ratings.length > 0 ? parseFloat((ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1)) : 0 });
     });
     return { avgEarly, avgRecent, diff, earlyCount: early.length, recentCount: recent.length, byQuarter };
   }, [filteredMatches]);
