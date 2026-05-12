@@ -308,7 +308,7 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialProfile, onSave, onC
                         {/* Primary Color */}
                         <div>
                             <span className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">{t.primaryColor}</span>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap gap-2 items-center">
                                 {COLORS.map((c) => (
                                     <button
                                     key={c.value}
@@ -319,6 +319,18 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialProfile, onSave, onC
                                     >
                                     </button>
                                 ))}
+                                <div className="relative w-6 h-6 rounded-full border border-slate-200 overflow-hidden shadow-sm flex items-center justify-center bg-gradient-to-tr from-red-500 via-green-500 to-blue-500 hover:scale-110 transition-all cursor-pointer">
+                                  <input 
+                                     type="color" 
+                                     value={team.themeColor.startsWith('#') ? team.themeColor : (COLORS.find(c => c.value === team.themeColor)?.hex || '#3b82f6')}
+                                     onChange={(e) => handleTeamChange(index, 'themeColor', e.target.value)}
+                                     className="absolute inset-0 w-[200%] h-[200%] -top-1/2 -left-1/2 opacity-0 cursor-pointer"
+                                     title="Custom Color"
+                                  />
+                                  {team.themeColor.startsWith('#') && (
+                                     <div className="absolute inset-0 pointer-events-none border-2 border-white rounded-full bg-transparent"></div>
+                                  )}
+                                </div>
                             </div>
                         </div>
 
@@ -326,7 +338,7 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialProfile, onSave, onC
                         {team.themePattern !== 'solid' && (
                             <div className="animate-fade-in">
                                 <span className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">{t.secondaryColor}</span>
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-wrap gap-2 items-center">
                                     {COLORS.map((c) => (
                                         <button
                                         key={c.value}
@@ -337,6 +349,18 @@ const ProfileSetup: React.FC<ProfileSetupProps> = ({ initialProfile, onSave, onC
                                         >
                                         </button>
                                     ))}
+                                    <div className="relative w-6 h-6 rounded-full border border-slate-200 overflow-hidden shadow-sm flex items-center justify-center bg-gradient-to-tr from-red-500 via-green-500 to-blue-500 hover:scale-110 transition-all cursor-pointer">
+                                      <input 
+                                         type="color" 
+                                         value={team.secondaryColor?.startsWith('#') ? team.secondaryColor : (COLORS.find(c => c.value === team.secondaryColor)?.hex || '#ffffff')}
+                                         onChange={(e) => handleTeamChange(index, 'secondaryColor', e.target.value)}
+                                         className="absolute inset-0 w-[200%] h-[200%] -top-1/2 -left-1/2 opacity-0 cursor-pointer"
+                                         title="Custom Color"
+                                      />
+                                      {team.secondaryColor?.startsWith('#') && (
+                                         <div className="absolute inset-0 pointer-events-none border-2 border-white rounded-full bg-transparent"></div>
+                                      )}
+                                    </div>
                                 </div>
                             </div>
                         )}
