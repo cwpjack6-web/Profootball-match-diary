@@ -6,7 +6,7 @@ import { getTeamById } from '../utils/colors';
 interface QuickLogSheetProps {
   isOpen: boolean;
   onClose: () => void;
-  matches: MatchData[];
+  matches: MatchData[];a
   profile: UserProfile;
   onSave: (matchId: string, update: Partial<MatchData>) => void;
   onCreateMatch: (opponent: string, teamId: string, extra?: { matchType?: string; tournamentName?: string; matchLabel?: string }) => string;
@@ -459,6 +459,13 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
 
   const handleRatingSkip = () => {
     setShowRatingModal(false);
+    
+    // Save the final period update without a rating (or rating = 0 as "unrated")
+    if (selectedMatchId && pendingFinalUpdate) {
+        onSave(selectedMatchId, { ...pendingFinalUpdate, rating: 0 });
+        setPendingFinalUpdate(null);
+    }
+    
     // Tournament: auto-create next game with same tournamentName
     if (selectedMatch?.matchType === 'tournament') {
       const nextGameNum = tournamentGameNum + 1;
