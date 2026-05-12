@@ -259,18 +259,18 @@ const ShareModal: React.FC<ShareModalProps> = ({ isOpen, onClose, match, profile
                         
                         {/* Header Row */}
                         <div className="flex justify-between items-start mb-2">
-                            <div className="flex flex-col">
-                                <span className="text-[10px] font-bold tracking-widest uppercase opacity-80 mb-0.5" style={textOutlineStyle}>{t.matchResult}</span>
+                            <div className="flex flex-col flex-1 min-w-0 pr-2">
+                                <span className="text-[10px] font-bold tracking-widest uppercase opacity-80 mb-1 whitespace-nowrap" style={textOutlineStyle}>{t.matchResult}</span>
                                 <div className="flex items-center gap-2">
-                                    {cardTheme === 'broadcast' && <div className={`h-6 w-1 ${theme.bg}`}></div>}
-                                    <h2 className="text-lg font-black italic uppercase leading-none flex items-center gap-2" style={textOutlineStyle}>
+                                    {cardTheme === 'broadcast' && <div className={`h-6 w-1 flex-shrink-0 ${theme.bg}`}></div>}
+                                    <h2 className="text-lg font-black italic uppercase leading-tight flex items-center gap-2 truncate" style={textOutlineStyle}>
                                         {matchTeam.name}
                                         {/* Logo in Share Card - Increased Size */}
-                                        {matchTeam.logo && <img src={matchTeam.logo} className="h-8 w-8 object-contain drop-shadow-md" alt="" />}
+                                        {matchTeam.logo && <img src={matchTeam.logo} className="h-8 w-8 flex-shrink-0 object-contain drop-shadow-md" alt="" />}
                                     </h2>
                                 </div>
                             </div>
-                            {match.isMotm && <div className="bg-yellow-500 text-black px-2 py-0.5 rounded-full font-black text-[10px] shadow-lg flex items-center gap-1 transform rotate-3 border-2 border-white/20"><i className="fas fa-trophy"></i> MOTM</div>}
+                            {match.isMotm && <div className="bg-yellow-500 text-black px-2 py-0.5 rounded-full font-black text-[10px] shadow-lg flex items-center flex-shrink-0 gap-1 transform rotate-3 border-2 border-white/20"><i className="fas fa-trophy"></i> MOTM</div>}
                         </div>
 
                         {/* Score Block */}
