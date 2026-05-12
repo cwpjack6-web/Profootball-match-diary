@@ -722,11 +722,15 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
         <div className="flex justify-between items-center mb-3">
           <label className="text-xs font-bold text-slate-400 uppercase">{t.performanceRating}</label>
           <span className={`text-4xl font-black ${styles.text}`}>
-            {formData.rating}<span className="text-sm text-slate-300 font-normal ml-1">/ 10</span>
+            {formData.rating > 0 ? (
+              <>{formData.rating}<span className="text-sm text-slate-300 font-normal ml-1">/ 10</span></>
+            ) : (
+              <span className="text-xl text-slate-300">{t.unrated}</span>
+            )}
           </span>
         </div>
-        <input type="range" name="rating" min="1" max="10" step="0.5" value={formData.rating} onChange={handleChange}
-          className="w-full h-3 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600 mb-4" />
+        <input type="range" name="rating" min="0" max="10" step="0.5" value={formData.rating || 0} onChange={handleChange}
+          className={`w-full h-3 bg-slate-200 rounded-lg appearance-none cursor-pointer mb-4 ${formData.rating > 0 ? 'accent-blue-600' : 'accent-slate-400'}`} />
         {/* MOTM */}
         <div className="flex items-center gap-3 border-t border-slate-100 pt-3">
           <div className="relative w-10 h-6">
