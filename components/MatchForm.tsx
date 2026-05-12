@@ -837,11 +837,11 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
               </h2>
               {profile.teams.length > 1 ? (
                 <select name="teamId" value={formData.teamId} onChange={handleChange}
-                  className={`bg-white/20 text-xs rounded-lg px-2 py-1 font-bold outline-none border border-white/20 ${styles.headerText}`}>
+                  className={`${styles.headerButton} text-xs rounded-lg px-2 py-1 font-bold outline-none`}>
                   {profile.teams.map(team => <option key={team.id} value={team.id} className="text-slate-800">{team.name}</option>)}
                 </select>
               ) : (
-                <span className={`bg-white/20 text-xs font-bold px-2 py-1 rounded-lg ${styles.headerText}`}>{activeTeam.name}</span>
+                <span className={`${styles.headerButton} text-xs font-bold px-2 py-1 rounded-lg`}>{activeTeam.name}</span>
               )}
             </div>
             <div className="flex items-center gap-2">
