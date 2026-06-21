@@ -88,7 +88,7 @@ const TeamManager: React.FC<TeamManagerProps> = ({ profile, onUpdateProfile }) =
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
              <div className={`${styles.headerBg} p-3 flex justify-between items-center`}>
                  <h3 className={`font-bold text-sm ${styles.headerText}`}><i className="fas fa-users mr-2"></i>{t.manageRoster}</h3>
-                 <button onClick={addTeammate} className={`${styles.headerButton} text-xs px-2 py-1 rounded transition-colors`}>
+                 <button onClick={addTeammate} className="bg-slate-800 hover:bg-slate-700 text-white text-xs px-2 py-1 rounded transition-colors shadow-sm">
                      <i className="fas fa-plus"></i>
                  </button>
              </div>
