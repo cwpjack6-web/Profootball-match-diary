@@ -107,6 +107,7 @@ const DrillDownSheet: React.FC<DrillDownSheetProps> = ({ data, onClose, t, onNav
 const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (matchId: string) => void }> = ({ matches, profile, onNavigateToMatch }) => {
   const { t, language } = useLanguage();
   const [teamFilter, setTeamFilter] = useState<Set<string>>(new Set());
+  const [isTeamDropdownOpen, setIsTeamDropdownOpen] = useState(false);
   const [matchTypeFilter, setMatchTypeFilter] = useState<Set<string>>(new Set());
   const [timeFilterType, setTimeFilterType] = useState<TimeFilterType>('all');
   const [timeFilterValue, setTimeFilterValue] = useState<string>('');
@@ -802,36 +803,120 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
 
         {/* Filters */}
         <div className="p-3 flex flex-col gap-2">
-          {/* Team Filter */}
-          <div className="flex gap-2 w-full overflow-x-auto no-scrollbar pb-1">
-            <button
-              onClick={() => setTeamFilter(new Set())}
-              className={`flex-none px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${teamFilter.size === 0 ? 'bg-slate-800 text-white border-slate-800 shadow-md' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}
-            >
-              {t.allTeams}
-            </button>
-            {profile.teams.map((team: any) => {
-              const active = teamFilter.has(String(team.id));
-              return (
-                <button key={team.id}
-                  onClick={() => setTeamFilter(prev => {
-                    const next = new Set(prev);
-                    if (next.has(String(team.id))) next.delete(String(team.id));
-                    else next.add(String(team.id));
-                    return next;
+          {/* Row 1: Team Dropdown & Time Dropdown */}
+          <div className="flex gap-2">
+            {/* Team Filter Dropdown */}
+            <div className="relative flex-1 z-30">
+              <button
+                onClick={() => setIsTeamDropdownOpen(!isTeamDropdownOpen)}
+                className="w-full flex items-center justify-between bg-white border border-slate-200 text-slate-700 px-3 py-2 rounded-lg text-sm font-bold shadow-sm outline-none h-full"
+              >
+                <span className="truncate pr-2 text-left">
+                  {teamFilter.size === 0 
+                    ? t.allTeams 
+                    : (teamFilter.size === 1 
+                        ? profile.teams.find((t: any) => String(t.id) === Array.from(teamFilter)[0])?.name || t.allTeams
+                        : `${teamFilter.size} ${language === 'zh' ? '隊球隊' : 'Teams'}`
+                      )
+                  }
+                </span>
+                <i className={`fas fa-chevron-down text-slate-400 transition-transform shrink-0 ${isTeamDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {isTeamDropdownOpen && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden max-h-60 overflow-y-auto">
+                  <button
+                    onClick={() => {
+                      setTeamFilter(new Set());
+                      setIsTeamDropdownOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold transition-colors ${teamFilter.size === 0 ? 'bg-slate-50 text-slate-800' : 'text-slate-600 hover:bg-slate-50'}`}
+                  >
+                    <div className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 ${teamFilter.size === 0 ? 'bg-blue-500 border-blue-500' : 'border-slate-300'}`}>
+                      {teamFilter.size === 0 && <i className="fas fa-check text-white text-[10px]" />}
+                    </div>
+                    {t.allTeams}
+                  </button>
+                  <div className="h-px bg-slate-100" />
+                  {profile.teams.map((team: any) => {
+                    const active = teamFilter.has(String(team.id));
+                    return (
+                      <button key={team.id}
+                        onClick={() => {
+                          setTeamFilter(prev => {
+                            const next = new Set(prev);
+                            if (next.has(String(team.id))) next.delete(String(team.id));
+                            else next.add(String(team.id));
+                            return next;
+                          });
+                        }}
+                        className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-bold transition-colors ${active ? 'bg-slate-50 text-slate-800' : 'text-slate-600 hover:bg-slate-50'}`}
+                      >
+                        <div className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 ${active ? 'bg-blue-500 border-blue-500' : 'border-slate-300'}`}>
+                          {active && <i className="fas fa-check text-white text-[10px]" />}
+                        </div>
+                        <span className="truncate">{team.name}</span>
+                      </button>
+                    );
                   })}
-                  className={`flex-none px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${active ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}
-                >
-                  {active && <i className="fas fa-check text-[10px] mr-1.5" />}
-                  {team.name}
-                </button>
-              );
-            })}
+                </div>
+              )}
+            </div>
+
+            {/* Time Filter Dropdown */}
+            <div className="flex-1">
+              <select value={timeFilterType} onChange={(e) => handleTypeChange(e.target.value as TimeFilterType)}
+                className="w-full bg-slate-100 text-sm rounded-lg px-3 py-2 outline-none border border-slate-200 font-bold text-slate-700 h-full">
+                <option value="all">{t.allTime}</option>
+                <option value="year">{t.filterYear}</option>
+                <option value="season">{t.filterSeason}</option>
+                <option value="month">{t.filterMonth}</option>
+                <option value="custom">{language === 'zh' ? '自訂日期' : 'Custom Range'}</option>
+              </select>
+            </div>
           </div>
-          <div className="flex gap-1.5 flex-wrap">
+
+          {/* Row 2: Secondary Time Filter & Match Types */}
+          <div className="flex flex-wrap gap-2 justify-between items-center sm:items-start">
+            
+            {/* Secondary Time Filter (if needed) */}
+            <div className={`flex items-center gap-2 ${timeFilterType !== 'all' ? 'flex-1 min-w-[120px]' : ''}`}>
+              {timeFilterType !== 'all' && timeFilterType !== 'custom' && (
+                <select value={timeFilterValue} onChange={(e) => setTimeFilterValue(e.target.value)}
+                  className="w-full bg-blue-50 text-blue-700 text-sm rounded-lg px-3 py-2 outline-none border border-blue-200 font-bold">
+                  {timeFilterType === 'year'   && timeOptions.years.map(y => <option key={y} value={y}>{y}</option>)}
+                  {timeFilterType === 'season' && timeOptions.quarters.map(q => <option key={q} value={q}>{q}</option>)}
+                  {timeFilterType === 'month'  && timeOptions.months.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              )}
+              {timeFilterType === 'custom' && (
+                <div className="flex items-center gap-1.5 w-full">
+                  <div className="flex-1 min-w-[100px]">
+                    <div className="text-[9px] font-bold text-slate-400 uppercase mb-0.5 pl-1">{language === 'zh' ? '開始日期' : 'From'}</div>
+                    <input
+                      type="date"
+                      value={customDateFrom}
+                      onChange={(e) => setCustomDateFrom(e.target.value)}
+                      className="w-full bg-blue-50 text-blue-700 text-xs rounded-lg px-2 py-1.5 outline-none border border-blue-200 font-bold"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-[100px]">
+                    <div className="text-[9px] font-bold text-slate-400 uppercase mb-0.5 pl-1">{language === 'zh' ? '結束日期' : 'To'}</div>
+                    <input
+                      type="date"
+                      value={customDateTo}
+                      onChange={(e) => setCustomDateTo(e.target.value)}
+                      className="w-full bg-blue-50 text-blue-700 text-xs rounded-lg px-2 py-1.5 outline-none border border-blue-200 font-bold"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Match Type Tags */}
+            <div className="flex gap-1.5 flex-wrap justify-end ml-auto shrink-0">
               {([
                 { key: 'league',     label: t.typeLeague,   color: 'blue'    },
-
                 { key: 'tournament', label: (t as any).typeTournament ?? (language === 'zh' ? '錦標賽' : 'Tournament'), color: 'amber' },
                 { key: 'friendly',   label: t.typeFriendly, color: 'emerald' },
               ]).map(({ key, label, color }) => {
@@ -863,45 +948,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
                 </button>
               )}
             </div>
-          <select value={timeFilterType} onChange={(e) => handleTypeChange(e.target.value as TimeFilterType)}
-            className="w-full bg-slate-100 text-sm rounded-lg px-3 py-2 outline-none border border-slate-200 font-bold text-slate-700">
-            <option value="all">{t.allTime}</option>
-            <option value="year">{t.filterYear}</option>
-            <option value="season">{t.filterSeason}</option>
-            <option value="month">{t.filterMonth}</option>
-            <option value="custom">{language === 'zh' ? '自訂日期' : 'Custom Range'}</option>
-          </select>
-          {timeFilterType !== 'all' && timeFilterType !== 'custom' && (
-            <select value={timeFilterValue} onChange={(e) => setTimeFilterValue(e.target.value)}
-              className="w-full bg-blue-50 text-blue-700 text-sm rounded-lg px-3 py-2 outline-none border border-blue-200 font-bold">
-              {timeFilterType === 'year'   && timeOptions.years.map(y => <option key={y} value={y}>{y}</option>)}
-              {timeFilterType === 'season' && timeOptions.quarters.map(q => <option key={q} value={q}>{q}</option>)}
-              {timeFilterType === 'month'  && timeOptions.months.map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
-          )}
-          {timeFilterType === 'custom' && (
-            <div className="flex items-center gap-2">
-              <div className="flex-1">
-                <div className="text-[9px] font-bold text-slate-400 uppercase mb-1 pl-1">{language === 'zh' ? '開始日期' : 'From'}</div>
-                <input
-                  type="date"
-                  value={customDateFrom}
-                  onChange={e => setCustomDateFrom(e.target.value)}
-                  className="w-full bg-blue-50 text-blue-700 text-sm rounded-lg px-3 py-2 outline-none border border-blue-200 font-bold"
-                />
-              </div>
-              <div className="text-slate-300 font-bold pt-4">→</div>
-              <div className="flex-1">
-                <div className="text-[9px] font-bold text-slate-400 uppercase mb-1 pl-1">{language === 'zh' ? '結束日期' : 'To'}</div>
-                <input
-                  type="date"
-                  value={customDateTo}
-                  onChange={e => setCustomDateTo(e.target.value)}
-                  className="w-full bg-blue-50 text-blue-700 text-sm rounded-lg px-3 py-2 outline-none border border-blue-200 font-bold"
-                />
-              </div>
-            </div>
-          )}
+          </div>
           {filteredMatches.length > 0 && (
             <button onClick={() => setShowShareModal(true)}
               className="w-full bg-slate-800 text-white text-xs font-bold py-2.5 rounded-lg flex items-center justify-center gap-2">
