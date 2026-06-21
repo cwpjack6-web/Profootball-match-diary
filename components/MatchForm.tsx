@@ -40,6 +40,7 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
   const [newVideoTag, setNewVideoTag] = useState<VideoLink['tag']>('highlight');
   const [newVideoNote, setNewVideoNote] = useState('');
   const [hasDraft, setHasDraft] = useState(false);
+  const [showExtras, setShowExtras] = useState(true);
 
   // ── Initial state builder ────────────────────────────────────────────────────
   const getInitialState = (): FormState => {
@@ -747,83 +748,106 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
       </div>
 
       {/* Dad comment — enlarged */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className={`bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col ${!showExtras ? 'flex-1 min-h-[300px]' : ''}`}>
         <div className="flex justify-between items-center px-4 pt-4 pb-2">
           <label className="text-sm font-bold text-slate-700">{t.dadCommentLabel}</label>
-          <select name="commenterIdentity" value={formData.commenterIdentity} onChange={handleChange}
-            className="bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-xs px-2 py-1 font-bold outline-none">
-            <option value="Dad">{t.roleDad}</option>
-            <option value="Coach">{t.roleCoach}</option>
-            <option value="Mom">{t.roleMom}</option>
-            <option value="Other">{t.roleOther}</option>
-          </select>
+          <div className="flex items-center gap-2">
+            <select name="commenterIdentity" value={formData.commenterIdentity} onChange={handleChange}
+              className="bg-slate-100 border border-slate-200 text-slate-700 rounded-lg text-xs px-2 py-1 font-bold outline-none">
+              <option value="Dad">{t.roleDad}</option>
+              <option value="Coach">{t.roleCoach}</option>
+              <option value="Mom">{t.roleMom}</option>
+              <option value="Other">{t.roleOther}</option>
+            </select>
+          </div>
         </div>
-        <textarea name="dadComment" rows={6} value={formData.dadComment} onChange={handleChange}
+        <textarea name="dadComment" rows={showExtras ? 6 : undefined} value={formData.dadComment} onChange={handleChange}
           placeholder={t.dadCommentPlaceholder}
-          className="w-full px-4 pb-4 text-slate-900 text-base resize-none outline-none leading-relaxed placeholder:text-slate-300" />
+          className={`w-full px-4 pb-4 text-slate-900 text-base resize-none outline-none leading-relaxed placeholder:text-slate-300 ${!showExtras ? 'flex-1' : ''}`} />
         <div className="px-4 pb-2 text-right">
           <span className="text-[10px] text-slate-300">{formData.dadComment.length} 字</span>
         </div>
       </div>
 
-      {/* Kid interview — enlarged */}
-      <div className="bg-indigo-50 rounded-2xl border border-indigo-100 shadow-sm overflow-hidden">
-        <div className="px-4 pt-4 pb-2 flex items-center gap-2">
-          <i className="fas fa-microphone text-indigo-400 text-sm" />
-          <label className="text-sm font-bold text-indigo-700">{t.interviewLabel}</label>
-        </div>
-        <textarea name="kidInterview" rows={5} value={formData.kidInterview} onChange={handleChange}
-          placeholder={t.interviewPlaceholder}
-          className="w-full px-4 pb-4 bg-transparent text-slate-900 text-base resize-none outline-none leading-relaxed placeholder:text-indigo-200" />
-        <div className="px-4 pb-2 text-right">
-          <span className="text-[10px] text-indigo-300">{formData.kidInterview.length} 字</span>
-        </div>
-      </div>
+      {!showExtras && (
+        <button type="button" onClick={() => setShowExtras(true)} className="w-full mt-2 py-3 bg-indigo-50 text-indigo-600 rounded-xl font-bold text-sm flex items-center justify-center gap-2 border border-indigo-100 border-dashed hover:bg-indigo-100 transition-colors">
+          <i className="fas fa-plus" />
+          {t.interviewLabel} / {t.youtubeLabel}
+        </button>
+      )}
 
-      {/* Video */}
-      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
-        <label className="text-xs font-bold text-slate-400 uppercase block mb-3">{t.youtubeLabel}</label>
-        <div className="space-y-2 mb-3">
-          <input type="url" value={newVideoUrl} onChange={e => setNewVideoUrl(e.target.value)}
-            placeholder={t.youtubePlaceholder}
-            className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm text-slate-900 outline-none" />
-          <div className="flex gap-2">
-            <select value={newVideoTag} onChange={e => setNewVideoTag(e.target.value as VideoLink['tag'])}
-              className="w-1/3 bg-white border border-slate-200 rounded-xl p-2 text-sm text-slate-900 outline-none">
-              <option value="highlight">{t.tagHighlight}</option>
-              <option value="goal">{t.tagGoal}</option>
-              <option value="assist">{t.tagAssist}</option>
-              <option value="full">{t.tagFull}</option>
-              <option value="other">{t.tagOther}</option>
-            </select>
-            <input type="text" value={newVideoNote} onChange={e => setNewVideoNote(e.target.value)}
-              placeholder={t.videoNote}
-              className="flex-1 bg-white border border-slate-200 rounded-xl p-2 text-sm text-slate-900 outline-none" />
-          </div>
-          <button type="button" onClick={handleAddVideo} disabled={!newVideoUrl}
-            className="w-full bg-slate-800 text-white text-xs font-bold py-2.5 rounded-xl disabled:opacity-40">
-            <i className="fas fa-plus mr-1" /> {t.addVideo}
-          </button>
-        </div>
-        {formData.videos.length > 0 && (
-          <div className="space-y-2">
-            {formData.videos.map((v: VideoLink) => (
-              <div key={v.id} className="flex items-center justify-between bg-white border border-slate-200 p-2 rounded-xl">
-                <div className="flex items-center gap-2 overflow-hidden">
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase shrink-0 ${
-                    v.tag === 'goal' ? 'bg-emerald-100 text-emerald-700' :
-                    v.tag === 'assist' ? 'bg-indigo-100 text-indigo-700' :
-                    'bg-red-100 text-red-700'}`}>{v.tag}</span>
-                  <a href={v.url} target="_blank" rel="noreferrer" className="text-xs text-blue-500 truncate">{v.url}</a>
-                </div>
-                <button type="button" onClick={() => handleRemoveVideo(v.id)} className="text-slate-300 hover:text-red-500 px-2">
-                  <i className="fas fa-times" />
-                </button>
+      {showExtras && (
+        <>
+          {/* Kid interview — enlarged */}
+          <div className="bg-indigo-50 rounded-2xl border border-indigo-100 shadow-sm overflow-hidden">
+            <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <i className="fas fa-microphone text-indigo-400 text-sm" />
+                <label className="text-sm font-bold text-indigo-700">{t.interviewLabel}</label>
               </div>
-            ))}
+              <button type="button" onClick={() => setShowExtras(false)} className="w-6 h-6 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-500 hover:bg-indigo-200 transition-colors">
+                <i className="fas fa-minus text-[10px]" />
+              </button>
+            </div>
+            <textarea name="kidInterview" rows={5} value={formData.kidInterview} onChange={handleChange}
+              placeholder={t.interviewPlaceholder}
+              className="w-full px-4 pb-4 bg-transparent text-slate-900 text-base resize-none outline-none leading-relaxed placeholder:text-indigo-200" />
+            <div className="px-4 pb-2 text-right">
+              <span className="text-[10px] text-indigo-300">{formData.kidInterview.length} 字</span>
+            </div>
           </div>
-        )}
-      </div>
+
+          {/* Video */}
+          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+            <div className="flex justify-between items-center mb-3">
+              <label className="text-xs font-bold text-slate-400 uppercase">{t.youtubeLabel}</label>
+              <button type="button" onClick={() => setShowExtras(false)} className="w-6 h-6 flex items-center justify-center rounded-full bg-slate-200 text-slate-500 hover:bg-slate-300 transition-colors">
+                <i className="fas fa-minus text-[10px]" />
+              </button>
+            </div>
+            <div className="space-y-2 mb-3">
+              <input type="url" value={newVideoUrl} onChange={e => setNewVideoUrl(e.target.value)}
+                placeholder={t.youtubePlaceholder}
+                className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm text-slate-900 outline-none" />
+              <div className="flex gap-2">
+                <select value={newVideoTag} onChange={e => setNewVideoTag(e.target.value as VideoLink['tag'])}
+                  className="w-1/3 bg-white border border-slate-200 rounded-xl p-2 text-sm text-slate-900 outline-none">
+                  <option value="highlight">{t.tagHighlight}</option>
+                  <option value="goal">{t.tagGoal}</option>
+                  <option value="assist">{t.tagAssist}</option>
+                  <option value="full">{t.tagFull}</option>
+                  <option value="other">{t.tagOther}</option>
+                </select>
+                <input type="text" value={newVideoNote} onChange={e => setNewVideoNote(e.target.value)}
+                  placeholder={t.videoNote}
+                  className="flex-1 bg-white border border-slate-200 rounded-xl p-2 text-sm text-slate-900 outline-none" />
+              </div>
+              <button type="button" onClick={handleAddVideo} disabled={!newVideoUrl}
+                className="w-full bg-slate-800 text-white text-xs font-bold py-2.5 rounded-xl disabled:opacity-40">
+                <i className="fas fa-plus mr-1" /> {t.addVideo}
+              </button>
+            </div>
+            {formData.videos.length > 0 && (
+              <div className="space-y-2">
+                {formData.videos.map((v: VideoLink) => (
+                  <div key={v.id} className="flex items-center justify-between bg-white border border-slate-200 p-2 rounded-xl">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase shrink-0 ${
+                        v.tag === 'goal' ? 'bg-emerald-100 text-emerald-700' :
+                        v.tag === 'assist' ? 'bg-indigo-100 text-indigo-700' :
+                        'bg-red-100 text-red-700'}`}>{v.tag}</span>
+                      <a href={v.url} target="_blank" rel="noreferrer" className="text-xs text-blue-500 truncate">{v.url}</a>
+                    </div>
+                    <button type="button" onClick={() => handleRemoveVideo(v.id)} className="text-slate-300 hover:text-red-500 px-2">
+                      <i className="fas fa-times" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 
