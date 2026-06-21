@@ -426,16 +426,34 @@ const App: React.FC = () => {
     if (!activeProfile) return '';
     const newId = Date.now().toString();
     const today = new Date().toISOString().split('T')[0];
+
+    // Inherit format/structure/home-away from previous matches in the same tournament
+    let inheritHome = true;
+    let inheritFormat: any = '';
+    let inheritStructure: any = '';
+    
+    if (extra?.tournamentName) {
+      const tourneyMatches = matches.filter(m => m.profileId === activeProfile.id && m.tournamentName === extra.tournamentName);
+      if (tourneyMatches.length > 0) {
+         // get the MOST RECENTly created match in this tournament
+         const lastMatch = tourneyMatches[tourneyMatches.length - 1];
+         inheritHome = lastMatch.isHome;
+         inheritFormat = lastMatch.matchFormat || '';
+         inheritStructure = lastMatch.matchStructure || '';
+      }
+    }
+
     const updated = addMatchToStorage({
       profileId: activeProfile.id,
       teamId,
       opponent,
       date: today,
-      isHome: true,
+      isHome: inheritHome,
       matchType: (extra?.matchType as any) || 'friendly',
       tournamentName: extra?.tournamentName || '',
       matchLabel: extra?.matchLabel || '',
-      matchFormat: '',
+      matchFormat: inheritFormat,
+      matchStructure: inheritStructure,
       scoreMyTeam: 0,
       scoreOpponent: 0,
       arthurGoals: 0,
