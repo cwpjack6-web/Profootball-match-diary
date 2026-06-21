@@ -6,7 +6,7 @@ import { getTeamById } from '../utils/colors';
 interface QuickLogSheetProps {
   isOpen: boolean;
   onClose: () => void;
-  matches: MatchData[];a
+  matches: MatchData[];
   profile: UserProfile;
   onSave: (matchId: string, update: Partial<MatchData>) => void;
   onCreateMatch: (opponent: string, teamId: string, extra?: { matchType?: string; tournamentName?: string; matchLabel?: string }) => string;
@@ -103,7 +103,8 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     } else {
       setStep('select');
     }
-    setSelectedTeamId(profile.teams[0]?.id || '');
+    const defaultTeam = profile.teams.filter(t => !t.isArchived)[0] || profile.teams[0];
+    setSelectedTeamId(defaultTeam?.id || '');
   }, [isOpen]);
 
   const prefillFromMatch = (m: MatchData) => {
@@ -619,7 +620,9 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                 {profile.teams.length > 1 && (
                   <select value={selectedTeamId} onChange={e => setSelectedTeamId(e.target.value)}
                     className="w-full bg-white border border-blue-200 rounded-lg px-3 py-2 text-sm font-bold outline-none">
-                    {profile.teams.map(team => (
+                    {profile.teams
+                      .filter(team => !team.isArchived || team.id === selectedTeamId)
+                      .map(team => (
                       <option key={team.id} value={team.id}>{team.name}</option>
                     ))}
                   </select>
