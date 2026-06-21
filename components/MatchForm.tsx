@@ -44,15 +44,15 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
 
   // ── Initial state builder ────────────────────────────────────────────────────
   const getInitialState = (): FormState => {
-    const firstTeam = profile.teams[0];
-    const defaultFormat = firstTeam?.defaultMatchFormat || '7v7';
-    const defaultStructure = firstTeam?.defaultMatchStructure || 'quarters';
+    const defaultTeam = profile.teams.filter(t => !t.isArchived)[0] || profile.teams[0];
+    const defaultFormat = defaultTeam?.defaultMatchFormat || '7v7';
+    const defaultStructure = defaultTeam?.defaultMatchStructure || 'quarters';
     const defaultPeriods = 0;
 
     const defaultState: FormState = {
       date: new Date().toISOString().split('T')[0],
       assemblyTime: '', matchTime: '', matchEndTime: initialData?.matchEndTime || '',
-      teamId: firstTeam?.id || '',
+      teamId: defaultTeam?.id || '',
       location: '', isHome: true,
       matchType: 'league', tournamentName: '', matchLabel: '',
       matchFormat: defaultFormat, matchStructure: defaultStructure, periodsPlayed: defaultPeriods,
@@ -866,10 +866,12 @@ const MatchForm: React.FC<ExtendedMatchFormProps> = ({
               {profile.teams.length > 1 ? (
                 <select name="teamId" value={formData.teamId} onChange={handleChange}
                   className={`${styles.headerButton} text-xs rounded-lg px-2 py-1 font-bold outline-none`}>
-                  {profile.teams.map(team => <option key={team.id} value={team.id} className="text-slate-800">{team.name}</option>)}
+                  {profile.teams
+                    .filter(team => !team.isArchived || team.id === formData.teamId)
+                    .map(team => <option key={team.id} value={team.id} className="text-slate-800">{team.name}</option>)}
                 </select>
               ) : (
-                <span className={`${styles.headerButton} text-xs font-bold px-2 py-1 rounded-lg`}>{activeTeam.name}</span>
+                <span className={`${styles.headerButton} text-xs font-bold px-2 py-1 rounded-lg`}>{activeTeam?.name || ''}</span>
               )}
             </div>
             <div className="flex items-center gap-2">
