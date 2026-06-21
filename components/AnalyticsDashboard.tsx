@@ -106,7 +106,7 @@ const DrillDownSheet: React.FC<DrillDownSheetProps> = ({ data, onClose, t, onNav
 
 const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (matchId: string) => void }> = ({ matches, profile, onNavigateToMatch }) => {
   const { t, language } = useLanguage();
-  const [teamFilter, setTeamFilter] = useState<string>('all');
+  const [teamFilter, setTeamFilter] = useState<Set<string>>(new Set());
   const [matchTypeFilter, setMatchTypeFilter] = useState<Set<string>>(new Set());
   const [timeFilterType, setTimeFilterType] = useState<TimeFilterType>('all');
   const [timeFilterValue, setTimeFilterValue] = useState<string>('');
@@ -166,7 +166,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
 
   const filteredMatches = useMemo(() => {
     let result = completedMatches;
-    if (teamFilter !== 'all') result = result.filter(m => String(m.teamId) === String(teamFilter));
+    if (teamFilter.size > 0) result = result.filter(m => teamFilter.has(String(m.teamId)));
     if (matchTypeFilter.size > 0) result = result.filter(m => matchTypeFilter.has(m.matchType || 'league'));
     if (timeFilterType !== 'all' && timeFilterValue) {
       if (timeFilterType === 'year') result = result.filter(m => m.date.startsWith(timeFilterValue));
@@ -802,13 +802,33 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
 
         {/* Filters */}
         <div className="p-3 flex flex-col gap-2">
-          <div className="flex gap-2">
-            <select value={teamFilter} onChange={(e) => setTeamFilter(e.target.value)}
-              className="flex-1 bg-slate-100 text-sm rounded-lg px-3 py-2 outline-none border border-slate-200 font-bold text-slate-700">
-              <option value="all">{t.allTeams}</option>
-              {profile.teams.map(team => <option key={team.id} value={team.id}>{team.name}</option>)}
-            </select>
-            <div className="flex gap-1.5 flex-wrap">
+          {/* Team Filter */}
+          <div className="flex gap-2 w-full overflow-x-auto no-scrollbar pb-1">
+            <button
+              onClick={() => setTeamFilter(new Set())}
+              className={`flex-none px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${teamFilter.size === 0 ? 'bg-slate-800 text-white border-slate-800 shadow-md' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}
+            >
+              {t.allTeams}
+            </button>
+            {profile.teams.map((team: any) => {
+              const active = teamFilter.has(String(team.id));
+              return (
+                <button key={team.id}
+                  onClick={() => setTeamFilter(prev => {
+                    const next = new Set(prev);
+                    if (next.has(String(team.id))) next.delete(String(team.id));
+                    else next.add(String(team.id));
+                    return next;
+                  })}
+                  className={`flex-none px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${active ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'}`}
+                >
+                  {active && <i className="fas fa-check text-[10px] mr-1.5" />}
+                  {team.name}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex gap-1.5 flex-wrap">
               {([
                 { key: 'league',     label: t.typeLeague,   color: 'blue'    },
 
@@ -843,7 +863,6 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
                 </button>
               )}
             </div>
-          </div>
           <select value={timeFilterType} onChange={(e) => handleTypeChange(e.target.value as TimeFilterType)}
             className="w-full bg-slate-100 text-sm rounded-lg px-3 py-2 outline-none border border-slate-200 font-bold text-slate-700">
             <option value="all">{t.allTime}</option>
@@ -1615,7 +1634,7 @@ const AnalyticsDashboard: React.FC<AnalyticsProps & { onNavigateToMatch?: (match
         onClose={() => setShowShareModal(false)}
         matches={filteredMatches}
         profile={profile}
-        title={teamFilter !== 'all' ? getTeamById(profile.teams, teamFilter).name : t.allTeams}
+        title={teamFilter.size > 0 ? (teamFilter.size === 1 ? getTeamById(profile.teams, Array.from(teamFilter)[0])?.name || t.allTeams : `${teamFilter.size} Teams`) : t.allTeams}
       />
     </div>
   );
