@@ -1,10 +1,3 @@
-/**
- * TournamentEditModal.tsx
- * Edits shared tournament-level fields (pitch, weather, tournamentStartTime, tournamentEndTime)
- * and syncs them across all games in the tournament.
- * Individual game matchTime stays independent.
- */
-
 import React, { useState, useEffect } from 'react';
 import { MatchData } from '../types';
 import { useLanguage } from '../context/LanguageContext';
@@ -37,27 +30,27 @@ const TournamentEditModal: React.FC<TournamentEditModalProps> = ({
       setTournamentStartTime(first.tournamentStartTime || '');
       setTournamentEndTime(first.tournamentEndTime || '');
     }
-  }, [isOpen, tournamentName]);
+  }, [isOpen, tournamentName, first]);
 
   if (!isOpen) return null;
 
   const zh = language === 'zh';
 
   const pitchOptions = [
-    { value: 'turf',       label: zh ? '天然草' : 'Natural Turf' },
-    { value: 'artificial', label: zh ? '仿真草' : 'Astroturf' },
-    { value: 'hard',       label: zh ? '硬地' : 'Hard Court' },
-    { value: 'indoor',     label: zh ? '室內' : 'Indoor' },
-    { value: 'other',      label: zh ? '其他' : 'Other' },
+    { value: 'turf',       label: zh ? 'å¤©ç„¶è‰' : 'Natural Turf' },
+    { value: 'artificial', label: zh ? 'ä»¿çœŸè‰' : 'Astroturf' },
+    { value: 'hard',       label: zh ? 'ç¡¬åœ°' : 'Hard Court' },
+    { value: 'indoor',     label: zh ? 'å®¤å…§' : 'Indoor' },
+    { value: 'other',      label: zh ? 'å…¶ä»–' : 'Other' },
   ];
 
   const weatherOptions = [
-    { value: 'sunny',  icon: 'fa-sun',              label: zh ? '晴天' : 'Sunny' },
-    { value: 'cloudy', icon: 'fa-cloud',             label: zh ? '多雲' : 'Cloudy' },
-    { value: 'rain',   icon: 'fa-cloud-rain',        label: zh ? '落雨' : 'Rainy' },
-    { value: 'windy',  icon: 'fa-wind',              label: zh ? '有風' : 'Windy' },
-    { value: 'hot',    icon: 'fa-temperature-high',  label: zh ? '炎熱' : 'Hot' },
-    { value: 'night',  icon: 'fa-moon',              label: zh ? '夜場' : 'Night' },
+    { value: 'sunny',  icon: 'fa-sun',              label: zh ? 'æ™´å¤©' : 'Sunny' },
+    { value: 'cloudy', icon: 'fa-cloud',             label: zh ? 'å¤šé›²' : 'Cloudy' },
+    { value: 'rain',   icon: 'fa-cloud-rain',        label: zh ? 'è½é›¨' : 'Rainy' },
+    { value: 'windy',  icon: 'fa-wind',              label: zh ? 'æœ‰é¢¨' : 'Windy' },
+    { value: 'hot',    icon: 'fa-temperature-high',  label: zh ? 'ç‚Žç†±' : 'Hot' },
+    { value: 'night',  icon: 'fa-moon',              label: zh ? 'å¤œå ´' : 'Night' },
   ];
 
   const handleSave = () => {
@@ -90,7 +83,7 @@ const TournamentEditModal: React.FC<TournamentEditModalProps> = ({
             </div>
             <p className="text-[10px] text-slate-400 font-bold mt-0.5">
               {zh
-                ? `將同步到全部 ${matches.length} 場比賽`
+                ? `å°‡åŒæ­¥åˆ°å…¨éƒ¨ ${matches.length} å ´æ¯”è³½`
                 : `Syncs to all ${matches.length} games`}
             </p>
           </div>
@@ -102,11 +95,11 @@ const TournamentEditModal: React.FC<TournamentEditModalProps> = ({
         {/* Tournament time range */}
         <div>
           <label className="text-[10px] font-black text-slate-400 uppercase block mb-2">
-            {zh ? '整個賽事時間' : 'Tournament Time Range'}
+            {zh ? 'æ•´å€‹è³½äº‹æ™‚é–“' : 'Tournament Time Range'}
           </label>
           <div className="flex items-center gap-2">
             <div className="flex-1">
-              <p className="text-[9px] text-slate-400 font-bold mb-1">{zh ? '開始' : 'Start'}</p>
+              <p className="text-[9px] text-slate-400 font-bold mb-1">{zh ? 'é–‹å§‹' : 'Start'}</p>
               <input
                 type="time"
                 value={tournamentStartTime}
@@ -114,9 +107,9 @@ const TournamentEditModal: React.FC<TournamentEditModalProps> = ({
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:border-blue-400 text-slate-800"
               />
             </div>
-            <div className="text-slate-300 font-bold mt-5">→</div>
+            <div className="text-slate-300 font-bold mt-5">â†’</div>
             <div className="flex-1">
-              <p className="text-[9px] text-slate-400 font-bold mb-1">{zh ? '結束' : 'End'}</p>
+              <p className="text-[9px] text-slate-400 font-bold mb-1">{zh ? 'çµæŸ' : 'End'}</p>
               <input
                 type="time"
                 value={tournamentEndTime}
@@ -127,7 +120,7 @@ const TournamentEditModal: React.FC<TournamentEditModalProps> = ({
           </div>
           <p className="text-[9px] text-slate-400 mt-1.5">
             {zh
-              ? '每場比賽嘅個別開始時間請喺各 Game 戰報卡入面編輯'
+              ? 'æ¯å ´æ¯”è³½å˜…å€‹åˆ¥é–‹å§‹æ™‚é–“è«‹å–ºå„ Game æˆ°å ±å¡å…¥é¢ç·¨è¼¯'
               : 'Individual game start times can be set in each Game card'}
           </p>
         </div>
@@ -135,7 +128,7 @@ const TournamentEditModal: React.FC<TournamentEditModalProps> = ({
         {/* Pitch type */}
         <div>
           <label className="text-[10px] font-black text-slate-400 uppercase block mb-2">
-            {zh ? '草地性質' : 'Pitch Type'}
+            {zh ? 'è‰åœ°æ€§è³ª' : 'Pitch Type'}
           </label>
           <div className="flex flex-wrap gap-2">
             {pitchOptions.map(opt => (
@@ -157,7 +150,7 @@ const TournamentEditModal: React.FC<TournamentEditModalProps> = ({
         {/* Weather */}
         <div>
           <label className="text-[10px] font-black text-slate-400 uppercase block mb-2">
-            {zh ? '天氣' : 'Weather'}
+            {zh ? 'å¤©æ°£' : 'Weather'}
           </label>
           <div className="flex flex-wrap gap-2">
             {weatherOptions.map(opt => (
@@ -183,7 +176,7 @@ const TournamentEditModal: React.FC<TournamentEditModalProps> = ({
           className="w-full py-4 bg-amber-500 text-white font-black rounded-xl shadow-lg hover:bg-amber-600 active:bg-amber-700 transition-colors flex items-center justify-center gap-2"
         >
           <i className="fas fa-save" />
-          {zh ? `儲存並同步到 ${matches.length} 場` : `Save & sync to ${matches.length} games`}
+          {zh ? `å„²å­˜ä¸¦åŒæ­¥åˆ° ${matches.length} å ´` : `Save & sync to ${matches.length} games`}
         </button>
 
       </div>
