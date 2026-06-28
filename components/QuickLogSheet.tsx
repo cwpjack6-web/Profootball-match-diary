@@ -17,7 +17,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
 }) => {
   const { t, language } = useLanguage();
 
-  // ── State ─────────────────────────────────────────────────────────────────
+  // â”€â”€ State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [step, setStep] = useState<'select' | 'log'>('select');
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [scoreMyTeam, setScoreMyTeam] = useState(0);
@@ -29,6 +29,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
   const [newOpponent, setNewOpponent] = useState('');
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [showNewMatchForm, setShowNewMatchForm] = useState(false);
+  const [newTournamentName, setNewTournamentName] = useState('');
   const [pendingOpponent, setPendingOpponent] = useState('');
   const [showOpponentPrompt, setShowOpponentPrompt] = useState(false);
   const [ownGoalsFor, setOwnGoalsFor] = useState(0);       // opponent own goal (counts for us)
@@ -44,8 +45,20 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
   const [currentQuarterNum, setCurrentQuarterNum] = useState(1);
   const [tournamentGameNum, setTournamentGameNum] = useState(1);
 
-  // ── Derived ───────────────────────────────────────────────────────────────
+  // â”€â”€ Derived â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const today = new Date().toISOString().split('T')[0];
+
+  const activeTournaments = useMemo(() => {
+    const names = new Set<string>();
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+    matches.forEach(m => {
+      if ((m.matchType === 'tournament' || m.matchType === 'cup') && m.tournamentName && new Date(m.date) >= cutoff) {
+        names.add(m.tournamentName);
+      }
+    });
+    return Array.from(names);
+  }, [matches]);
 
   const todayMatches = useMemo(() => {
     return matches.filter(m => m.date === today)
@@ -66,10 +79,10 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     matches.find(m => m.id === selectedMatchId) || null,
   [matches, selectedMatchId]);
 
-  // Period count from existing dadComment — match both 【節X】 (zh) and [Period X] (en)
+  // Period count from existing dadComment â€” match both ã€ç¯€Xã€‘ (zh) and [Period X] (en)
   const existingPeriodCount = useMemo(() => {
     if (!selectedMatch?.dadComment) return 0;
-    const zh = (selectedMatch.dadComment.match(/【節\d+】/g) || []).length;
+    const zh = (selectedMatch.dadComment.match(/ã€ç¯€\d+ã€‘/g) || []).length;
     const en = (selectedMatch.dadComment.match(/\[Period \d+\]/g) || []).length;
     return Math.max(zh, en);
   }, [selectedMatch]);
@@ -89,7 +102,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     return team?.roster || [];
   }, [selectedMatch, profile]);
 
-  // ── Auto-select if only one today match ──────────────────────────────────
+  // â”€â”€ Auto-select if only one today match â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (!isOpen) return;
     if (todayMatches.length === 1) {
@@ -120,12 +133,12 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     setNoteText('');
     // Seed localPeriodOffset from already-saved periods in dadComment
     const comment = m.dadComment || '';
-    const zh = (comment.match(/【節\d+】/g) || []).length;
+    const zh = (comment.match(/ã€ç¯€\d+ã€‘/g) || []).length;
     const en = (comment.match(/\[Period \d+\]/g) || []).length;
     setLocalPeriodOffset(Math.max(zh, en));
   };
 
-  // ── Reset on close ────────────────────────────────────────────────────────
+  // â”€â”€ Reset on close â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleClose = () => {
     setStep('select');
     setSelectedMatchId(null);
@@ -134,6 +147,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     setArthurAssists(0);
     setTeammateGoals({});
     setNewOpponent('');
+    setNewTournamentName('');
     setShowNewMatchForm(false);
     setOwnGoalsFor(0);
     setOwnGoalsAgainst(0);
@@ -146,11 +160,11 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     onClose();
   };
 
-  // ── Select match ──────────────────────────────────────────────────────────
+  // â”€â”€ Select match â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleSelectMatch = (m: MatchData) => {
     setSelectedMatchId(m.id);
     prefillFromMatch(m);
-    // Tournament with no opponent yet — prompt before entering log
+    // Tournament with no opponent yet â€” prompt before entering log
     if (m.matchType === 'tournament' && !m.opponent?.trim()) {
       setPendingOpponent('');
       setShowOpponentPrompt(true);
@@ -159,7 +173,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     setStep('log');
   };
 
-  // ── Confirm opponent name for tournament match ─────────────────────────
+  // â”€â”€ Confirm opponent name for tournament match â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleConfirmOpponent = () => {
     if (!pendingOpponent.trim() || !selectedMatchId) return;
     onSave(selectedMatchId, { opponent: pendingOpponent.trim() });
@@ -167,11 +181,19 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     setStep('log');
   };
 
-  // ── Create new match then enter log ──────────────────────────────────────
+  // â”€â”€ Create new match then enter log â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleCreateAndLog = () => {
     if (!newOpponent.trim()) return;
     const teamId = selectedTeamId || profile.teams[0]?.id || '';
-    const newId = onCreateMatch(newOpponent.trim(), teamId);
+    
+    let matchLabel = 'Game 1';
+    if (newTournamentName) {
+      const existingMatches = matches.filter(m => m.matchType === 'tournament' && m.tournamentName === newTournamentName);
+      matchLabel = `Game ${existingMatches.length + 1}`;
+    }
+    
+    const extra = newTournamentName ? { matchType: 'tournament', tournamentName: newTournamentName, matchLabel } : undefined;
+    const newId = onCreateMatch(newOpponent.trim(), teamId, extra);
     setSelectedMatchId(newId);
     setScoreMyTeam(0);
     setScoreOpponent(0);
@@ -184,7 +206,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     setStep('log');
   };
 
-  // ── Teammate goal tap ─────────────────────────────────────────────────────
+  // â”€â”€ Teammate goal tap â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const tapTeammateGoal = (id: string) => {
     setTeammateGoals(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
     setScoreMyTeam(s => s + 1);
@@ -199,32 +221,32 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     });
   };
 
-  // ── Save ──────────────────────────────────────────────────────────────────
+  // â”€â”€ Save â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleSave = () => {
     if (!selectedMatchId || !selectedMatch) return;
 
-    // Define participationLabel here (was missing — caused silent crash)
+    // Define participationLabel here (was missing â€” caused silent crash)
     const participationLabel = participation === 'full'
-      ? (language === 'zh' ? '全節' : 'Full')
+      ? (language === 'zh' ? 'å…¨ç¯€' : 'Full')
       : participation === 'partial'
-      ? (language === 'zh' ? '部分' : 'Partial')
-      : (language === 'zh' ? '未出場' : 'Did Not Play');
+      ? (language === 'zh' ? 'éƒ¨åˆ†' : 'Partial')
+      : (language === 'zh' ? 'æœªå‡ºå ´' : 'Did Not Play');
 
     // Build period note block
     const periodHeader = language === 'zh'
-      ? `【節${nextPeriodNum}】`
+      ? `ã€ç¯€${nextPeriodNum}ã€‘`
       : `[Period ${nextPeriodNum}]`;
 
     const goalSummary: string[] = [];
-    if (arthurGoals > 0) goalSummary.push(`${profile.name} ⚽×${arthurGoals}`);
-    if (arthurAssists > 0) goalSummary.push(`${profile.name} 👟×${arthurAssists}`);
+    if (arthurGoals > 0) goalSummary.push(`${profile.name} âš½Ã—${arthurGoals}`);
+    if (arthurAssists > 0) goalSummary.push(`${profile.name} ðŸ‘ŸÃ—${arthurAssists}`);
     Object.entries(teammateGoals).forEach(([id, count]) => {
       const player = roster.find(r => r.id === id);
-      if (player) goalSummary.push(`${player.name} ⚽×${count}`);
+      if (player) goalSummary.push(`${player.name} âš½Ã—${count}`);
     });
 
     const goalLine = goalSummary.length > 0
-      ? (language === 'zh' ? `入球：${goalSummary.join('、')}\n` : `Goals: ${goalSummary.join(', ')}\n`)
+      ? (language === 'zh' ? `å…¥çƒï¼š${goalSummary.join('ã€')}\n` : `Goals: ${goalSummary.join(', ')}\n`)
       : '';
 
     const posLabel = periodPositions.length > 0 ? ` [${periodPositions.join('/')}]` : '';
@@ -240,7 +262,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     const totalArthurGoals = (selectedMatch.arthurGoals || 0) + arthurGoals;
     const totalArthurAssists = (selectedMatch.arthurAssists || 0) + arthurAssists;
 
-    // Build scorers array — using correct {teammateId, count} format from MatchData type
+    // Build scorers array â€” using correct {teammateId, count} format from MatchData type
     const existingScorers = selectedMatch.scorers || [];
     const newScorers = [...existingScorers];
     Object.entries(teammateGoals).forEach(([id, count]) => {
@@ -286,23 +308,23 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     // Score carries over (cumulative)
   };
 
-  // ── Tournament: save quarter and auto-advance ─────────────────────────────
+  // â”€â”€ Tournament: save quarter and auto-advance â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleSaveTournamentQuarter = () => {
     if (!selectedMatchId || !selectedMatch) return;
 
     const qNum = currentQuarterNum;
-    const qHeader = language === 'zh' ? `【Q${qNum}】` : `[Q${qNum}]`;
+    const qHeader = language === 'zh' ? `ã€Q${qNum}ã€‘` : `[Q${qNum}]`;
     const goalSummary: string[] = [];
-    if (arthurGoals > 0) goalSummary.push(`${profile.name} ⚽×${arthurGoals}`);
-    if (arthurAssists > 0) goalSummary.push(`${profile.name} 👟×${arthurAssists}`);
+    if (arthurGoals > 0) goalSummary.push(`${profile.name} âš½Ã—${arthurGoals}`);
+    if (arthurAssists > 0) goalSummary.push(`${profile.name} ðŸ‘ŸÃ—${arthurAssists}`);
     Object.entries(teammateGoals).forEach(([id, count]) => {
       const player = roster.find(r => r.id === id);
-      if (player) goalSummary.push(`${player.name} ⚽×${count}`);
+      if (player) goalSummary.push(`${player.name} âš½Ã—${count}`);
     });
     const goalLine = goalSummary.length > 0
-      ? (language === 'zh' ? `入球：${goalSummary.join('、')}\n` : `Goals: ${goalSummary.join(', ')}\n`)
+      ? (language === 'zh' ? `å…¥çƒï¼š${goalSummary.join('ã€')}\n` : `Goals: ${goalSummary.join(', ')}\n`)
       : '';
-    const qBlock = `${qHeader} ${scoreMyTeam}–${scoreOpponent}\n${goalLine}${noteText.trim()}`;
+    const qBlock = `${qHeader} ${scoreMyTeam}â€“${scoreOpponent}\n${goalLine}${noteText.trim()}`;
     const existingComment = selectedMatch.dadComment || '';
     const newComment = existingComment ? `${existingComment}\n\n${qBlock}` : qBlock;
 
@@ -333,7 +355,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     setOwnGoalsAgainst(0);
   };
 
-  // ── Done: build final period update, show rating modal ──────────────────────
+  // â”€â”€ Done: build final period update, show rating modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // We capture the period data NOW (before state clears) and store it
   // Then on rating confirm, we merge period + rating into ONE onSave call
   const [pendingFinalUpdate, setPendingFinalUpdate] = useState<Record<string, any> | null>(null);
@@ -342,24 +364,24 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     if (!selectedMatchId || !selectedMatch) return null;
 
     const participationLabel = participation === 'full'
-      ? (language === 'zh' ? '全節' : 'Full')
+      ? (language === 'zh' ? 'å…¨ç¯€' : 'Full')
       : participation === 'partial'
-      ? (language === 'zh' ? '部分' : 'Partial')
-      : (language === 'zh' ? '未出場' : 'Did Not Play');
+      ? (language === 'zh' ? 'éƒ¨åˆ†' : 'Partial')
+      : (language === 'zh' ? 'æœªå‡ºå ´' : 'Did Not Play');
 
     const periodHeader = language === 'zh'
-      ? `【節${nextPeriodNum}】`
+      ? `ã€ç¯€${nextPeriodNum}ã€‘`
       : `[Period ${nextPeriodNum}]`;
 
     const goalSummary: string[] = [];
-    if (arthurGoals > 0) goalSummary.push(`${profile.name} ⚽×${arthurGoals}`);
-    if (arthurAssists > 0) goalSummary.push(`${profile.name} 👟×${arthurAssists}`);
+    if (arthurGoals > 0) goalSummary.push(`${profile.name} âš½Ã—${arthurGoals}`);
+    if (arthurAssists > 0) goalSummary.push(`${profile.name} ðŸ‘ŸÃ—${arthurAssists}`);
     Object.entries(teammateGoals).forEach(([id, count]) => {
       const player = roster.find(r => r.id === id);
-      if (player) goalSummary.push(`${player.name} ⚽×${count}`);
+      if (player) goalSummary.push(`${player.name} âš½Ã—${count}`);
     });
     const goalLine = goalSummary.length > 0
-      ? (language === 'zh' ? `入球：${goalSummary.join('、')}\n` : `Goals: ${goalSummary.join(', ')}\n`)
+      ? (language === 'zh' ? `å…¥çƒï¼š${goalSummary.join('ã€')}\n` : `Goals: ${goalSummary.join(', ')}\n`)
       : '';
     const posLabel = periodPositions.length > 0 ? ` [${periodPositions.join('/')}]` : '';
     const periodBlock = `${periodHeader} [${participationLabel}]${posLabel}\n${goalLine}${noteText.trim()}`;
@@ -527,10 +549,10 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
             )}
             <span className="text-sm font-black text-slate-800">
               {step === 'select'
-                ? (language === 'zh' ? '⚡ 快速記錄' : '⚡ Quick Log')
+                ? (language === 'zh' ? 'âš¡ å¿«é€Ÿè¨˜éŒ„' : 'âš¡ Quick Log')
                 : isTournament
-                  ? `⚡ ${selectedMatch?.tournamentName || 'Tournament'} · Q${currentQuarterNum}`
-                  : `⚡ ${language === 'zh' ? `節${nextPeriodNum}` : `Period ${nextPeriodNum}`} · vs ${selectedMatch?.opponent}`}
+                  ? `âš¡ ${selectedMatch?.tournamentName || 'Tournament'} Â· Q${currentQuarterNum}`
+                  : `âš¡ ${language === 'zh' ? `ç¯€${nextPeriodNum}` : `Period ${nextPeriodNum}`} Â· vs ${selectedMatch?.opponent}`}
             </span>
           </div>
           <button onClick={handleClose} className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
@@ -538,7 +560,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
           </button>
         </div>
 
-        {/* ── STEP 1: Select match ─────────────────────────────────────────── */}
+        {/* â”€â”€ STEP 1: Select match â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {step === 'select' && (
           <div className="overflow-y-auto flex-1 p-4 space-y-3">
 
@@ -546,12 +568,12 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
             {todayMatches.length > 0 && (
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase mb-2">
-                  {language === 'zh' ? '今日比賽' : "Today's Matches"}
+                  {language === 'zh' ? 'ä»Šæ—¥æ¯”è³½' : "Today's Matches"}
                 </p>
                 <div className="space-y-2">
                   {todayMatches.map(m => {
                     const team = getTeamById(profile.teams, m.teamId);
-                    const periods = (m.dadComment?.match(/【節\d+】|\[Period \d+\]/g) || []).length;
+                    const periods = (m.dadComment?.match(/ã€ç¯€\d+ã€‘|\[Period \d+\]/g) || []).length;
                     return (
                       <button key={m.id} onClick={() => handleSelectMatch(m)}
                         className="w-full flex items-center gap-3 bg-blue-50 border border-blue-200 rounded-xl p-3 text-left active:scale-[0.98] transition-transform">
@@ -562,11 +584,11 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                           <div className="font-black text-slate-800 text-sm">vs {m.opponent}</div>
                           <div className="text-[10px] text-slate-500 font-bold">{team.name}
                             {periods > 0 && <span className="ml-2 text-blue-500">
-                              {language === 'zh' ? `已記${periods}節` : `${periods} periods logged`}
+                              {language === 'zh' ? `å·²è¨˜${periods}ç¯€` : `${periods} periods logged`}
                             </span>}
                           </div>
                         </div>
-                        <div className="text-blue-500 font-black text-sm">{m.scoreMyTeam}–{m.scoreOpponent}</div>
+                        <div className="text-blue-500 font-black text-sm">{m.scoreMyTeam}â€“{m.scoreOpponent}</div>
                         <i className="fas fa-chevron-right text-blue-300 text-xs" />
                       </button>
                     );
@@ -579,7 +601,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
             {todayMatches.length === 0 && recentMatch && (
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase mb-2">
-                  {language === 'zh' ? '最近比賽' : 'Recent Match'}
+                  {language === 'zh' ? 'æœ€è¿‘æ¯”è³½' : 'Recent Match'}
                 </p>
                 <button onClick={() => handleSelectMatch(recentMatch)}
                   className="w-full flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl p-3 text-left active:scale-[0.98] transition-transform">
@@ -601,22 +623,31 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                 className="w-full flex items-center gap-3 border-2 border-dashed border-slate-200 rounded-xl p-3 text-slate-400 hover:border-blue-300 hover:text-blue-500 transition-colors">
                 <i className="fas fa-plus-circle text-lg" />
                 <span className="text-sm font-bold">
-                  {language === 'zh' ? '新增今日比賽' : 'Add new match'}
+                  {language === 'zh' ? 'æ–°å¢žä»Šæ—¥æ¯”è³½' : 'Add new match'}
                 </span>
               </button>
             ) : (
               <div className="border border-blue-200 rounded-xl p-4 space-y-3 bg-blue-50">
                 <p className="text-xs font-black text-blue-700">
-                  {language === 'zh' ? '新比賽' : 'New Match'}
+                  {language === 'zh' ? 'æ–°æ¯”è³½' : 'New Match'}
                 </p>
                 <input
                   type="text"
                   value={newOpponent}
                   onChange={e => setNewOpponent(e.target.value)}
-                  placeholder={language === 'zh' ? '對手名稱' : 'Opponent name'}
+                  placeholder={language === 'zh' ? 'å°æ‰‹åç¨±' : 'Opponent name'}
                   className="w-full bg-white border border-blue-200 rounded-lg px-3 py-2 text-sm font-bold outline-none focus:border-blue-400"
                   autoFocus
                 />
+                {activeTournaments.length > 0 && (
+                  <select value={newTournamentName} onChange={e => setNewTournamentName(e.target.value)}
+                    className="w-full bg-white border border-blue-200 rounded-lg px-3 py-2 text-sm font-bold outline-none focus:border-blue-400">
+                    <option value="">{language === 'zh' ? 'ç„¡éŒ¦æ¨™è³½ (å‹èª¼è³½)' : 'No Tournament (Friendly)'}</option>
+                    {activeTournaments.map(t => (
+                      <option key={t} value={t}>ðŸ† {t}</option>
+                    ))}
+                  </select>
+                )}
                 {profile.teams.length > 1 && (
                   <select value={selectedTeamId} onChange={e => setSelectedTeamId(e.target.value)}
                     className="w-full bg-white border border-blue-200 rounded-lg px-3 py-2 text-sm font-bold outline-none">
@@ -630,11 +661,11 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                 <div className="flex gap-2">
                   <button onClick={() => setShowNewMatchForm(false)}
                     className="flex-1 py-2 bg-white text-slate-500 rounded-lg text-sm font-bold border border-slate-200">
-                    {language === 'zh' ? '取消' : 'Cancel'}
+                    {language === 'zh' ? 'å–æ¶ˆ' : 'Cancel'}
                   </button>
                   <button onClick={handleCreateAndLog} disabled={!newOpponent.trim()}
                     className="flex-1 py-2 bg-blue-500 text-white rounded-lg text-sm font-bold disabled:opacity-40">
-                    {language === 'zh' ? '建立並記錄' : 'Create & Log'}
+                    {language === 'zh' ? 'å»ºç«‹ä¸¦è¨˜éŒ„' : 'Create & Log'}
                   </button>
                 </div>
               </div>
@@ -642,16 +673,16 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
           </div>
         )}
 
-        {/* ── Opponent prompt for tournament matches ──────────────────────── */}
+        {/* â”€â”€ Opponent prompt for tournament matches â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {showOpponentPrompt && (
           <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-6">
             <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl space-y-4">
               <div>
                 <h3 className="font-black text-slate-800 text-base">
-                  {language === 'zh' ? '輸入對手名稱' : 'Enter Opponent'}
+                  {language === 'zh' ? 'è¼¸å…¥å°æ‰‹åç¨±' : 'Enter Opponent'}
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
-                  {language === 'zh' ? '錦標賽每場對手可以不同' : 'Each tournament game can have a different opponent'}
+                  {language === 'zh' ? 'éŒ¦æ¨™è³½æ¯å ´å°æ‰‹å¯ä»¥ä¸åŒ' : 'Each tournament game can have a different opponent'}
                 </p>
               </div>
               <input
@@ -659,36 +690,36 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                 value={pendingOpponent}
                 onChange={e => setPendingOpponent(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleConfirmOpponent()}
-                placeholder={language === 'zh' ? '對手隊名' : 'Opponent name'}
+                placeholder={language === 'zh' ? 'å°æ‰‹éšŠå' : 'Opponent name'}
                 className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:border-blue-400"
                 autoFocus
               />
               <div className="flex gap-3">
                 <button onClick={() => { setShowOpponentPrompt(false); setStep('log'); }}
                   className="flex-1 py-2.5 bg-slate-100 text-slate-500 rounded-xl text-sm font-bold">
-                  {language === 'zh' ? '略過' : 'Skip'}
+                  {language === 'zh' ? 'ç•¥éŽ' : 'Skip'}
                 </button>
                 <button onClick={handleConfirmOpponent} disabled={!pendingOpponent.trim()}
                   className="flex-1 py-2.5 bg-blue-500 text-white rounded-xl text-sm font-bold disabled:opacity-40">
-                  {language === 'zh' ? '確認' : 'Confirm'}
+                  {language === 'zh' ? 'ç¢ºèª' : 'Confirm'}
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* ── STEP 2: Log ──────────────────────────────────────────────────── */}
+        {/* â”€â”€ STEP 2: Log â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         {step === 'log' && (
           <div className="overflow-y-auto flex-1">
 
             {/* Tournament: Quarter tabs */}
             {isTournament && (
               <div className="px-4 pt-3">
-                {/* Opponent name — shown on Q1 if not yet set */}
+                {/* Opponent name â€” shown on Q1 if not yet set */}
                 {currentQuarterNum === 1 && !selectedMatch?.opponent?.trim() && (
                   <div className="mb-3">
                     <label className="text-[10px] font-black text-purple-600 uppercase mb-1 block">
-                      {language === 'zh' ? '對手名稱（可選）' : 'Opponent (optional)'}
+                      {language === 'zh' ? 'å°æ‰‹åç¨±ï¼ˆå¯é¸ï¼‰' : 'Opponent (optional)'}
                     </label>
                     <input
                       type="text"
@@ -699,7 +730,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                           onSave(selectedMatchId, { opponent: pendingOpponent.trim() });
                         }
                       }}
-                      placeholder={language === 'zh' ? '輸入對手隊名...' : 'Enter opponent name...'}
+                      placeholder={language === 'zh' ? 'è¼¸å…¥å°æ‰‹éšŠå...' : 'Enter opponent name...'}
                       className="w-full bg-white border border-purple-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-purple-400"
                     />
                   </div>
@@ -712,7 +743,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                           ? 'bg-purple-600 text-white border-purple-600'
                           : 'bg-white text-slate-400 border-slate-200'
                       }`}>
-                      Q{q} {q < currentQuarterNum ? '✓' : ''}
+                      Q{q} {q < currentQuarterNum ? 'âœ“' : ''}
                     </button>
                   ))}
                   <button onClick={() => setCurrentQuarterNum(q => q + 1)}
@@ -721,7 +752,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                   </button>
                 </div>
                 <p className="text-[10px] text-purple-500 font-bold mt-1">
-                  {language === 'zh' ? `正在記錄 Q${currentQuarterNum} 數據` : `Logging Q${currentQuarterNum} data`}
+                  {language === 'zh' ? `æ­£åœ¨è¨˜éŒ„ Q${currentQuarterNum} æ•¸æ“š` : `Logging Q${currentQuarterNum} data`}
                 </p>
               </div>
             )}
@@ -730,37 +761,37 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
             {!isTournament && localPeriodOffset > 0 && (
               <div className="mx-4 mt-3 px-3 py-2 bg-slate-50 rounded-lg border border-slate-100">
                 <p className="text-[10px] text-blue-500 font-bold">
-                  {language === 'zh' ? `已記 ${localPeriodOffset} 節` : `${localPeriodOffset} period(s) logged`}
+                  {language === 'zh' ? `å·²è¨˜ ${localPeriodOffset} ç¯€` : `${localPeriodOffset} period(s) logged`}
                 </p>
               </div>
             )}
 
             <div className="p-4 space-y-4">
 
-              {/* ① Score */}
+              {/* â‘  Score */}
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase mb-2">
-                  {isTournament ? (language === 'zh' ? `Q${currentQuarterNum} 比數` : `Q${currentQuarterNum} Score`) : (language === 'zh' ? `Q${nextPeriodNum} 比數` : `Q${nextPeriodNum} Score`)}
+                  {isTournament ? (language === 'zh' ? `Q${currentQuarterNum} æ¯”æ•¸` : `Q${currentQuarterNum} Score`) : (language === 'zh' ? `Q${nextPeriodNum} æ¯”æ•¸` : `Q${nextPeriodNum} Score`)}
                 </p>
                 <div className="flex items-center justify-center gap-4 bg-slate-50 rounded-xl p-4 border border-slate-100">
                   {/* My team */}
                   <div className="flex flex-col items-center gap-2">
-                    <span className="text-[10px] font-black text-slate-500 uppercase">{language === 'zh' ? '我方' : 'Us'}</span>
+                    <span className="text-[10px] font-black text-slate-500 uppercase">{language === 'zh' ? 'æˆ‘æ–¹' : 'Us'}</span>
                     <div className="flex items-center gap-3">
                       <button onClick={() => setScoreMyTeam(Math.max(0, scoreMyTeam - 1))}
-                        className="w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-500 text-lg font-black active:bg-slate-100 shadow-sm">−</button>
+                        className="w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-500 text-lg font-black active:bg-slate-100 shadow-sm">âˆ’</button>
                       <span className="text-4xl font-black text-slate-800 w-10 text-center">{scoreMyTeam}</span>
                       <button onClick={() => setScoreMyTeam(scoreMyTeam + 1)}
                         className="w-9 h-9 rounded-full bg-emerald-500 text-white flex items-center justify-center text-lg font-black active:bg-emerald-600 shadow-sm">+</button>
                     </div>
                   </div>
-                  <span className="text-2xl font-black text-slate-300 pb-1">–</span>
+                  <span className="text-2xl font-black text-slate-300 pb-1">â€“</span>
                   {/* Opponent */}
                   <div className="flex flex-col items-center gap-2">
-                    <span className="text-[10px] font-black text-slate-500 uppercase">{language === 'zh' ? '對方' : 'Them'}</span>
+                    <span className="text-[10px] font-black text-slate-500 uppercase">{language === 'zh' ? 'å°æ–¹' : 'Them'}</span>
                     <div className="flex items-center gap-3">
                       <button onClick={() => setScoreOpponent(Math.max(0, scoreOpponent - 1))}
-                        className="w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-500 text-lg font-black active:bg-slate-100 shadow-sm">−</button>
+                        className="w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-500 text-lg font-black active:bg-slate-100 shadow-sm">âˆ’</button>
                       <span className="text-4xl font-black text-slate-800 w-10 text-center">{scoreOpponent}</span>
                       <button onClick={() => setScoreOpponent(scoreOpponent + 1)}
                         className="w-9 h-9 rounded-full bg-rose-400 text-white flex items-center justify-center text-lg font-black active:bg-rose-500 shadow-sm">+</button>
@@ -769,10 +800,10 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                 </div>
               </div>
 
-              {/* ② Goals & Assists */}
+              {/* â‘¡ Goals & Assists */}
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase mb-2">
-                  {isTournament ? (language === 'zh' ? `Q${currentQuarterNum} 入球 / 助攻` : `Q${currentQuarterNum} Goals / Assists`) : (language === 'zh' ? `Q${nextPeriodNum} 入球 / 助攻` : `Q${nextPeriodNum} Goals / Assists`)}
+                  {isTournament ? (language === 'zh' ? `Q${currentQuarterNum} å…¥çƒ / åŠ©æ”»` : `Q${currentQuarterNum} Goals / Assists`) : (language === 'zh' ? `Q${nextPeriodNum} å…¥çƒ / åŠ©æ”»` : `Q${nextPeriodNum} Goals / Assists`)}
                 </p>
                 <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-3">
 
@@ -785,16 +816,16 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                     {/* Goals */}
                     <div className="flex items-center gap-1.5">
                       <button onClick={() => { if (arthurGoals > 0) { setArthurGoals(arthurGoals - 1); setScoreMyTeam(s => Math.max(0, s - 1)); } }}
-                        className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">−</button>
-                      <span className="text-sm font-black text-emerald-600 w-5 text-center">⚽{arthurGoals}</span>
+                        className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">âˆ’</button>
+                      <span className="text-sm font-black text-emerald-600 w-5 text-center">âš½{arthurGoals}</span>
                       <button onClick={() => { setArthurGoals(arthurGoals + 1); setScoreMyTeam(s => s + 1); }}
                         className="w-6 h-6 rounded-full bg-emerald-500 text-white text-sm font-black flex items-center justify-center active:bg-emerald-600">+</button>
                     </div>
                     {/* Assists */}
                     <div className="flex items-center gap-1.5 ml-2">
                       <button onClick={() => setArthurAssists(Math.max(0, arthurAssists - 1))}
-                        className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">−</button>
-                      <span className="text-sm font-black text-indigo-500 w-5 text-center">👟{arthurAssists}</span>
+                        className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">âˆ’</button>
+                      <span className="text-sm font-black text-indigo-500 w-5 text-center">ðŸ‘Ÿ{arthurAssists}</span>
                       <button onClick={() => setArthurAssists(arthurAssists + 1)}
                         className="w-6 h-6 rounded-full bg-indigo-500 text-white text-sm font-black flex items-center justify-center active:bg-indigo-600">+</button>
                     </div>
@@ -814,14 +845,14 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                             <div className="flex items-center gap-1.5">
                               {count > 0 && (
                                 <button onClick={() => clearTeammateGoal(player.id)}
-                                  className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">−</button>
+                                  className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">âˆ’</button>
                               )}
                               {count > 0 && (
-                                <span className="text-sm font-black text-emerald-600 w-5 text-center">⚽{count}</span>
+                                <span className="text-sm font-black text-emerald-600 w-5 text-center">âš½{count}</span>
                               )}
                               <button onClick={() => tapTeammateGoal(player.id)}
                                 className={`w-7 h-7 rounded-full text-white text-xs font-black flex items-center justify-center transition-colors ${count > 0 ? 'bg-emerald-500 active:bg-emerald-600' : 'bg-slate-300 active:bg-slate-400'}`}>
-                                {count > 0 ? '+' : '⚽'}
+                                {count > 0 ? '+' : 'âš½'}
                               </button>
                             </div>
                           </div>
@@ -832,42 +863,42 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                 </div>
               </div>
 
-              {/* ③ Own Goals */}
+              {/* â‘¢ Own Goals */}
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase mb-2">
-                  {language === 'zh' ? '烏龍球' : 'Own Goals'}
+                  {language === 'zh' ? 'çƒé¾çƒ' : 'Own Goals'}
                 </p>
                 <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 space-y-2">
-                  {/* Opponent OG → counts for us */}
+                  {/* Opponent OG â†’ counts for us */}
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-500 flex items-center justify-center text-xs font-black shrink-0">OG</div>
                     <span className="text-xs font-bold text-slate-600 flex-1">
-                      {language === 'zh' ? '對方烏龍球（我方得分）' : 'Opponent OG (counts for us)'}
+                      {language === 'zh' ? 'å°æ–¹çƒé¾çƒï¼ˆæˆ‘æ–¹å¾—åˆ†ï¼‰' : 'Opponent OG (counts for us)'}
                     </span>
                     <div className="flex items-center gap-1.5">
                       {ownGoalsFor > 0 && (
                         <button onClick={() => { if (ownGoalsFor > 0) { setOwnGoalsFor(ownGoalsFor - 1); setScoreMyTeam(s => Math.max(0, s - 1)); } }}
-                          className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">−</button>
+                          className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">âˆ’</button>
                       )}
-                      {ownGoalsFor > 0 && <span className="text-sm font-black text-orange-500 w-5 text-center">×{ownGoalsFor}</span>}
+                      {ownGoalsFor > 0 && <span className="text-sm font-black text-orange-500 w-5 text-center">Ã—{ownGoalsFor}</span>}
                       <button onClick={() => { setOwnGoalsFor(ownGoalsFor + 1); setScoreMyTeam(s => s + 1); }}
                         className={`w-7 h-7 rounded-full text-white text-xs font-black flex items-center justify-center transition-colors ${ownGoalsFor > 0 ? 'bg-orange-400 active:bg-orange-500' : 'bg-slate-300 active:bg-slate-400'}`}>
                         {ownGoalsFor > 0 ? '+' : 'OG'}
                       </button>
                     </div>
                   </div>
-                  {/* Our OG → counts for opponent */}
+                  {/* Our OG â†’ counts for opponent */}
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center text-xs font-black shrink-0">OG</div>
                     <span className="text-xs font-bold text-slate-600 flex-1">
-                      {language === 'zh' ? '我方烏龍球（對方得分）' : 'Our OG (counts for them)'}
+                      {language === 'zh' ? 'æˆ‘æ–¹çƒé¾çƒï¼ˆå°æ–¹å¾—åˆ†ï¼‰' : 'Our OG (counts for them)'}
                     </span>
                     <div className="flex items-center gap-1.5">
                       {ownGoalsAgainst > 0 && (
                         <button onClick={() => { if (ownGoalsAgainst > 0) { setOwnGoalsAgainst(ownGoalsAgainst - 1); setScoreOpponent(s => Math.max(0, s - 1)); } }}
-                          className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">−</button>
+                          className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">âˆ’</button>
                       )}
-                      {ownGoalsAgainst > 0 && <span className="text-sm font-black text-rose-500 w-5 text-center">×{ownGoalsAgainst}</span>}
+                      {ownGoalsAgainst > 0 && <span className="text-sm font-black text-rose-500 w-5 text-center">Ã—{ownGoalsAgainst}</span>}
                       <button onClick={() => { setOwnGoalsAgainst(ownGoalsAgainst + 1); setScoreOpponent(s => s + 1); }}
                         className={`w-7 h-7 rounded-full text-white text-xs font-black flex items-center justify-center transition-colors ${ownGoalsAgainst > 0 ? 'bg-rose-400 active:bg-rose-500' : 'bg-slate-300 active:bg-slate-400'}`}>
                         {ownGoalsAgainst > 0 ? '+' : 'OG'}
@@ -877,16 +908,16 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                 </div>
               </div>
 
-              {/* ④ Participation */}
+              {/* â‘£ Participation */}
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase mb-2">
-                  {language === 'zh' ? `阿仔今節出場？` : `Participation This Period`}
+                  {language === 'zh' ? `é˜¿ä»”ä»Šç¯€å‡ºå ´ï¼Ÿ` : `Participation This Period`}
                 </p>
                 <div className="grid grid-cols-3 gap-2">
                   {([
-                    { key: 'full',    labelZh: '全節正選', labelEn: 'Full Period',   icon: 'fa-circle',       color: 'emerald' },
-                    { key: 'partial', labelZh: '部分上陣', labelEn: 'Partial',        icon: 'fa-adjust',       color: 'amber'   },
-                    { key: 'none',    labelZh: '未出場',   labelEn: 'Did Not Play',   icon: 'fa-circle-notch', color: 'slate'   },
+                    { key: 'full',    labelZh: 'å…¨ç¯€æ­£é¸', labelEn: 'Full Period',   icon: 'fa-circle',       color: 'emerald' },
+                    { key: 'partial', labelZh: 'éƒ¨åˆ†ä¸Šé™£', labelEn: 'Partial',        icon: 'fa-adjust',       color: 'amber'   },
+                    { key: 'none',    labelZh: 'æœªå‡ºå ´',   labelEn: 'Did Not Play',   icon: 'fa-circle-notch', color: 'slate'   },
                   ] as const).map(opt => (
                     <button key={opt.key} onClick={() => setParticipation(opt.key)}
                       className={`flex flex-col items-center gap-1 py-2.5 rounded-xl border-2 text-xs font-black transition-all ${
@@ -902,17 +933,17 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                   ))}
                 </div>
                 <p className="text-[10px] text-slate-400 text-center mt-1.5">
-                  {participation === 'full'    ? (language === 'zh' ? '計 1 節' : '+1 period') :
-                   participation === 'partial' ? (language === 'zh' ? '計 0.5 節' : '+0.5 period') :
-                                                  (language === 'zh' ? '唔計入上陣節數' : 'Not counted')}
+                  {participation === 'full'    ? (language === 'zh' ? 'è¨ˆ 1 ç¯€' : '+1 period') :
+                   participation === 'partial' ? (language === 'zh' ? 'è¨ˆ 0.5 ç¯€' : '+0.5 period') :
+                                                  (language === 'zh' ? 'å””è¨ˆå…¥ä¸Šé™£ç¯€æ•¸' : 'Not counted')}
                 </p>
               </div>
 
-              {/* ⑤ Position */}
+              {/* â‘¤ Position */}
               {participation !== 'none' && (
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase mb-2">
-                    {language === 'zh' ? `阿仔今節打咩位？` : `Position This Period`}
+                    {language === 'zh' ? `é˜¿ä»”ä»Šç¯€æ‰“å’©ä½ï¼Ÿ` : `Position This Period`}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {(['FW','LW','RW','MF','DF','GK'] as const).map(pos => (
@@ -930,21 +961,21 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                   </div>
                   {periodPositions.length > 0 && (
                     <p className="text-[10px] text-blue-500 font-bold mt-1.5">
-                      {language === 'zh' ? `✓ 已選：${periodPositions.join(' / ')}` : `✓ Selected: ${periodPositions.join(' / ')}`}
+                      {language === 'zh' ? `âœ“ å·²é¸ï¼š${periodPositions.join(' / ')}` : `âœ“ Selected: ${periodPositions.join(' / ')}`}
                     </p>
                   )}
                 </div>
               )}
 
-              {/* ⑥ Note */}
+              {/* â‘¥ Note */}
               <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase mb-2">
-                  {isTournament ? (language === 'zh' ? `Q${currentQuarterNum} 筆記` : `Q${currentQuarterNum} Notes`) : (language === 'zh' ? `節${nextPeriodNum} 筆記` : `Period ${nextPeriodNum} Notes`)}
+                  {isTournament ? (language === 'zh' ? `Q${currentQuarterNum} ç­†è¨˜` : `Q${currentQuarterNum} Notes`) : (language === 'zh' ? `ç¯€${nextPeriodNum} ç­†è¨˜` : `Period ${nextPeriodNum} Notes`)}
                 </p>
                 <textarea
                   value={noteText}
                   onChange={e => setNoteText(e.target.value)}
-                  placeholder={language === 'zh' ? '今節重點…' : 'Key moments this period…'}
+                  placeholder={language === 'zh' ? 'ä»Šç¯€é‡é»žâ€¦' : 'Key moments this periodâ€¦'}
                   rows={4}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 text-sm outline-none focus:border-blue-400 focus:bg-white transition-colors resize-none"
                 />
@@ -958,7 +989,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
         {step === 'log' && (
           <div className="p-4 border-t border-slate-100 bg-white shrink-0">
             {isTournament ? (
-              /* Tournament: two buttons — save quarter + done */
+              /* Tournament: two buttons â€” save quarter + done */
               <div className="space-y-2">
                 <button
                   onClick={handleSaveTournamentQuarter}
@@ -966,14 +997,14 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                   className="w-full py-3 bg-purple-600 text-white rounded-xl font-black text-sm flex items-center justify-center gap-2 active:bg-purple-700 disabled:opacity-40 transition-colors shadow-lg"
                 >
                   <i className="fas fa-save" />
-                  {language === 'zh' ? `儲存 Q${currentQuarterNum} · 繼續 Q${currentQuarterNum + 1}` : `Save Q${currentQuarterNum} · Continue Q${currentQuarterNum + 1}`}
+                  {language === 'zh' ? `å„²å­˜ Q${currentQuarterNum} Â· ç¹¼çºŒ Q${currentQuarterNum + 1}` : `Save Q${currentQuarterNum} Â· Continue Q${currentQuarterNum + 1}`}
                 </button>
                 <button
                   onClick={handleDone}
                   className="w-full py-3 bg-slate-100 text-slate-700 rounded-xl font-black text-sm flex items-center justify-center gap-2 active:bg-slate-200 transition-colors"
                 >
                   <i className="fas fa-check" />
-                  {language === 'zh' ? '完成今場 Game' : 'Done with this Game'}
+                  {language === 'zh' ? 'å®Œæˆä»Šå ´ Game' : 'Done with this Game'}
                 </button>
               </div>
             ) : (
@@ -985,14 +1016,14 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                   className="w-full py-3 bg-blue-600 text-white rounded-xl font-black text-sm flex items-center justify-center gap-2 active:bg-blue-700 disabled:opacity-40 transition-colors shadow-lg"
                 >
                   <i className="fas fa-save" />
-                  {language === 'zh' ? `儲存 Q${nextPeriodNum} · 繼續 Q${nextPeriodNum + 1}` : `Save Q${nextPeriodNum} · Continue Q${nextPeriodNum + 1}`}
+                  {language === 'zh' ? `å„²å­˜ Q${nextPeriodNum} Â· ç¹¼çºŒ Q${nextPeriodNum + 1}` : `Save Q${nextPeriodNum} Â· Continue Q${nextPeriodNum + 1}`}
                 </button>
                 <button
                   onClick={handleDone}
                   className="w-full py-3 bg-slate-100 text-slate-700 rounded-xl font-black text-sm flex items-center justify-center gap-2 active:bg-slate-200 transition-colors"
                 >
                   <i className="fas fa-check" />
-                  {language === 'zh' ? '完成，評分並關閉' : 'Done & Rate'}
+                  {language === 'zh' ? 'å®Œæˆï¼Œè©•åˆ†ä¸¦é—œé–‰' : 'Done & Rate'}
                 </button>
               </div>
             )}
@@ -1000,7 +1031,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
         )}
       </div>
 
-      {/* ── Rating Modal ─────────────────────────────────────────────────── */}
+      {/* â”€â”€ Rating Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {showRatingModal && <style>{`
         .rating-sheet input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%; background: white; border: 3px solid #3b82f6; box-shadow: 0 2px 8px rgba(0,0,0,0.15); cursor: pointer; }
         .rating-sheet input[type=range]::-moz-range-thumb { width: 28px; height: 28px; border-radius: 50%; background: white; border: 3px solid #3b82f6; box-shadow: 0 2px 8px rgba(0,0,0,0.15); cursor: pointer; }
@@ -1017,7 +1048,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
               <div className="w-10 h-1 bg-slate-200 rounded-full" />
             </div>
             <h3 className="text-base font-black text-slate-800 text-center mt-3 mb-1">
-              {language === 'zh' ? '今場表現如何？' : 'How did it go?'}
+              {language === 'zh' ? 'ä»Šå ´è¡¨ç¾å¦‚ä½•ï¼Ÿ' : 'How did it go?'}
             </h3>
             <p className="text-[11px] text-slate-400 text-center mb-5">
               {language === 'zh' ? `vs ${selectedMatch?.opponent}` : `vs ${selectedMatch?.opponent}`}
@@ -1073,7 +1104,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                               : n >= 6 ? 'text-amber-500 scale-125 font-black'
                               : 'text-rose-400 scale-125 font-black'
                             : 'text-slate-300'}`}>
-                          {n % 1 === 0 ? n : '·'}
+                          {n % 1 === 0 ? n : 'Â·'}
                         </button>
                       ))}
                     </div>
@@ -1085,12 +1116,12 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
             <div className="flex gap-3">
               <button onClick={handleRatingSkip}
                 className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-xl font-bold text-sm">
-                {language === 'zh' ? '跳過' : 'Skip'}
+                {language === 'zh' ? 'è·³éŽ' : 'Skip'}
               </button>
               <button onClick={handleRatingConfirm}
                 className="flex-[2] py-3 bg-blue-600 text-white rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg">
                 <i className="fas fa-star text-yellow-300" />
-                {language === 'zh' ? `確認 ⭐${pendingRating}` : `Confirm ⭐${pendingRating}`}
+                {language === 'zh' ? `ç¢ºèª â­${pendingRating}` : `Confirm â­${pendingRating}`}
               </button>
             </div>
           </div>
