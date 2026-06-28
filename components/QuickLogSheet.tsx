@@ -313,18 +313,27 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
     if (!selectedMatchId || !selectedMatch) return;
 
     const qNum = currentQuarterNum;
-    const qHeader = language === 'zh' ? `ã€Q${qNum}ã€‘` : `[Q${qNum}]`;
-    const goalSummary: string[] = [];
-    if (arthurGoals > 0) goalSummary.push(`${profile.name} âš½Ã—${arthurGoals}`);
-    if (arthurAssists > 0) goalSummary.push(`${profile.name} ðŸ‘ŸÃ—${arthurAssists}`);
-    Object.entries(teammateGoals).forEach(([id, count]) => {
-      const player = roster.find(r => r.id === id);
-      if (player) goalSummary.push(`${player.name} âš½Ã—${count}`);
-    });
-    const goalLine = goalSummary.length > 0
-      ? (language === 'zh' ? `å…¥çƒï¼š${goalSummary.join('ã€')}\n` : `Goals: ${goalSummary.join(', ')}\n`)
-      : '';
-    const qBlock = `${qHeader} ${scoreMyTeam}â€“${scoreOpponent}\n${goalLine}${noteText.trim()}`;
+      const symbolLightning = "\u26A1";
+      const symbolDot = "\xB7";
+      const symbolSoccer = "\u26BD";
+      const symbolShoe = "\uD83D\uDC5F";
+      const symbolTrophy = "\uD83C\uDFC6";
+      const symbolEnDash = "\u2013";
+      const symbolMinus = "\u2212";
+
+      const qHeader = language === 'zh' ? `ã€Q${qNum}ã€‘` : `[Q${qNum}]`;
+      const goalSummary: string[] = [];
+      if (arthurGoals > 0) goalSummary.push(`${profile.name} ${symbolSoccer}\xD7${arthurGoals}`);
+      if (arthurAssists > 0) goalSummary.push(`${profile.name} ${symbolShoe}\xD7${arthurAssists}`);
+      Object.entries(teammateGoals).forEach(([id, count]) => {
+        const player = roster.find(r => r.id === id);
+        if (player) goalSummary.push(`${player.name} ${symbolSoccer}\xD7${count}`);
+      });
+      const goalLine = goalSummary.length > 0
+        ? (language === 'zh' ? `å…¥çƒï¼š${goalSummary.join('ã€')}\n` : `Goals: ${goalSummary.join(', ')}\n`)
+        : '';
+      const qBlock = `${qHeader} ${scoreMyTeam}${symbolEnDash}${scoreOpponent}\n${goalLine}${noteText.trim()}`;
+
     const existingComment = selectedMatch.dadComment || '';
     const newComment = existingComment ? `${existingComment}\n\n${qBlock}` : qBlock;
 
@@ -551,8 +560,8 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
               {step === 'select'
                 ? (language === 'zh' ? 'âš¡ å¿«é€Ÿè¨˜éŒ„' : 'âš¡ Quick Log')
                 : isTournament
-                  ? `âš¡ ${selectedMatch?.tournamentName || 'Tournament'} Â· Q${currentQuarterNum}`
-                  : `âš¡ ${language === 'zh' ? `ç¯€${nextPeriodNum}` : `Period ${nextPeriodNum}`} Â· vs ${selectedMatch?.opponent}`}
+                  ? `\u26A1 ${selectedMatch?.tournamentName || 'Tournament'} \xB7 Q${currentQuarterNum}`
+                  : `\u26A1 ${language === 'zh' ? `ç¯€${nextPeriodNum}` : `Period ${nextPeriodNum}`} \xB7 vs ${selectedMatch?.opponent}`}
             </span>
           </div>
           <button onClick={handleClose} className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
@@ -644,7 +653,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                     className="w-full bg-white border border-blue-200 rounded-lg px-3 py-2 text-sm font-bold outline-none focus:border-blue-400">
                     <option value="">{language === 'zh' ? 'ç„¡éŒ¦æ¨™è³½ (å‹èª¼è³½)' : 'No Tournament (Friendly)'}</option>
                     {activeTournaments.map(t => (
-                      <option key={t} value={t}>ðŸ† {t}</option>
+                      <option key={t} value={t}>{"\uD83C\uDFC6"} {t}</option>
                     ))}
                   </select>
                 )}
@@ -779,19 +788,19 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                     <span className="text-[10px] font-black text-slate-500 uppercase">{language === 'zh' ? 'æˆ‘æ–¹' : 'Us'}</span>
                     <div className="flex items-center gap-3">
                       <button onClick={() => setScoreMyTeam(Math.max(0, scoreMyTeam - 1))}
-                        className="w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-500 text-lg font-black active:bg-slate-100 shadow-sm">âˆ’</button>
+                        className="w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-500 text-lg font-black active:bg-slate-100 shadow-sm">{"\u2212"}</button>
                       <span className="text-4xl font-black text-slate-800 w-10 text-center">{scoreMyTeam}</span>
                       <button onClick={() => setScoreMyTeam(scoreMyTeam + 1)}
                         className="w-9 h-9 rounded-full bg-emerald-500 text-white flex items-center justify-center text-lg font-black active:bg-emerald-600 shadow-sm">+</button>
                     </div>
                   </div>
-                  <span className="text-2xl font-black text-slate-300 pb-1">â€“</span>
+                  <span className="text-2xl font-black text-slate-300 pb-1">{"\u2013"}</span>
                   {/* Opponent */}
                   <div className="flex flex-col items-center gap-2">
                     <span className="text-[10px] font-black text-slate-500 uppercase">{language === 'zh' ? 'å°æ–¹' : 'Them'}</span>
                     <div className="flex items-center gap-3">
                       <button onClick={() => setScoreOpponent(Math.max(0, scoreOpponent - 1))}
-                        className="w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-500 text-lg font-black active:bg-slate-100 shadow-sm">âˆ’</button>
+                        className="w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-500 text-lg font-black active:bg-slate-100 shadow-sm">{"\u2212"}</button>
                       <span className="text-4xl font-black text-slate-800 w-10 text-center">{scoreOpponent}</span>
                       <button onClick={() => setScoreOpponent(scoreOpponent + 1)}
                         className="w-9 h-9 rounded-full bg-rose-400 text-white flex items-center justify-center text-lg font-black active:bg-rose-500 shadow-sm">+</button>
@@ -816,16 +825,16 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                     {/* Goals */}
                     <div className="flex items-center gap-1.5">
                       <button onClick={() => { if (arthurGoals > 0) { setArthurGoals(arthurGoals - 1); setScoreMyTeam(s => Math.max(0, s - 1)); } }}
-                        className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">âˆ’</button>
-                      <span className="text-sm font-black text-emerald-600 w-5 text-center">âš½{arthurGoals}</span>
+                        className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">{"\u2212"}</button>
+                      <span className="text-sm font-black text-emerald-600 w-5 text-center">{"\u26BD"}{arthurGoals}</span>
                       <button onClick={() => { setArthurGoals(arthurGoals + 1); setScoreMyTeam(s => s + 1); }}
                         className="w-6 h-6 rounded-full bg-emerald-500 text-white text-sm font-black flex items-center justify-center active:bg-emerald-600">+</button>
                     </div>
                     {/* Assists */}
                     <div className="flex items-center gap-1.5 ml-2">
                       <button onClick={() => setArthurAssists(Math.max(0, arthurAssists - 1))}
-                        className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">âˆ’</button>
-                      <span className="text-sm font-black text-indigo-500 w-5 text-center">ðŸ‘Ÿ{arthurAssists}</span>
+                        className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">{"\u2212"}</button>
+                      <span className="text-sm font-black text-indigo-500 w-5 text-center">{"\uD83D\uDC5F"}{arthurAssists}</span>
                       <button onClick={() => setArthurAssists(arthurAssists + 1)}
                         className="w-6 h-6 rounded-full bg-indigo-500 text-white text-sm font-black flex items-center justify-center active:bg-indigo-600">+</button>
                     </div>
@@ -845,14 +854,14 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                             <div className="flex items-center gap-1.5">
                               {count > 0 && (
                                 <button onClick={() => clearTeammateGoal(player.id)}
-                                  className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">âˆ’</button>
+                                  className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">{"\u2212"}</button>
                               )}
                               {count > 0 && (
-                                <span className="text-sm font-black text-emerald-600 w-5 text-center">âš½{count}</span>
+                                <span className="text-sm font-black text-emerald-600 w-5 text-center">{"\u26BD"}{count}</span>
                               )}
                               <button onClick={() => tapTeammateGoal(player.id)}
                                 className={`w-7 h-7 rounded-full text-white text-xs font-black flex items-center justify-center transition-colors ${count > 0 ? 'bg-emerald-500 active:bg-emerald-600' : 'bg-slate-300 active:bg-slate-400'}`}>
-                                {count > 0 ? '+' : 'âš½'}
+                                {count > 0 ? '+' : "\u26BD"}
                               </button>
                             </div>
                           </div>
@@ -878,7 +887,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                     <div className="flex items-center gap-1.5">
                       {ownGoalsFor > 0 && (
                         <button onClick={() => { if (ownGoalsFor > 0) { setOwnGoalsFor(ownGoalsFor - 1); setScoreMyTeam(s => Math.max(0, s - 1)); } }}
-                          className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">âˆ’</button>
+                          className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">{"\u2212"}</button>
                       )}
                       {ownGoalsFor > 0 && <span className="text-sm font-black text-orange-500 w-5 text-center">Ã—{ownGoalsFor}</span>}
                       <button onClick={() => { setOwnGoalsFor(ownGoalsFor + 1); setScoreMyTeam(s => s + 1); }}
@@ -896,7 +905,7 @@ const QuickLogSheet: React.FC<QuickLogSheetProps> = ({
                     <div className="flex items-center gap-1.5">
                       {ownGoalsAgainst > 0 && (
                         <button onClick={() => { if (ownGoalsAgainst > 0) { setOwnGoalsAgainst(ownGoalsAgainst - 1); setScoreOpponent(s => Math.max(0, s - 1)); } }}
-                          className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">âˆ’</button>
+                          className="w-6 h-6 rounded-full bg-white border border-slate-200 text-slate-400 text-sm font-black flex items-center justify-center active:bg-slate-100">{"\u2212"}</button>
                       )}
                       {ownGoalsAgainst > 0 && <span className="text-sm font-black text-rose-500 w-5 text-center">Ã—{ownGoalsAgainst}</span>}
                       <button onClick={() => { setOwnGoalsAgainst(ownGoalsAgainst + 1); setScoreOpponent(s => s + 1); }}
