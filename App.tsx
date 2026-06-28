@@ -23,7 +23,7 @@ import AnalyticsDashboard from './components/AnalyticsDashboard';
 import CoverPage from './components/CoverPage';
 import SyncModal from './components/SyncModal';
 import ShareCard from './components/ShareCard';
-import TournamentEditModal from './components/TournamentEditModal';           // ← 換成統一組件
+import TournamentEditModal from './components/TournamentEditModal';           // â† æ›æˆçµ±ä¸€çµ„ä»¶
 import OpponentStatsModal from './components/OpponentStatsModal';
 import MatchTimeline from './components/MatchTimeline';
 import VideoModal from './components/VideoModal';
@@ -84,7 +84,7 @@ const App: React.FC = () => {
   const [selectedOpponent, setSelectedOpponent] = useState<string | null>(null);
   const [viewingVideoId, setViewingVideoId] = useState<string | null>(null);
 
-  // ── 新增：賽季分享 state ──────────────────────────────────────────────────
+  // â”€â”€ æ–°å¢žï¼šè³½å­£åˆ†äº« state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [showSeasonShare, setShowSeasonShare] = useState(false);
 
   useEffect(() => {
@@ -117,7 +117,29 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (activeProfile) {
-        const userMatches = getMatches(activeProfile.id);
+        let userMatches = getMatches(activeProfile.id);
+        
+        // One-time sanitization for garbled text
+        let needsSave = false;
+        userMatches = userMatches.map(match => {
+          let str = JSON.stringify(match);
+          if (str.includes('Ã¢Å¡Â¡') || str.includes('Ã‚Â·') || str.includes('Ã¢Å¡Â½') || str.includes('Ã°Å¸â€™Å¸') || str.includes('Ã¢â‚¬â€') || str.includes('Ã¢â‚¬â€œ') || str.includes('Ã¢Ë†â€™') || str.includes('Ã°Å¸â€ ')) {
+             str = str.replace(/Ã¢Å¡Â¡/g, '\u26A1')
+                      .replace(/Ã‚Â·/g, '\xB7')
+                      .replace(/Ã¢Å¡Â½/g, '\u26BD')
+                      .replace(/Ã°Å¸â€™Å¸/g, '\uD83D\uDC5F')
+                      .replace(/Ã¢â‚¬â€/g, '\u2014')
+                      .replace(/Ã¢â‚¬â€œ/g, '\u2013')
+                      .replace(/Ã¢Ë†â€™/g, '\u2212')
+                      .replace(/Ã°Å¸â€ /g, '\uD83C\uDFC6');
+             const fixedMatch = JSON.parse(str);
+             updateMatchInStorage(activeProfile.id, fixedMatch);
+             needsSave = true;
+             return fixedMatch;
+          }
+          return match;
+        });
+
         const userJournals = getJournals(activeProfile.id);
         setMatches(userMatches);
         setJournals(userJournals);
@@ -333,32 +355,32 @@ const App: React.FC = () => {
         const locationStr = m.location ? `@ ${m.location}` : '';
         const contextLine = [matchType, homeAway, locationStr].filter(Boolean).join(' | ');
         const isScheduled = m.status === 'scheduled';
-        const resultSymbol = isScheduled ? '⏳' : (m.scoreMyTeam > m.scoreOpponent ? '✅' : m.scoreMyTeam < m.scoreOpponent ? '❌' : '🤝');
+        const resultSymbol = isScheduled ? 'â³' : (m.scoreMyTeam > m.scoreOpponent ? 'âœ…' : m.scoreMyTeam < m.scoreOpponent ? 'âŒ' : 'ðŸ¤');
         
         let statsParts = [];
         if (!isScheduled) {
-            if (m.arthurGoals > 0) statsParts.push(`⚽ ${m.arthurGoals} ${t.goals}`);
-            if (m.arthurAssists > 0) statsParts.push(`👟 ${m.arthurAssists} ${t.assists}`);
-            if (m.rating) statsParts.push(`⭐ ${m.rating}/10`);
-            if (m.isMotm) statsParts.push(`🏆 MOTM`);
+            if (m.arthurGoals > 0) statsParts.push(`\u26BD ${m.arthurGoals} ${t.goals}`);
+            if (m.arthurAssists > 0) statsParts.push(`\uD83D\uDC5F ${m.arthurAssists} ${t.assists}`);
+            if (m.rating) statsParts.push(`\u2B50 ${m.rating}/10`);
+            if (m.isMotm) statsParts.push(`\uD83C\uDFC6 MOTM`);
         }
         const statsLine = statsParts.join('  ');
 
         let timeParts = [];
-        if (m.matchTime) timeParts.push(`⏰ ${t.matchTime}: ${m.matchTime}`);
-        if (m.assemblyTime) timeParts.push(`👥 ${t.assemblyTime}: ${m.assemblyTime}`);
+        if (m.matchTime) timeParts.push(`â° ${t.matchTime}: ${m.matchTime}`);
+        if (m.assemblyTime) timeParts.push(`ðŸ‘¥ ${t.assemblyTime}: ${m.assemblyTime}`);
         const timeLine = timeParts.join(' | ');
 
         let extraLine = '';
         const positions = Array.isArray(m.positionPlayed) ? m.positionPlayed.join(', ') : typeof m.positionPlayed === 'string' ? m.positionPlayed : '';
         if (m.pitchType || m.weather || positions) {
-            extraLine = [m.pitchType, m.weather, positions].filter(Boolean).join(' • ');
+            extraLine = [m.pitchType, m.weather, positions].filter(Boolean).join(' â€¢ ');
         }
 
-        let block = `📅 ${m.date} (${team.name})\n`;
+        let block = `ðŸ“… ${m.date} (${team.name})\n`;
         if (timeLine) block += `${timeLine}\n`;
         block += `${contextLine}\n`;
-        block += `⚔️ VS ${m.opponent} \n`;
+        block += `âš”ï¸ VS ${m.opponent} \n`;
         
         if (!isScheduled) {
             block += `${resultSymbol} ${m.scoreMyTeam} - ${m.scoreOpponent}\n`;
@@ -367,11 +389,11 @@ const App: React.FC = () => {
             block += `${resultSymbol} ${t.upcomingMatches}\n`;
         }
         
-        if (extraLine) block += `📌 ${extraLine}\n`;
+        if (extraLine) block += `ðŸ“Œ ${extraLine}\n`;
         
         if (!isScheduled) {
-            if (m.dadComment) block += `💬 ${m.commenterIdentity || 'Dad'}: ${m.dadComment}\n`;
-            if (m.kidInterview) block += `🎙️ ${activeProfile.name}: ${m.kidInterview}\n`;
+            if (m.dadComment) block += `ðŸ’¬ ${m.commenterIdentity || 'Dad'}: ${m.dadComment}\n`;
+            if (m.kidInterview) block += `ðŸŽ™ï¸ ${activeProfile.name}: ${m.kidInterview}\n`;
         }
 
         return block;
@@ -413,7 +435,7 @@ const App: React.FC = () => {
     showToast(t.savedTick, 'success');
   };
 
-  // Quick Log create new match handler — returns new match id
+  // Quick Log create new match handler â€” returns new match id
   const handleSaveMatchLabel = (matchId: string, label: string) => {
     if (!activeProfile) return;
     const existing = matches.find(m => m.id === matchId);
@@ -477,14 +499,14 @@ const App: React.FC = () => {
 
   const mainTheme = activeTeam ? getTeamColorStyles(activeTeam.themeColor) : getTeamColorStyles('blue');
 
-  // ── 賽季分享 title ─────────────────────────────────────────────────────────
+  // â”€â”€ è³½å­£åˆ†äº« title â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const seasonShareTitle = useMemo(() => {
     if (!activeProfile) return '';
     const teamName = quickTeamFilter !== 'all'
       ? getTeamById(activeProfile.teams, quickTeamFilter)?.name ?? ''
       : activeProfile.teams[0]?.name ?? '';
     const year = new Date().getFullYear();
-    return teamName ? `${teamName} · ${year}` : `${year}`;
+    return teamName ? `${teamName} Â· ${year}` : `${year}`;
   }, [activeProfile, quickTeamFilter]);
 
   if (loading) return null;
@@ -513,7 +535,7 @@ const App: React.FC = () => {
                     onClick={toggleLanguage}
                     className="w-9 h-9 rounded-full flex items-center justify-center bg-black/10 hover:bg-black/20 text-white text-xs font-bold transition-colors"
                 >
-                    {language === 'zh' ? 'EN' : '中'}
+                    {language === 'zh' ? 'EN' : 'ä¸­'}
                 </button>
 
                 {activeTab === 'matches' && <button onClick={toggleSelectionMode} className={`${isSelectionMode ? 'bg-white text-slate-800' : 'bg-black/20 text-white hover:bg-black/30'} w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-colors`}><i className={`fas ${isSelectionMode ? 'fa-check-square' : 'fa-list-ul'} text-sm`}></i></button>}
@@ -550,7 +572,7 @@ const App: React.FC = () => {
                           <div className="w-px h-6 bg-slate-300 mx-1"></div>
                           <button onClick={() => setShowArchived(!showArchived)} className={`flex-none w-8 h-8 rounded-full flex items-center justify-center border transition-all ${showArchived ? 'bg-orange-100 text-orange-600 border-orange-200' : 'bg-white text-slate-400 border-slate-200'}`} title="Toggle Archives"><i className="fas fa-archive text-xs"></i></button>
                           
-                          {/* ── 賽季分享按鈕 ── */}
+                          {/* â”€â”€ è³½å­£åˆ†äº«æŒ‰éˆ• â”€â”€ */}
                           {filteredMatches.filter(m => m.status !== 'scheduled').length > 0 && (
                             <button
                               onClick={() => setShowSeasonShare(true)}
@@ -685,7 +707,7 @@ const App: React.FC = () => {
                               rel="noopener noreferrer"
                               className="inline-flex items-center justify-center w-full gap-2 bg-[#FFDD00] text-black font-black px-6 py-3 rounded-full shadow-md hover:shadow-lg hover:scale-[1.02] transition-all text-sm"
                           >
-                              <span className="text-base">☕</span> {t.buyCoffeeBtn}
+                              <span className="text-base">â˜•</span> {t.buyCoffeeBtn}
                           </a>
                       </div>
                   </div>
@@ -693,12 +715,12 @@ const App: React.FC = () => {
           </div>
       )}
 
-      {/* ── Modals ── */}
+      {/* â”€â”€ Modals â”€â”€ */}
       <MatchForm isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} onSubmit={handleFormSubmit} profile={activeProfile} initialData={editingMatch} previousMatches={matches} onAddTeammate={handleAddTeammate} />
       <SyncModal isOpen={isSyncOpen} onClose={() => setIsSyncOpen(false)} matches={matches} profile={activeProfile} onSyncComplete={handleSyncComplete} syncOnlyMatches={syncSubset} />
       <VideoModal isOpen={!!viewingVideoId} videoId={viewingVideoId} onClose={() => setViewingVideoId(null)} />
       
-      {/* 單場分享 — mode="match" */}
+      {/* å–®å ´åˆ†äº« â€” mode="match" */}
       {shareMatch && (
         <ShareCard
           mode="match"
@@ -709,7 +731,7 @@ const App: React.FC = () => {
         />
       )}
 
-      {/* 賽季分享 — mode="season" */}
+      {/* è³½å­£åˆ†äº« â€” mode="season" */}
       {showSeasonShare && (
         <ShareCard
           mode="season"
@@ -721,7 +743,7 @@ const App: React.FC = () => {
         />
       )}
 
-      {/* 杯賽分享 — mode="tournament" */}
+      {/* æ¯è³½åˆ†äº« â€” mode="tournament" */}
       {shareTournament && (
         <ShareCard
           mode="tournament"
@@ -733,7 +755,7 @@ const App: React.FC = () => {
         />
       )}
 
-      {/* 杯賽編輯 — TournamentEditModal */}
+      {/* æ¯è³½ç·¨è¼¯ â€” TournamentEditModal */}
       {editingTournament && (
         <TournamentEditModal
           isOpen={!!editingTournament}
